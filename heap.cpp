@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <sys/time.h>
 using namespace std;
 
 void print_help(const char *name)
@@ -149,8 +150,56 @@ void get_top500()
     cout << endl;
 }
 
+void test(int n)
+{
+    fstream fs("sample.txt", fstream::in);
+	std::vector<int> sample;
+    for(int t; fs >> t;)
+		sample.push_back(t);
+	fs.close();
+
+	{
+		struct timeval start_time, stop_time;
+		gettimeofday(&start_time, NULL);
+		multiset<int> top;
+		for(std::vector<int>::iterator it=sample.begin(), ie=sample.end(); it!=ie; ++it)
+		{
+			if(*it > *top.begin())
+			{
+				top.insert(*it);
+				if(top.size() > n)
+					top.erase(top.begin());
+			}
+		}
+		gettimeofday(&stop_time, NULL);
+		cout << "set use " << (stop_time.tv_sec-start_time.tv_sec)*1000+(stop_time.tv_usec-start_time.tv_usec)/1000 << " ms" << endl;
+	}
+
+	{
+		struct timeval start_time, stop_time;
+		gettimeofday(&start_time, NULL);
+		int top[n];
+		std::vector<int>::iterator it=sample.begin();
+		for(int i=0; i<n; ++i, ++it)
+		{
+			top[i] = *it;
+		}
+		make_heap(top, top+n, greater<int>());
+		for(std::vector<int>::iterator ie=sample.end(); it!=ie; ++it)
+		{
+			if(*it > top[0])
+				__adjust_heap(top, 0, n, *it, greater<int>());
+		}
+		sort_heap(top, top+n, greater<int>());
+		gettimeofday(&stop_time, NULL);
+		cout << "heap use " << (stop_time.tv_sec-start_time.tv_sec)*1000+(stop_time.tv_usec-start_time.tv_usec)/1000 << " ms" << endl;
+	}
+}
+
 int main(int argc, char **argv)
 {
+	test(500);
+	return 0;
     if(argc == 2)
     {
         if(strcmp(argv[1], "gen") == 0)
