@@ -198,7 +198,7 @@ void test(int n)
 
 int main(int argc, char **argv)
 {
-	test(500);
+	test(10000);
 	return 0;
     if(argc == 2)
     {
