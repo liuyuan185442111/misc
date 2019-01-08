@@ -1,8 +1,11 @@
 #include <cstddef>
 #include <functional>
 #include <unordered_map>
-template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp=std::less<ScoreType>>
-class RankImp
+#include <iostream>
+#include <algorithm>
+
+template <typename KeyType, typename InfoType, typename ScoreType, typename ScoreCmp=std::less<ScoreType>>
+class RankingList
 {
 	struct RankInfo
 	{
@@ -13,73 +16,131 @@ class RankImp
 		RankInfo(KeyType _key, ScoreType _score, const InfoType &_info)
 			: key(_key), score(_score), other_info(_info), last_ranking(0) { }
 	};
-	ScoreCmp cmpor;
-	size_t maxsize;
-	RankInfo *rank;
-	RankInfo *min;
-	std::unordered_map<int, RankInfo*> rankMap;
-	void UpdateMin()
+	ScoreCmp _cmpor;
+	size_t _maxsize;
+	RankInfo *_rank;
+	RankInfo *_min;
+	std::unordered_map<KeyType, RankInfo*> _hashMap;
+
+	std::string _data;
+
+	void update_min()
 	{
-		for(auto i = rank, e = rank + rankMap.size(); i !=  e; ++i)
-			if(cmpor(i->score, min->score)) min = i;
+		for(auto i = _rank, e = _rank + _hashMap.size(); i != e; ++i)
+			if(_cmpor(i->score, _min->score)) _min = i;
+	}
+	void update_min_and_map()
+	{
+		int rank = 0;
+		for(auto i = _rank, e = _rank + _hashMap.size(); i != e; ++i)
+		{
+			if(_cmpor(i->score, _min->score)) _min = i;
+			i->last_ranking = ++rank;
+			_hashMap[i->key] = i;
+		}
+	}
+	void sort()
+	{
+		std::sort(_rank, _rank + _hashMap.size(), [this](const RankInfo &lhs, const RankInfo &rhs){return _cmpor(rhs.score, lhs.score);});
+	}
+	void save()
+	{
+		int *buf = (int *)_rank - 1;
+		*buf = (int)_hashMap.size();
+		sizeof(int) + sizeof(RankInfo) * *buf;
+	}
+	void load()
+	{
 	}
 
 public:
-	RankImp(size_t n) : cmpor(ScoreCmp()), maxsize(n?n:1), min(nullptr)
+	RankingList(size_t n) : _cmpor(ScoreCmp()), _maxsize(n?n:1), _min(nullptr)
 	{
-		rank = (RankInfo *)malloc(n * sizeof(RankInfo));
-		rankMap.reserve(maxsize);
+		_rank = (RankInfo *)((int *)malloc(sizeof(int) + n * sizeof(RankInfo)) + 1);
+		_hashMap.reserve(_maxsize);
 	}
-	~RankImp() { free(rank); }
+	~RankingList() { free((int *)_rank - 1); }
 
-	void Update(KeyType key, ScoreType score, const InfoType &info = InfoType())
+	void update(KeyType key, ScoreType score, const InfoType &info = InfoType())
 	{
-		auto it = rankMap.find(key);
-		if(it != rankMap.end())
+		auto it = _hashMap.find(key);
+		if(it != _hashMap.end())
 		{
-			//found in rankMap
+			//found in _rank
 			it->second->score = score;
 			it->second->other_info = info;
-			if(it->second == min)
+			if(it->second == _min)
 			{
-				UpdateMin();
+				update_min();
 			}
 		}
 		else
 		{
-			size_t cursize = rankMap.size();
-			if(cursize != maxsize)
+			size_t cursize = _hashMap.size();
+			if(cursize != _maxsize)
 			{
-				//rankMap not full
-				rankMap.insert(std::make_pair(key, &(rank[cursize] = RankInfo(key, score, info))));
-				if(!min || cmpor(score, min->score))
+				//_rank not full
+				_hashMap.insert(std::make_pair(key, &(_rank[cursize] = RankInfo(key, score, info))));
+				if(!_min || _cmpor(score, _min->score))
 				{
-					min = rank + cursize - 1;
+					_min = _rank + cursize;
 				}
 			}
-			else if(cmpor(min->score, score))
+			else if(_cmpor(_min->score, score))
 			{
 				//substitute
-				*min = RankInfo(key, score, info);
-				UpdateMin();
+				_hashMap.erase(_min->key);
+				*_min = RankInfo(key, score, info);
+				_hashMap.insert(std::make_pair(key, _min));
+				update_min();
 			}
-			//do nothing
 		}
 	}
 
-	void Update()
+	void reform()
 	{
+		sort();
+		save();
+		update_min_and_map();
+	}
+
+	void dump(std::ostream &out)
+	{
+		for(auto i = _rank, e = _rank + _hashMap.size(); i != e; ++i)
+			out << "key:" << i->key << ", score:" << i->score << ", last_ranking:" << i->last_ranking << std::endl;
+	}
+
+	void insert_sort(int *a, int n)
+	{
+		int picket;
+		for (int i=1, j; i<n; ++i)
+		{
+			picket = a[i];
+			for (j=i-1; j>=0&&a[j]>picket; --j)
+				a[j+1] = a[j];
+			a[j+1] = picket;
+		}
 	}
 };
 
-#include <iostream>
-typedef RankImp<int, int, int> rank;
+
+typedef RankingList<int, int, int> rank;
 int main()
 {
-	rank r(10);
-	r.Update(1,1);
-	r.Update(2,2);
-	r.Update(3,3);
-	r.Update(4,4);
+	srand(time(NULL));
+	rank r(100);
+	for(int i=1000000;i>0;--i)
+	{
+		if(i%100 == 0) r.reform();
+		int t = rand();
+		r.update(t%10000,t);
+	}
+	r.reform();
+	r.dump(std::cout);
 	return 0;
 }
+
+//todo
+//callback
+//full
+//different sorts
