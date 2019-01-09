@@ -39,8 +39,6 @@ class RankingList
 		ScoreType score;
 		InfoType other_info;
 		int last_ranking;
-		RankInfo(KeyType _key, ScoreType _score, const InfoType &_info)
-			: key(_key), score(_score), other_info(_info), last_ranking(0) { }
 	};
 	ScoreCmp _cmpor;
 	size_t _maxsize;
@@ -110,11 +108,14 @@ public:
 	RankingList(size_t n) : _cmpor(ScoreCmp()), _maxsize(n?n:1), _min(nullptr), _update_counter(0), _ready(false), _last_reform_time(0)
 	{
 		_rank = (RankInfo *)((int *)malloc(sizeof(int) + n * sizeof(RankInfo)) + 1);
+		memset(_rank, 0, n * sizeof(RankInfo));
 		_hashMap.reserve(_maxsize);
 	}
 	~RankingList() { free((int *)_rank - 1); }
 
-	bool update(KeyType key, ScoreType score, const InfoType &info = InfoType())
+	//bool update(KeyType key, ScoreType score, InfoType &make_info(InfoType &))
+	template <typename MAKE_INFO>
+	bool update(KeyType key, ScoreType score, MAKE_INFO make_info)
 	{
 		if(!_ready) return false;
 		auto it = _hashMap.find(key);
@@ -122,7 +123,7 @@ public:
 		{
 			//found in _rank
 			it->second->score = score;
-			it->second->other_info = info;
+			make_info(it->second->other_info);
 			if(it->second == _min)
 			{
 				update_min();
@@ -135,7 +136,10 @@ public:
 			if(cursize != _maxsize)
 			{
 				//_rank not full
-				_hashMap.insert(std::make_pair(key, &(_rank[cursize] = RankInfo(key, score, info))));
+				_rank[cursize].key = key;
+				_rank[cursize].score = score;
+				make_info(_rank[cursize].other_info);
+				_hashMap.insert(std::make_pair(key, _rank + cursize));
 				if(!_min || _cmpor(score, _min->score))
 				{
 					_min = _rank + cursize;
@@ -146,7 +150,9 @@ public:
 			{
 				//substitute
 				_hashMap.erase(_min->key);
-				*_min = RankInfo(key, score, info);
+				_min->key = key;
+				_min->score = score;
+				make_info(_min->other_info);
 				_hashMap.insert(std::make_pair(key, _min));
 				update_min();
 				++_update_counter;
@@ -174,23 +180,23 @@ public:
 	}
 };
 
+template <typename InfoType>
+InfoType &make_info(InfoType &info) { return info; }
 
 typedef RankingList<int, int, int> rank;
 int main()
 {
-	//srand(time(NULL));
-	srand(10010);
+	srand(time(NULL));
 	rank r(500);
 	r.load(NULL, 0);
 	for(int i=1000000;i>0;--i)
 	{
 		if(i%375 == 0) r.reform();
 		int t = rand();
-		r.update(t%10000,t);
+		r.update(t%10000,t,make_info<int>);
 	}
 	r.reform();
 	r.dump(std::cout);
 	return 0;
 }
 
-//callback
