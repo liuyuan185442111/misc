@@ -113,7 +113,10 @@ public:
 	}
 	~RankingList() { free((int *)_rank - 1); }
 
-	//bool update(KeyType key, ScoreType score, InfoType &make_info(InfoType &))
+	bool update(KeyType key, ScoreType score, const InfoType &info = InfoType())
+	{
+		update(key, score, [info](InfoType &in){in=info;});
+	}
 	template <typename MAKE_INFO>
 	bool update(KeyType key, ScoreType score, MAKE_INFO make_info)
 	{
@@ -193,7 +196,8 @@ int main()
 	{
 		if(i%375 == 0) r.reform();
 		int t = rand();
-		r.update(t%10000,t,make_info<int>);
+		//r.update(t%10000,t,make_info<int>);
+		r.update(t%10000,t);
 	}
 	r.reform();
 	r.dump(std::cout);
