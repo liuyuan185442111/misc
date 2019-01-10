@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <cstring>
 #include <string>
+#include <assert.h>
 
 template <typename T, typename Cmp = std::less<T>>
 void insert_sort(T *a, int n, const Cmp &cmpor = Cmp())
@@ -99,6 +100,8 @@ class RankingList
 		_update_counter = 0;
 		return true;
 	}
+
+public:
 	void save()
 	{
 		int *buf = (int *)_rank - 1;
@@ -108,14 +111,13 @@ class RankingList
 		//send to db
 	}
 
-public:
 	void load(void *buf, size_t len)
 	{
 		if(_ready) return;
 		if(buf && len)
 		{
 			int size = *(int *)buf;
-			if(len != size * sizeof(RankInfo))
+			if(len != sizeof(int) + size * sizeof(RankInfo))
 			{
 				//err
 				return;
@@ -127,14 +129,15 @@ public:
 		}
 		_ready = true;
 	}
-	void merge(void *buf, size_t len)
+	void forward_merge(void *buf, size_t len)
 	{
 		if(buf && len)
 		{
 			int size = *(int *)buf;
-			if(len != size * sizeof(RankInfo))
+			if(len != sizeof(int) + size * sizeof(RankInfo))
 			{
 				//err
+				assert(false);
 				return;
 			}
 			for(RankInfo *i = (RankInfo *)((int *)buf + 1), *e = i + size; i != e; ++i)
@@ -265,8 +268,9 @@ public:
 	{
 		return _last_reform_time;
 	}
-	void get_data()
+	void get_data(std::string &data)
 	{
+		data = _data;
 	}
 
 	void dump(std::ostream &out = std::cout)
@@ -282,6 +286,7 @@ InfoType &make_info(InfoType &info) { return info; }
 int topn()
 {
 	srand(time(NULL));
+	srand(0);
 	RankingList<int, int, int> r(100);
 	r.load(NULL, 0);
 	for(int i=1000000;i>0;--i)
@@ -292,6 +297,26 @@ int topn()
 		r.update(t%10000,t);
 		if(rand()&1) r.remove(t%10000);
 	}
+	r.reform();
+	r.dump(std::cout);
+	std::cout << std::endl;
+
+	srand(0);
+	RankingList<int, int, int> s(100);
+	s.load(NULL, 0);
+	for(int i=10000;i>0;--i)
+	{
+		int t = rand();
+		//r.update(t%10000,t,make_info<int>);
+		s.update(t%10000,t);
+	}
+	s.reform();
+	s.dump();
+	std::cout << std::endl;
+
+	std::string data;
+	s.get_data(data);
+	r.forward_merge((void *)data.c_str(), data.length());
 	r.reform();
 	r.dump(std::cout);
 	return 0;
