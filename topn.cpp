@@ -14,10 +14,16 @@
  * 每个gs也维护一份top榜单,定时发给delivery去合并
  * 玩家下线时候如果在gs的top中要立即通知delivery去更新
  *
+ * 每种info有一个mask, 记录了哪些榜单中有该info
  *
- * 可全加载到内存中的搜索
- * 不能全加载到内存中的搜索
- * 实时榜单,启动刷榜
+ *
+ * 真·实时榜
+ * 全加载到内存中
+ * 不存盘,启动刷榜
+ *
+ *
+ * 全部帮派的模糊搜索
+ * 曲谱类的模糊搜索
  */
 #include <cstddef>
 #include <functional>
@@ -27,6 +33,7 @@
 #include <cstring>
 #include <string>
 #include <assert.h>
+#include <map>
 
 template <typename T, typename Cmp = std::less<T>>
 void insert_sort(T *a, int n, const Cmp &cmpor = Cmp())
@@ -152,6 +159,12 @@ public:
 		_hashMap.reserve(_maxsize);
 	}
 	~RankingList() { free((int *)_rank - 1); }
+	void reset()
+	{
+		_min = nullptr;
+		_hashMap.clear();
+		memset(_rank, 0, _maxsize * sizeof(RankInfo));
+	}
 
 	bool update(KeyType key, ScoreType score, const InfoType &info = InfoType())
 	{
@@ -268,9 +281,12 @@ public:
 	{
 		return _last_reform_time;
 	}
-	void get_data(std::string &data)
+	void get_all_data(std::string &data)
 	{
 		data = _data;
+	}
+	void get_wanted_data(std::string &data)
+	{
 	}
 
 	void dump(std::ostream &out = std::cout)
@@ -315,16 +331,80 @@ int topn()
 	std::cout << std::endl;
 
 	std::string data;
-	s.get_data(data);
+	s.get_all_data(data);
 	r.forward_merge((void *)data.c_str(), data.length());
 	r.reform();
 	r.dump(std::cout);
 	return 0;
 }
 
+
+template <typename KeyType, typename InfoType, typename ScoreType, typename ScoreCmp=std::less<ScoreType>>
+class RealtimeRank
+{
+	std::map<KeyType, ScoreType> rj;
+	std::map<std::pair<ScoreType,KeyType>, InfoType> jjk;
+	void add()
+	{
+	}
+	void update()
+	{
+	}
+};
+
+
+using std::string;
+using std::cout;
+using std::endl;
+unsigned char table[]=
+{
+	'0','1','2','3','4','5','6','7','8','9','<','>',
+	'A','B','C','D','E','F','G','H','I','J','K','L','M',
+	'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+	'a','b','c','d','e','f','g','h','i','j','k','l','m',
+	'n','o','p','q','r','s','t','u','v','w','x','y','z'
+};
+class FindSubstr
+{
+	std::vector<string> strs;
+public:
+	void make_strs(int min_len, int max_len, int count)
+	{
+		/*
+		for(int i=0;i<count;++i)
+		{
+			int len = rand() % (max_len - min_len) + min_len;
+			string str(len, 0);
+			for(int j=0;j<len;++j)
+				str[j] = table[rand() % sizeof(table)];
+			strs.push_back(str);
+		}
+		*/
+		for(int i=0;i<count;++i)
+			strs.push_back("11111111111111111111111111111111111111111111111111111112");
+	}
+	int search(const string &str)
+	{
+		int ret_c = 0;
+		for(const auto &i:strs)
+		{
+			if(i.find(str) != std::string::npos) ++ret_c;
+		}
+		return ret_c;
+	}
+};
+
 #include <unistd.h>
+#include <sys/time.h>
 int main()
 {
-	topn();
+	//topn();
+	FindSubstr s;
+	s.make_strs(32, 64, 1000000);
+	struct timeval start, stop;
+	gettimeofday(&start, NULL);
+	cout << s.search("1111111111111111111111112") << endl;
+	gettimeofday(&stop, NULL);
+	cout << stop.tv_sec*1000 + stop.tv_usec/1000 - start.tv_sec*1000 - start.tv_usec/1000 << endl;
 	return 0;
 }
