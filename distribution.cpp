@@ -7,6 +7,7 @@
 #include <string>
 #include <assert.h>
 #include <map>
+#include <set>
 #include <unistd.h>
 #include <sys/time.h>
 
@@ -86,13 +87,12 @@ public:
 		int section = get_section(score);
 		if(section < 0) return section;
 		Bucket &b = buckets[section];
-		return b.higher_count + (int)((score - b.low_score) / (b.high_score - b.low_score) * b.count);
+		return b.higher_count + (int)((b.high_score - score) / interval * b.count);
 	}
 	void change_score(ScoreType old_score, ScoreType new_score)
 	{
 		int sec1 = get_section(old_score);
 		int sec2 = get_section(new_score);
-		std::cout << sec1 << sec2 << std::endl;
 		if(sec1 != sec2 && sec1 >= 0 && sec2 >= 0)
 		{
 			--buckets[sec1].count;
@@ -125,14 +125,36 @@ using namespace std;
 
 int main()
 {
-	CommonDist *p = new CommonDist100(1, 101);
+	multiset<int> scores;
+	CommonDist *p = new CommonDist100(1, 8001);
 	p->init();
-	p->add_data(10);
-	p->add_data(20);
-	p->add_data(30);
+	for(int i=0;i<9999;++i)
+	{
+		int score = rand() % 7999 + 1;
+		p->add_data(score);
+		scores.insert(score);
+	}
 	p->add_end();
-	p->change_score(30, 100);
+
+	cout << "rank distribution:\n";
 	p->dump(cout);
-	cout << p->get_rank(9) << endl;
+
+	{
+	auto a=scores.begin();
+	auto b=scores.rbegin();
+	for(int i=scores.size()/2-100;i>0;--i)
+	{
+		p->change_score(*a, *b);
+		p->change_score(*b, *a);
+	}
+	}
+	p->dump(cout);
+
+	cout << "score:real_rank:approximate_rank\n";
+	int c = 0;
+	for(auto i=scores.rbegin(), e=scores.rend(); i!=e; ++i)
+	{
+		cout << *i << ":" << ++c << ":" << p->get_rank(*i) << endl;
+	}
 	return 0;
 }
