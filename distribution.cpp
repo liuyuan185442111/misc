@@ -69,9 +69,9 @@ public:
 	}
 	bool add_data(ScoreType score)
 	{
-		if(score < min_score || score >= max_score)
-			return false;
-		++buckets[get_section(score)].count;
+		int section = get_section(score);
+		if(section < 0) return false;
+		++buckets[section].count;
 		return true;
 	}
 	void add_end()
@@ -121,6 +121,7 @@ public:
 typedef IDistribution<int> CommonDist;
 typedef Distribution<int, float, 100> CommonDist100;
 
+
 using namespace std;
 
 int main()
@@ -140,14 +141,15 @@ int main()
 	p->dump(cout);
 
 	{
-	auto a=scores.begin();
-	auto b=scores.rbegin();
-	for(int i=scores.size()/2-100;i>0;--i)
-	{
-		p->change_score(*a, *b);
-		p->change_score(*b, *a);
+		auto a=scores.begin();
+		auto b=scores.rbegin();
+		for(int i=scores.size()/2-100;i>0;--i)
+		{
+			p->change_score(*a, *b);
+			p->change_score(*b, *a);
+		}
 	}
-	}
+	cout << "rank distribution after change score:\n";
 	p->dump(cout);
 
 	cout << "score:real_rank:approximate_rank\n";
@@ -156,5 +158,7 @@ int main()
 	{
 		cout << *i << ":" << ++c << ":" << p->get_rank(*i) << endl;
 	}
+
+	delete p;
 	return 0;
 }
