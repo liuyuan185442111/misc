@@ -49,7 +49,7 @@ void insert_sort(T *a, T *b, const Cmp &cmpor = Cmp())
 	}
 }
 
-template <typename KeyType, typename InfoType, typename ScoreType, typename ScoreCmp=std::less<ScoreType>>
+template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp=std::less<ScoreType>>
 class RankingList
 {
 	struct RankInfo

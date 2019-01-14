@@ -103,7 +103,7 @@ void get_top_heap2(int n)
 template <typename Key, int maxsize, typename Cmp = std::greater<Key> >
 class TopTable
 {
-    int top[maxsize];
+    Key top[maxsize];
     int size;
 	Cmp comparator;
 public:
