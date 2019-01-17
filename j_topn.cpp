@@ -140,29 +140,6 @@ public:
 		memset(_rank, 0, _maxsize * sizeof(RankInfo));
 	}
 
-	//start - stop > 0 && value < *(start-1)
-	template <typename T>
-	T *move_left(T *start, T *stop, const T &value)
-	{
-		//找到左边第一个不大于value的元素的后一个位置
-		T *target = start;
-		for(; target != stop; --target)
-		{
-			if(!_cmpor(value.score, target->score))
-				break;
-		}
-		if(target == stop) {if(!_cmpor(value.score, target->score)) ++target;}
-		else ++target;
-		//然后依次右移
-		for(T *p = start; p != target; --p)
-		{
-			*p = *(p-1);
-			_hashMap[(p-1)->key] = p;
-		}
-		*target = value;
-		return target;
-	}
-
 	bool update(KeyType key, ScoreType score, const InfoType &info = InfoType())
 	{
 		if(!_ready) return false;
@@ -174,22 +151,52 @@ public:
 			{
 				if(it->second != _rank)
 				{
-					RankInfo *start = it->second;
-					if(_cmpor(score, (start-1)->score))
+					RankInfo *p = it->second;
+					for(; p != _rank; --p)
 					{
-						_hashMap.erase(start->key);
-						RankInfo *target = move_left(start, _rank, RankInfo(key, score, info));
-						_hashMap.insert(std::make_pair(key, target));
+						if(_cmpor(score, (p-1)->score))
+						{
+							*p = *(p-1);
+							_hashMap[p->key] = p;
+						}
+						else
+							break;
 					}
+					p->key = key;
+					p->score = score;
+					p->other_info = info;
+					_hashMap[key] = p;
 				}
 				else
+				{
 					it->second->score = score;
+					it->second->other_info = info;
+				}
 			}
 			else if(_cmpor(it->second->score, score))
 			{
 				if(it->second != _rank + _hashMap.size() - 1)
 				{
-					//right word
+					RankInfo *p = it->second;
+					for(; p!=_rank+_hashMap.size()-1; ++p)
+					{
+						if(_cmpor((p+1)->score, score))
+						{
+							*p = *(p+1);
+							_hashMap[p->key] = p;
+						}
+						else
+							break;
+					}
+					p->key = key;
+					p->score = score;
+					p->other_info = info;
+					_hashMap[key] = p;
+				}
+				else
+				{
+					it->second->score = score;
+					it->second->other_info = info;
 				}
 			}
 		}
@@ -213,65 +220,24 @@ public:
 			}
 			else if(_cmpor(score, (_rank + _maxsize - 1)->score))
 			{
-				auto temp = (_rank + _maxsize - 1)->key;
-				RankInfo *target = move_left(_rank + _maxsize, _rank, RankInfo(key,score,info));
-				_hashMap.erase(temp);
-				_hashMap.insert(std::make_pair(key, target));
-			}
-		}
-	}
-	//update score or info
-	template <typename MAKE_INFO>
-	bool update(KeyType key, ScoreType score, MAKE_INFO make_info)
-	{
-		if(!_ready) return false;
-		auto it = _hashMap.find(key);
-		if(it != _hashMap.end())
-		{
-			//found in _rank
-			ScoreType old_score = it->second->score;
-			it->second->score = score;
-			make_info(it->second->other_info);
-			if(it->second == _min)
-			{
-				if(_cmpor(old_score, score)) update_min();
-				else _min->score = score;
-			}
-			else if(_cmpor(score, old_score) && _cmpor(score, _min->score))
-			{
-				_min = it->second;
-			}
-			++_update_counter;
-		}
-		else
-		{
-			size_t cursize = _hashMap.size();
-			if(cursize != _maxsize)
-			{
-				//_rank not full
-				_rank[cursize].key = key;
-				_rank[cursize].score = score;
-				make_info(_rank[cursize].other_info);
-				_hashMap.insert(std::make_pair(key, _rank + cursize));
-				if(!_min || _cmpor(score, _min->score))
+				RankInfo *p = _rank + _maxsize - 1;
+				_hashMap.erase(p->key);
+				for(; p!=_rank; --p)
 				{
-					_min = _rank + cursize;
+					if(_cmpor(score, (p-1)->score))
+					{
+						*p = *(p-1);
+						_hashMap[p->key] = p;
+					}
+					else
+						break;
 				}
-				++_update_counter;
-			}
-			else if(_cmpor(_min->score, score))
-			{
-				//substitute
-				_hashMap.erase(_min->key);
-				_min->key = key;
-				_min->score = score;
-				make_info(_min->other_info);
-				_hashMap.insert(std::make_pair(key, _min));
-				update_min();
-				++_update_counter;
+				p->key = key;
+				p->score = score;
+				p->other_info = info;
+				_hashMap[key] = p;
 			}
 		}
-		return true;
 	}
 	bool remove(KeyType key)
 	{
@@ -308,18 +274,6 @@ public:
 		return true;
 	}
 
-	bool reform()
-	{
-		if(!_ready) return false;
-		if(sort())
-		{
-			save();
-			update_min_and_map();
-		}
-		_last_reform_time = time(NULL);
-		return true;
-	}
-
 	//名单满的时候返回最小分数
 	//用于提前做判断剔除榜外数据
 	ScoreType get_min_score()
@@ -349,61 +303,44 @@ public:
 template <typename InfoType>
 InfoType &make_info(InfoType &info) { return info; }
 
+using std::string;
+using std::cout;
+using std::endl;
+
 int topn()
 {
 	srand(time(NULL));
 	srand(0);
-	RankingList<int, int, int> r(100);
+	RankingList<int, int, int> r(500);
 	r.load(NULL, 0);
-	for(int i=1000000;i>0;--i)
+	for(int i=6666666;i>0;--i)
 	{
-		if(i%100 == 0) r.reform();
 		int t = rand();
-		//r.update(t%10000,t,make_info<int>);
 		r.update(t%10000,t);
-		if(rand()&1) r.remove(t%10000);
+		//if(rand()&1) r.remove(t%10000);
 	}
-	r.reform();
 	r.dump(std::cout);
 	std::cout << std::endl;
-
-	srand(0);
-	RankingList<int, int, int> s(100);
-	s.load(NULL, 0);
-	for(int i=10000;i>0;--i)
-	{
-		int t = rand();
-		//r.update(t%10000,t,make_info<int>);
-		s.update(t%10000,t);
-	}
-	s.reform();
-	s.dump();
-	std::cout << std::endl;
-
-	std::string data;
-	s.get_all_data(data);
-	r.forward_merge((void *)data.c_str(), data.length());
-	r.reform();
-	r.dump(std::cout);
 	return 0;
 }
-
-using std::string;
-using std::cout;
-using std::endl;
 
 #include <unistd.h>
 #include <sys/time.h>
 int main()
 {
-	//topn();
+	topn();
+	return 0;
 	RankingList<int, int, int> r(1);
 	r.load(NULL, 0);
-	for(int i=1;i<=10;++i)
-		r.update(i,i);
+	r.update(1,2);
+	r.update(2,2);
+	r.update(3,4);
+	r.update(4,4);
+	r.update(5,6);
+	r.update(6,6);
 	r.dump(std::cout);
 	cout << endl;
-	r.update(9,20);
+	r.update(5,2);
 	r.dump(std::cout);
 	return 0;
 }
