@@ -35,12 +35,13 @@ public:
 		if(it != _hashMap.end())
 		{
 			//found in _rank
-			if(_cmpor(score, it->second->score))
+			RankInfo *target = it->second;
+			if(_cmpor(score, target->score))
 			{
-				if(it->second != _rank)
+				if(target != _rank)
 				{
-					RankInfo *p = it->second;
-					for(; p != _rank; --p)
+					RankInfo *p = target;
+					for( ; p != _rank; --p)
 					{
 						if(_cmpor(score, (p-1)->score))
 						{
@@ -57,16 +58,16 @@ public:
 				}
 				else
 				{
-					it->second->score = score;
-					it->second->info = info;
+					target->score = score;
+					target->info = info;
 				}
 			}
-			else if(_cmpor(it->second->score, score))
+			else if(_cmpor(target->score, score))
 			{
-				if(it->second != _rank + _hashMap.size() - 1)
+				if(target != _rank + _hashMap.size() - 1)
 				{
-					RankInfo *p = it->second;
-					for(; p!=_rank+_hashMap.size()-1; ++p)
+					RankInfo *p = target;
+					for(RankInfo *pe = _rank + _hashMap.size() - 1; p != pe; ++p)
 					{
 						if(_cmpor((p+1)->score, score))
 						{
@@ -83,8 +84,8 @@ public:
 				}
 				else
 				{
-					it->second->score = score;
-					it->second->info = info;
+					target->score = score;
+					target->info = info;
 				}
 			}
 		}
@@ -93,13 +94,17 @@ public:
 			size_t cursize = _hashMap.size();
 			if(cursize != _maxsize)
 			{
-				//_rank not full
-				RankInfo *pos = std::upper_bound(_rank, _rank + cursize, RankInfo(key,score,info), [this](const RankInfo &lhs, const RankInfo &rhs){return _cmpor(lhs.score, rhs.score);});
-				RankInfo *p = _rank + cursize;
-				for(; p != pos; --p)
+				RankInfo *p = _rank;
+				if(cursize)
 				{
-					*p = *(p-1);
-					_hashMap[(p-1)->key] = p;
+					//_rank not full
+					RankInfo *pos = std::upper_bound(_rank, _rank + cursize, RankInfo(key,score,info),
+							[this](const RankInfo &lhs, const RankInfo &rhs){return _cmpor(lhs.score, rhs.score);});
+					for(p += cursize - 1; p != pos; --p)
+					{
+						*p = *(p-1);
+						_hashMap[p->key] = p;
+					}
 				}
 				p->key = key;
 				p->score = score;
@@ -110,7 +115,7 @@ public:
 			{
 				RankInfo *p = _rank + _maxsize - 1;
 				_hashMap.erase(p->key);
-				for(; p!=_rank; --p)
+				for( ; p != _rank; --p)
 				{
 					if(_cmpor(score, (p-1)->score))
 					{
@@ -123,9 +128,15 @@ public:
 				p->key = key;
 				p->score = score;
 				p->info = info;
-				_hashMap[key] = p;
+				_hashMap.insert(std::make_pair(key, p));
+			}
+			else
+			{
+				//do nothing
+				return false;
 			}
 		}
+		return true;
 	}
 	bool remove(KeyType key)
 	{
