@@ -4,7 +4,7 @@
 #include <iostream>
 #include <cstring>
 
-template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp=std::greater<ScoreType>>
+template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp = std::greater<ScoreType>>
 class RealtimeRankingList
 {
 	struct RankInfo
@@ -100,7 +100,7 @@ public:
 					//_rank not full
 					RankInfo *pos = std::upper_bound(_rank, _rank + cursize, RankInfo(key,score,info),
 							[this](const RankInfo &lhs, const RankInfo &rhs){return _cmpor(lhs.score, rhs.score);});
-					for(p += cursize - 1; p != pos; --p)
+					for(p += cursize; p != pos; --p)
 					{
 						*p = *(p-1);
 						_hashMap[p->key] = p;
@@ -180,7 +180,6 @@ int topn()
 	return 0;
 }
 
-#include <unistd.h>
 #include <sys/time.h>
 int main()
 {

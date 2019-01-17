@@ -1,29 +1,9 @@
-/**
- * top n的实现
- * 维护一个稍大的榜单 应对尾部数据不准的情况
- * gs宕或delivery宕都会有问题 所以必须要有离线刷
- *
- * 对于只增的:
- * 通知每个gs每个榜单的min score
- * gs判断在榜单:可能在可能不在
- * gs判断不在榜单:一定不在
- * score/info更新都要通知
- *
- * 对于可减的:
- * 每个gs也维护一份top榜单,定时发给delivery去合并
- * 玩家下线时候如果在gs的top中要立即通知delivery去更新
- *
- * gs中每种info有一个mask, 记录了哪些榜单中有该info
- */
-#include <cstddef>
-#include <functional>
 #include <unordered_map>
-#include <iostream>
+#include <functional>
 #include <algorithm>
+#include <iostream>
 #include <cstring>
 #include <string>
-#include <assert.h>
-#include <map>
 
 template <typename T, typename Cmp = std::less<T>>
 void insert_sort(T *a, int n, const Cmp &cmpor = Cmp())
@@ -49,8 +29,8 @@ void insert_sort(T *a, T *b, const Cmp &cmpor = Cmp())
 	}
 }
 
-template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp=std::less<ScoreType>>
-class RankingList
+template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp = std::less<ScoreType>>
+class IntervalRankingList
 {
 	struct RankInfo
 	{
@@ -134,7 +114,6 @@ public:
 			if(len != sizeof(int) + size * sizeof(RankInfo))
 			{
 				//err
-				assert(false);
 				return;
 			}
 			for(RankInfo *i = (RankInfo *)((int *)buf + 1), *e = i + size; i != e; ++i)
@@ -142,13 +121,14 @@ public:
 		}
 	}
 
-	RankingList(size_t n) : _cmpor(ScoreCmp()), _wanted(n?n:1), _maxsize(_wanted + std::max(_wanted/10, (size_t)10)), _min(nullptr), _update_counter(0), _ready(false), _last_reform_time(0)
+	IntervalRankingList(size_t n) : _cmpor(ScoreCmp()), _wanted(n?n:1), _maxsize(_wanted + std::max(_wanted/10, (size_t)10)),
+		_min(nullptr), _update_counter(0), _ready(false), _last_reform_time(0)
 	{
 		_rank = (RankInfo *)((int *)malloc(sizeof(int) + _maxsize * sizeof(RankInfo)) + 1);
 		memset(_rank, 0, _maxsize * sizeof(RankInfo));
 		_hashMap.reserve(_maxsize);
 	}
-	~RankingList() { free((int *)_rank - 1); }
+	~IntervalRankingList() { free((int *)_rank - 1); }
 	void reset()
 	{
 		_min = nullptr;
@@ -256,7 +236,7 @@ public:
 			save();
 			update_min_and_map();
 		}
-		_last_reform_time = time(NULL);
+		_last_reform_time = time(nullptr);
 		return true;
 	}
 
@@ -291,10 +271,10 @@ InfoType &make_info(InfoType &info) { return info; }
 
 int topn()
 {
-	srand(time(NULL));
+	srand(time(nullptr));
 	srand(0);
-	RankingList<int, int, int> r(100);
-	r.load(NULL, 0);
+	IntervalRankingList<int, int, int> r(100);
+	r.load(nullptr, 0);
 	for(int i=1000000;i>0;--i)
 	{
 		if(i%100 == 0) r.reform();
@@ -308,8 +288,8 @@ int topn()
 	std::cout << std::endl;
 
 	srand(0);
-	RankingList<int, int, int> s(100);
-	s.load(NULL, 0);
+	IntervalRankingList<int, int, int> s(100);
+	s.load(nullptr, 0);
 	for(int i=10000;i>0;--i)
 	{
 		int t = rand();
@@ -332,7 +312,6 @@ using std::string;
 using std::cout;
 using std::endl;
 
-#include <unistd.h>
 #include <sys/time.h>
 int main()
 {
