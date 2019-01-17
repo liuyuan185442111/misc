@@ -51,8 +51,8 @@ public:
         else
             sort_heap(top, top+size, comparator);
 		table.reserve(size);
-		for(auto &i:top)
-			table.push_back(RankType(i.second, i.first));
+		for(int i=0;i<size;++i)
+			table.push_back(RankType(top[i].second, top[i].first));
 		return size;
     }
 };

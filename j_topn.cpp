@@ -1,20 +1,3 @@
-/**
- * top n的实现
- * 维护一个稍大的榜单 应对尾部数据不准的情况
- * gs宕或delivery宕都会有问题 所以必须要有离线刷
- *
- * 对于只增的:
- * 通知每个gs每个榜单的min score
- * gs判断在榜单:可能在可能不在
- * gs判断不在榜单:一定不在
- * score/info更新都要通知
- *
- * 对于可减的:
- * 每个gs也维护一份top榜单,定时发给delivery去合并
- * 玩家下线时候如果在gs的top中要立即通知delivery去更新
- *
- * gs中每种info有一个mask, 记录了哪些榜单中有该info
- */
 #include <cstddef>
 #include <functional>
 #include <unordered_map>
@@ -49,7 +32,7 @@ void insert_sort(T *a, T *b, const Cmp &cmpor = Cmp())
 	}
 }
 
-template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp=std::less<ScoreType>>
+template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp=std::greater<ScoreType>>
 class RankingList
 {
 	struct RankInfo
@@ -58,6 +41,7 @@ class RankingList
 		ScoreType score;
 		InfoType other_info;
 		int last_ranking;
+		RankInfo(KeyType k, ScoreType s, InfoType i) : key(k), score(s), other_info(i), last_ranking(0) {}
 	};
 	ScoreCmp _cmpor;
 	size_t _wanted;
@@ -142,9 +126,9 @@ public:
 		}
 	}
 
-	RankingList(size_t n) : _cmpor(ScoreCmp()), _wanted(n?n:1), _maxsize(_wanted + std::max(_wanted/10, (size_t)10)), _min(nullptr), _update_counter(0), _ready(false), _last_reform_time(0)
+	RankingList(size_t n) : _cmpor(ScoreCmp()), _wanted(n?n:1), _maxsize(_wanted/* + std::max(_wanted/10, (size_t)10)*/), _min(nullptr), _update_counter(0), _ready(false), _last_reform_time(0)
 	{
-		_rank = (RankInfo *)((int *)malloc(sizeof(int) + _maxsize * sizeof(RankInfo)) + 1);
+		_rank = (RankInfo *)((int *)malloc(sizeof(int) + (_maxsize+1) * sizeof(RankInfo)) + 1);
 		memset(_rank, 0, _maxsize * sizeof(RankInfo));
 		_hashMap.reserve(_maxsize);
 	}
@@ -156,9 +140,85 @@ public:
 		memset(_rank, 0, _maxsize * sizeof(RankInfo));
 	}
 
+	//start - stop > 0 && value < *(start-1)
+	template <typename T>
+	T *move_left(T *start, T *stop, const T &value)
+	{
+		//找到左边第一个不大于value的元素的后一个位置
+		T *target = start;
+		for(; target != stop; --target)
+		{
+			if(!_cmpor(value.score, target->score))
+				break;
+		}
+		if(target == stop) {if(!_cmpor(value.score, target->score)) ++target;}
+		else ++target;
+		//然后依次右移
+		for(T *p = start; p != target; --p)
+		{
+			*p = *(p-1);
+			_hashMap[(p-1)->key] = p;
+		}
+		*target = value;
+		return target;
+	}
+
 	bool update(KeyType key, ScoreType score, const InfoType &info = InfoType())
 	{
-		update(key, score, [info](InfoType &in){in=info;});
+		if(!_ready) return false;
+		auto it = _hashMap.find(key);
+		if(it != _hashMap.end())
+		{
+			//found in _rank
+			if(_cmpor(score, it->second->score))
+			{
+				if(it->second != _rank)
+				{
+					RankInfo *start = it->second;
+					if(_cmpor(score, (start-1)->score))
+					{
+						_hashMap.erase(start->key);
+						RankInfo *target = move_left(start, _rank, RankInfo(key, score, info));
+						_hashMap.insert(std::make_pair(key, target));
+					}
+				}
+				else
+					it->second->score = score;
+			}
+			else if(_cmpor(it->second->score, score))
+			{
+				if(it->second != _rank + _hashMap.size() - 1)
+				{
+					//right word
+				}
+			}
+		}
+		else
+		{
+			size_t cursize = _hashMap.size();
+			if(cursize != _maxsize)
+			{
+				//_rank not full
+				RankInfo *pos = std::upper_bound(_rank, _rank + cursize, RankInfo(key,score,info), [this](const RankInfo &lhs, const RankInfo &rhs){return _cmpor(lhs.score, rhs.score);});
+				RankInfo *p = _rank + cursize;
+				for(; p != pos; --p)
+				{
+					*p = *(p-1);
+					_hashMap[(p-1)->key] = p;
+				}
+				p->key = key;
+				p->score = score;
+				p->other_info = info;
+				_hashMap.insert(std::make_pair(key, p));
+			}
+			else if(_cmpor(score, (_rank + _maxsize - 1)->score))
+			{
+				auto temp = (_rank + _maxsize - 1)->key;
+				RankInfo *target = move_left(_rank + _maxsize, _rank, RankInfo(key,score,info));
+				_hashMap.erase(temp);
+				_hashMap.insert(std::make_pair(key, target));
+			}
+		}
 	}
 	//update score or info
 	template <typename MAKE_INFO>
@@ -336,7 +396,15 @@ using std::endl;
 #include <sys/time.h>
 int main()
 {
-	topn();
+	//topn();
+	RankingList<int, int, int> r(1);
+	r.load(NULL, 0);
+	for(int i=1;i<=10;++i)
+		r.update(i,i);
+	r.dump(std::cout);
+	cout << endl;
+	r.update(9,20);
+	r.dump(std::cout);
 	return 0;
 }
 
