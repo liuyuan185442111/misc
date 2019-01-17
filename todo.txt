@@ -1,0 +1,11 @@
+ * 对于只增的:
+ * 通知每个gs每个榜单的min score
+ * gs判断在榜单:可能在可能不在
+ * gs判断不在榜单:一定不在
+ * score/info更新gs都要通知delivery
+ *
+ * 对于可减的:
+ * 每个gs也维护一份top榜单,定时发给delivery去合并
+ * 玩家下线时候如果在gs的top中要立即通知delivery去更新
+ *
+ * gs中每种info有一个mask, 记录了哪些榜单中有该info
