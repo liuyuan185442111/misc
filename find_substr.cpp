@@ -1,13 +1,13 @@
-#include <cstddef>
-#include <functional>
 #include <unordered_map>
-#include <iostream>
+#include <functional>
 #include <algorithm>
+#include <iostream>
+#include <assert.h>
+#include <cstddef>
 #include <cstring>
 #include <string>
-#include <assert.h>
-#include <map>
 #include <vector>
+#include <map>
 
 using std::string;
 using std::cout;
@@ -27,16 +27,16 @@ public:
 	void make_strs(int min_len, int max_len, int count)
 	{
 		/*
-		for(int i=0;i<count;++i)
+		for(int i=0; i<count; ++i)
 		{
 			int len = rand() % (max_len - min_len) + min_len;
 			string str(len, 0);
-			for(int j=0;j<len;++j)
+			for(int j=0; j<len; ++j)
 				str[j] = table[rand() % sizeof(table)];
 			strs.push_back(str);
 		}
 		*/
-		for(int i=0;i<count;++i)
+		for(int i=0; i<count; ++i)
 			strs.push_back("11111111111111111111111111111111111111111111111111111112");
 	}
 	int search(const string &str)
@@ -58,8 +58,9 @@ int main()
 	s.make_strs(32, 64, 1000000);
 	struct timeval start, stop;
 	gettimeofday(&start, NULL);
-	cout << s.search("1111111111111111111111112") << endl;
+	cout << "find " << s.search("1111111111111111111111112");
 	gettimeofday(&stop, NULL);
-	cout << stop.tv_sec*1000 + stop.tv_usec/1000 - start.tv_sec*1000 - start.tv_usec/1000 << endl;
+	cout << " using " << stop.tv_sec*1000 + stop.tv_usec/1000 - start.tv_sec*1000 - start.tv_usec/1000 << "ms" << endl;
 	return 0;
 }
+
