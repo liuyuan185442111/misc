@@ -1,5 +1,3 @@
-interval:
-
 对于只增的:
 通知每个gs每个榜单的min score
 gs判断在榜单->可能在可能不在,因为可能min score变大了没来得及通知gs
