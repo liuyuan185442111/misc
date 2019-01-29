@@ -1,13 +1,13 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
-#include <set>
-#include <vector>
 #include <algorithm>
+#include <set>
+#include <map>
+#include <vector>
 #include <cstdlib>
 #include <cstring>
 #include <sys/time.h>
-#include <map>
 
 template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp=std::less<ScoreType>>
 struct RankInfo
