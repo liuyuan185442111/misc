@@ -47,6 +47,7 @@ public:
 	size_t size() { return _hashMap.size(); }
 };
 
+
 //.tcc
 #include <functional>
 #include <algorithm>
