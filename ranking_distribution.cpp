@@ -1,15 +1,9 @@
-#include <cstddef>
 #include <functional>
-#include <unordered_map>
-#include <iostream>
 #include <algorithm>
+#include <iostream>
+#include <cstddef>
 #include <cstring>
-#include <string>
-#include <assert.h>
-#include <map>
 #include <set>
-#include <unistd.h>
-#include <sys/time.h>
 
 template <typename ScoreType>
 class IDistribution
@@ -34,8 +28,8 @@ protected:
 	{
 		SpaceType low_score;
 		SpaceType high_score;
-		size_t higher_count;
 		size_t count;
+		size_t higher_count;
 	};
 	ScoreType min_score;
 	ScoreType max_score;
@@ -48,6 +42,7 @@ protected:
 			return -1;
 		return (score - min_score) / interval;
 	}
+
 public:
 	Distribution(ScoreType min, ScoreType max) : min_score(min), max_score(max), interval(0)
 	{
@@ -129,7 +124,7 @@ int main()
 	multiset<int> scores;
 	CommonDist *p = new CommonDist100(1, 8001);
 	p->init();
-	for(int i=0;i<9999;++i)
+	for(int i=0; i<9999; ++i)
 	{
 		int score = rand() % 7999 + 1;
 		p->add_data(score);
@@ -141,9 +136,9 @@ int main()
 	p->dump(cout);
 
 	{
-		auto a=scores.begin();
-		auto b=scores.rbegin();
-		for(int i=scores.size()/2-100;i>0;--i)
+		auto a = scores.begin();
+		auto b = scores.rbegin();
+		for(int i=scores.size()/2-100; i>0; --i)
 		{
 			p->change_score(*a, *b);
 			p->change_score(*b, *a);
