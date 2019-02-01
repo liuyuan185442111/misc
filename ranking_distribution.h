@@ -1,9 +1,15 @@
+#ifndef RANKING_DISTRIBUTION_H
+#define RANKING_DISTRIBUTION_H
+
 #include <functional>
 #include <algorithm>
 #include <iostream>
 #include <cstddef>
 #include <cstring>
 #include <set>
+
+namespace grank
+{
 
 template <typename ScoreType>
 class IDistribution
@@ -113,47 +119,6 @@ public:
 	}
 };
 
-typedef IDistribution<int> CommonDist;
-typedef Distribution<int, float, 100> CommonDist100;
-
-
-using namespace std;
-
-int main()
-{
-	multiset<int> scores;
-	CommonDist *p = new CommonDist100(1, 8001);
-	p->init();
-	for(int i=0; i<9999; ++i)
-	{
-		int score = rand() % 7999 + 1;
-		p->add_data(score);
-		scores.insert(score);
-	}
-	p->add_end();
-
-	cout << "rank distribution:\n";
-	p->dump(cout);
-
-	{
-		auto a = scores.begin();
-		auto b = scores.rbegin();
-		for(int i=scores.size()/2-100; i>0; --i)
-		{
-			p->change_score(*a, *b);
-			p->change_score(*b, *a);
-		}
-	}
-	cout << "rank distribution after change score:\n";
-	p->dump(cout);
-
-	cout << "score:real_rank:approximate_rank\n";
-	int c = 0;
-	for(auto i=scores.rbegin(), e=scores.rend(); i!=e; ++i)
-	{
-		cout << *i << ":" << ++c << ":" << p->get_rank(*i) << endl;
-	}
-
-	delete p;
-	return 0;
 }
+#endif
+

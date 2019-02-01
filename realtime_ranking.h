@@ -1,6 +1,11 @@
-//.h
+#ifndef REALTIME_RANKING_H
+#define REALTIME_RANKING_H
+
 #include <unordered_map>
 #include <iostream>
+
+namespace grank
+{
 
 template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp = std::greater<ScoreType>>
 class RealtimeRankingList
@@ -48,7 +53,7 @@ public:
 };
 
 
-//.tcc
+
 #include <functional>
 #include <algorithm>
 template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp>
@@ -161,6 +166,7 @@ bool RealtimeRankingList<KeyType, ScoreType, InfoType, ScoreCmp>::update(KeyType
 	}
 	return true;
 }
+
 template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp>
 bool RealtimeRankingList<KeyType, ScoreType, InfoType, ScoreCmp>::remove(KeyType key)
 {
@@ -179,43 +185,6 @@ bool RealtimeRankingList<KeyType, ScoreType, InfoType, ScoreCmp>::remove(KeyType
 	return false;
 }
 
-
-//test.cpp
-#include <cstring>
-#include <sys/time.h>
-using std::cout;
-using std::endl;
-
-int test()
-{
-	srand(time(nullptr));
-	RealtimeRankingList<int, int, std::string> r(40);
-	for(int i=1000000; i>0; --i)
-	{
-		int t = rand();
-		r.update(t%10000, t);
-		if(rand()&1) r.remove(t%10000);
-	}
-	r.dump(std::cout);
-	return 0;
 }
-
-int main()
-{
-	test();
-	return 0;
-
-	RealtimeRankingList<int, int, int> r(1);
-	r.update(1,2);
-	r.update(2,2);
-	r.update(3,4);
-	r.update(4,4);
-	r.update(5,6);
-	r.update(6,6);
-	r.dump(std::cout);
-	cout << endl;
-	r.update(5,2);
-	r.dump(std::cout);
-	return 0;
-}
+#endif
 
