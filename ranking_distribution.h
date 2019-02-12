@@ -66,6 +66,7 @@ protected:
 	}
 
 public:
+	//把N作为构造函数的参数, 可以省掉init函数
 	Distribution(ScoreType min, ScoreType max) : min_score(min), max_score(max), interval(0)
 	{
 		memset(buckets, 0, sizeof(Bucket) * N);
