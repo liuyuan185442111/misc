@@ -2,6 +2,8 @@
 #define REALTIME_RANKING_H
 
 #include <unordered_map>
+#include <functional>
+#include <algorithm>
 #include <iostream>
 
 namespace grank
@@ -54,8 +56,6 @@ public:
 
 
 
-#include <functional>
-#include <algorithm>
 template <typename KeyType, typename ScoreType, typename InfoType, typename ScoreCmp>
 bool RealtimeRankingList<KeyType, ScoreType, InfoType, ScoreCmp>::update(KeyType key, ScoreType score, const InfoType &info)
 {

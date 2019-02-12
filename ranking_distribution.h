@@ -48,6 +48,22 @@ protected:
 			return -1;
 		return (score - min_score) / interval;
 	}
+	void change_section(int sec1, int sec2)
+	{
+		if(sec1 != sec2 && !(sec1 < 0 && sec2 < 0))
+		{
+			if(sec1 >= 0) --buckets[sec1].count;
+			if(sec2 >= 0) ++buckets[sec2].count;
+			for(int i=sec1<0?0:sec1; i<sec2; ++i)
+			{
+				++buckets[i].higher_count;
+			}
+			for(int i=sec2<0?0:sec2; i<sec1; ++i)
+			{
+				--buckets[i].higher_count;
+			}
+		}
+	}
 
 public:
 	Distribution(ScoreType min, ScoreType max) : min_score(min), max_score(max), interval(0)
@@ -92,21 +108,15 @@ public:
 	}
 	void change_score(ScoreType old_score, ScoreType new_score)
 	{
-		int sec1 = get_section(old_score);
-		int sec2 = get_section(new_score);
-		if(sec1 != sec2 && sec1 >= 0 && sec2 >= 0)
-		{
-			--buckets[sec1].count;
-			++buckets[sec2].count;
-			for(int i=sec1; i<sec2; ++i)
-			{
-				++buckets[i].higher_count;
-			}
-			for(int i=sec2; i<sec1; ++i)
-			{
-				--buckets[i].higher_count;
-			}
-		}
+		change_section(get_section(old_score), get_section(new_score));
+	}
+	void add_score(ScoreType new_score)
+	{
+		change_section(-1, get_section(new_score));
+	}
+	void del_score(ScoreType old_score)
+	{
+		change_section(get_section(old_score), -1);
 	}
 
 	void dump(std::ostream &out = std::cout)
