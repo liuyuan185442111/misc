@@ -6,7 +6,9 @@
 #include <iostream>
 #include <cstddef>
 #include <cstring>
+#include <vector>
 #include <set>
+#include <assert.h>
 
 namespace grank
 {
@@ -18,15 +20,18 @@ protected:
 	virtual int get_section(ScoreType score)=0;
 public:
 	virtual ~IDistribution(){}
-	virtual bool init()=0;
 	virtual bool add_data(ScoreType score)=0;
 	virtual void add_end()=0;
 	virtual int get_rank(ScoreType score)=0;
 	virtual void change_score(ScoreType old_score, ScoreType new_score)=0;
+	virtual void add_score(ScoreType new_score)=0;
+	virtual void del_score(ScoreType old_score)=0;
 	virtual void dump(std::ostream &out)=0;
+	virtual void load(const std::vector<int> &counts)=0;
+	virtual void save(std::vector<int> &counts)=0;
 };
 
-template <typename ScoreType, typename SpaceType, size_t N>
+template <typename ScoreType, typename SpaceType>
 class Distribution : public IDistribution<ScoreType>
 {
 protected:
@@ -36,11 +41,13 @@ protected:
 		SpaceType high_score;
 		size_t count;
 		size_t higher_count;
+		Bucket(SpaceType low, SpaceType high)
+			: low_score(low), high_score(high), count(0), higher_count(0) {}
 	};
 	ScoreType min_score;
 	ScoreType max_score;
 	SpaceType interval;
-	Bucket buckets[N];
+	std::vector<Bucket> buckets;
 
 	int get_section(ScoreType score)
 	{
@@ -54,11 +61,11 @@ protected:
 		{
 			if(sec1 >= 0) --buckets[sec1].count;
 			if(sec2 >= 0) ++buckets[sec2].count;
-			for(int i=sec1<0?0:sec1; i<sec2; ++i)
+			for(int i=(sec1<0?0:sec1); i<sec2; ++i)
 			{
 				++buckets[i].higher_count;
 			}
-			for(int i=sec2<0?0:sec2; i<sec1; ++i)
+			for(int i=(sec2<0?0:sec2); i<sec1; ++i)
 			{
 				--buckets[i].higher_count;
 			}
@@ -66,24 +73,22 @@ protected:
 	}
 
 public:
-	//把N作为构造函数的参数, 可以省掉init函数
-	Distribution(ScoreType min, ScoreType max) : min_score(min), max_score(max), interval(0)
+	//[min,max)
+	Distribution(ScoreType min, ScoreType max, size_t pieces = 100) : min_score(min), max_score(max)
 	{
-		memset(buckets, 0, sizeof(Bucket) * N);
-	}
-	bool init()
-	{
-		if(N < 3) return false;
-		interval = SpaceType(max_score - min_score) / N;
-		if(interval < 0) return false;
+		if(max_score < min_score) std::swap(min_score, max_score);
+		assert(min_score < max_score);
+		assert(pieces > 3);
+		interval = SpaceType(max_score - min_score) / pieces;
+		assert(interval > 0);
+
+		buckets.reserve(pieces);
 		SpaceType t = min_score;
-		for(size_t i=0; i<N; ++i)
+		for(size_t i=0; i<pieces; ++i)
 		{
-			buckets[i].low_score = t;
+			buckets.push_back(Bucket(t, t + interval));
 			t += interval;
-			buckets[i].high_score = t;
 		}
-		return true;
 	}
 	bool add_data(ScoreType score)
 	{
@@ -94,12 +99,13 @@ public:
 	}
 	void add_end()
 	{
-		for(size_t i=N, sum=0; i>0; --i)
+		for(size_t i=buckets.size(), sum=0; i>0; --i)
 		{
 			buckets[i-1].higher_count = sum;
 			sum += buckets[i-1].count;
 		}
 	}
+
 	int get_rank(ScoreType score)
 	{
 		int section = get_section(score);
@@ -107,6 +113,7 @@ public:
 		Bucket &b = buckets[section];
 		return b.higher_count + (int)((b.high_score - score) / interval * b.count);
 	}
+
 	void change_score(ScoreType old_score, ScoreType new_score)
 	{
 		change_section(get_section(old_score), get_section(new_score));
@@ -122,10 +129,29 @@ public:
 
 	void dump(std::ostream &out = std::cout)
 	{
-		for(size_t i=0; i<N; ++i)
+		for(size_t i=0; i<buckets.size(); ++i)
 		{
 			out << "bucket " << i << ": score=[" << buckets[i].low_score << "," << buckets[i].high_score << ")"
 				<< ", cur_count=" << buckets[i].count << ", higher_count=" << buckets[i].higher_count << std::endl;
+		}
+	}
+
+	void load(const std::vector<int> &counts)
+	{
+		if(counts.size() != buckets.size()) return;
+		for(int i=0, s=(int)counts.size(); i!=s; ++i)
+		{
+			buckets[i].count = counts[i];
+		}
+		add_end();
+	}
+	void save(std::vector<int> &counts)
+	{
+		counts.clear();
+		counts.reserve(buckets.size());
+		for(auto &e:buckets)
+		{
+			counts.push_back(e.count);
 		}
 	}
 };
