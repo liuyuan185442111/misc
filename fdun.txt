@@ -6,3 +6,7 @@
 2. 工作进程从网络连接读取和处理，并发回处理结果。
 
 https://blog.csdn.net/win_lin/article/details/7760951
+
+struct msghdr
+这个东西比较坑, 就是把每个数据依次发送而已
+recvmsg必须定义好msghdr每个字段的长度才能正确收到数据

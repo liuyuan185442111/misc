@@ -19,6 +19,7 @@
 #include <assert.h>
 using namespace std;
 #include "un.h"
+#include "errno.h"
 
 int main(int argc, char *argv[])
 {
@@ -26,10 +27,12 @@ int main(int argc, char *argv[])
 	{
 		int lfd = serv_listen("test.domain");
 		cout << "listen fd is " << lfd << endl;
+		if(lfd < 0) return 0;
 		uid_t uid;
 		int fd = serv_accept(lfd, &uid);
 		cout << "accept fd is " << fd << endl;
 		cout << "client uid is " << uid << endl;
+		if(fd < 0) return 0;
 		while(true)
 		{
 			char buf[128];
@@ -38,21 +41,27 @@ int main(int argc, char *argv[])
 			buf[n] = 0;
 			puts(buf);
 			//write(fd, buf, strlen(buf));
-			cout << "send_fd " << send_fd(fd, 0, NULL) << endl;
+			for(;;){
+			write(fd, ":666:", 5);
+			cout << "send_fd " << send_fd(fd, 9356, "987654") << " chars\n";
+			write(fd, ":999:", 5);
+			//cout << "errno " << errno << endl;
+			}
 		}
 	}
 	else
 	{
 		int fd = cli_conn("test.domain");
 		cout << "connect fd is " << fd << endl;
-		char buf[8];
+		if(fd < 0) return 0;
 		for(int counter = 1; ;counter++)
 		{
-			//对端关闭了socket write会产生SIGPIPE 默认是退出程序
+			char buf[8];
 			sprintf(buf, ">>>%4d", counter);
+			//对端关闭了socket write会产生SIGPIPE 默认是退出程序
 			write(fd, buf, 7);
-			sleep(2);
 			recv_fd(fd);
+			sleep(2);
 			//shutdown(fd, SHUT_WR);
 			//close(fd);
 		}
@@ -154,10 +163,11 @@ errout:
 
 int send_fd(int fd, int fd_to_send, const char *errmsg)
 {
-	char buf[2];
-	struct iovec vec[1];
-	vec[0].iov_base = buf;
-	vec[0].iov_len = 1;
+	struct iovec vec[2];
+	vec[0].iov_base = (void *)errmsg;
+	vec[0].iov_len = strlen(errmsg);
+	vec[1].iov_base = &fd_to_send;
+	vec[1].iov_len = sizeof(fd_to_send);
 	struct msghdr msg;
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
@@ -171,18 +181,23 @@ int send_fd(int fd, int fd_to_send, const char *errmsg)
 
 int recv_fd(int fd)
 {
-	char buf[2];
-	struct iovec vec[1];
-	vec[0].iov_base = buf;
-	vec[0].iov_len = 1;
+	char errmsg[256];
+	memset(errmsg, 0, 256);
+	int trans_fd;
+	struct iovec vec[2];
+	vec[0].iov_base = errmsg;
+	vec[0].iov_len = 255;
+	vec[1].iov_base = &trans_fd;
+	vec[1].iov_len = sizeof(trans_fd);
 	struct msghdr msg;
+	msg.msg_namelen = 0;
 	msg.msg_iov = vec;
 	msg.msg_iovlen = 1;
+	msg.msg_controllen = 0;
 	int nr = recvmsg(fd, &msg, 0);
 	if(nr < 0)
 	{
-		puts("recvmsg error");
-		cout << errno << endl;
+		cout << "recvmsg error " << errno << endl;
 		return -1;
 	}
 	else if(nr == 0)
@@ -190,7 +205,9 @@ int recv_fd(int fd)
 		puts("connection closed by server");
 		return -2;
 	}
-	puts("succeed");
+	puts(">>>");
+	cout << errmsg << endl;
+	cout << trans_fd << endl;
 	return 0;
 }
 
