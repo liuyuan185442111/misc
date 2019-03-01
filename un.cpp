@@ -1,28 +1,35 @@
-#include <string>
-#include <list>
-#include <algorithm>
-#include <vector>
-#include <iostream>
-#include <iterator>
-#include <fcntl.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
+#include <assert.h>
+#include <errno.h>
 #include <string.h>
+#include <string>
+#include <list>
+#include <vector>
+#include <algorithm>
+#include <iostream>
+#include <iterator>
+#include <unistd.h>
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <stddef.h>
-#include <assert.h>
 using namespace std;
-#include "un.h"
-#include "errno.h"
+
+int serv_listen(const char *name);
+int serv_accept(int listenfd, uid_t *uidptr);
+int cli_conn(const char *name);
+
+int send_fd(int fd, int fd_to_send, const char *errmsg);
+int recv_fd(int fd);
 
 int main(int argc, char *argv[])
 {
+	//server
 	if(argc == 1)
 	{
 		int lfd = serv_listen("test.domain");
@@ -33,6 +40,8 @@ int main(int argc, char *argv[])
 		cout << "accept fd is " << fd << endl;
 		cout << "client uid is " << uid << endl;
 		if(fd < 0) return 0;
+		int open_fd = open("fdun.txt", O_RDONLY);
+		cout << "open_fd is " << open_fd << endl;
 		while(true)
 		{
 			char buf[128];
@@ -40,15 +49,15 @@ int main(int argc, char *argv[])
 			if(n <= 0) { close(fd); break; }
 			buf[n] = 0;
 			puts(buf);
-			//write(fd, buf, strlen(buf));
-			for(;;){
-			write(fd, ":666:", 5);
-			cout << "send_fd " << send_fd(fd, 9356, "987654") << " chars\n";
-			write(fd, ":999:", 5);
-			//cout << "errno " << errno << endl;
-			}
+			cout << "send_fd " << send_fd(fd, open_fd, "abcd") << " chars\n";
+			//被发送者关闭的描述符并不真正关闭文件或设备,
+			//因为描述符在接收进程里仍视为打开的,
+			//即使接收者还没有明确地收到这个描述符
+			close(open_fd);
+			sleep(600);
 		}
 	}
+	//client
 	else
 	{
 		int fd = cli_conn("test.domain");
@@ -60,7 +69,18 @@ int main(int argc, char *argv[])
 			sprintf(buf, ">>>%4d", counter);
 			//对端关闭了socket write会产生SIGPIPE 默认是退出程序
 			write(fd, buf, 7);
-			recv_fd(fd);
+			int trans_fd = recv_fd(fd);
+			cout << "trans_fd is " << trans_fd << endl;
+			if(trans_fd)
+			{
+				char bufs[256];
+				int nbufs = read(trans_fd, bufs, 16);
+				if(nbufs > 0)
+				{
+					bufs[nbufs] = 0;
+					cout << "read data " << bufs << endl;
+				}
+			}
 			sleep(2);
 			//shutdown(fd, SHUT_WR);
 			//close(fd);
@@ -91,6 +111,7 @@ int serv_listen(const char *name)
 		goto errout;
 	}
 	return fd;
+
 errout:
 	err = errno;
 	close(fd);
@@ -119,6 +140,7 @@ int serv_accept(int listenfd, uid_t *uidptr)
 	if(uidptr) *uidptr = buf.st_uid;
 	unlink(un.sun_path);
 	return clifd;
+
 errout:
 	err = errno;
 	close(clifd);
@@ -154,6 +176,7 @@ int cli_conn(const char *name)
 		goto errout;
 	}
 	return fd;
+
 errout:
 	err = errno;
 	close(fd);
@@ -163,19 +186,34 @@ errout:
 
 int send_fd(int fd, int fd_to_send, const char *errmsg)
 {
+	//errmsg + \0 + char
 	struct iovec vec[2];
+	char tmp[6];
+	tmp[0] = 0;
+	if(fd_to_send >= 0) tmp[1] = 1;
+	else tmp[1] = 0;
 	vec[0].iov_base = (void *)errmsg;
 	vec[0].iov_len = strlen(errmsg);
-	vec[1].iov_base = &fd_to_send;
-	vec[1].iov_len = sizeof(fd_to_send);
+	vec[1].iov_base = tmp;
+	vec[1].iov_len = 2;
 	struct msghdr msg;
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
 	msg.msg_iov = vec;
-	msg.msg_iovlen = 1;
-	msg.msg_control = NULL;
+	msg.msg_iovlen = 2;
 	msg.msg_controllen = 0;
-	msg.msg_flags = 0;
+	//这里一定要从堆里分配空间
+	//不能从栈上分配, 不然CMSG_DATA会把上个变量冲掉
+	struct cmsghdr *cmp = (struct cmsghdr *)malloc(CMSG_LEN(sizeof(int)));
+	if(cmp && fd_to_send >= 0)
+	{
+		cmp->cmsg_level = SOL_SOCKET;
+		cmp->cmsg_type = SCM_RIGHTS;
+		cmp->cmsg_len = CMSG_LEN(sizeof(int));
+		*(int *)CMSG_DATA(cmp) = fd_to_send;
+		msg.msg_control = cmp;
+		msg.msg_controllen = cmp->cmsg_len;
+	}
 	return sendmsg(fd, &msg, 0);
 }
 
@@ -183,17 +221,17 @@ int recv_fd(int fd)
 {
 	char errmsg[256];
 	memset(errmsg, 0, 256);
-	int trans_fd;
-	struct iovec vec[2];
+	struct iovec vec[1];
 	vec[0].iov_base = errmsg;
 	vec[0].iov_len = 255;
-	vec[1].iov_base = &trans_fd;
-	vec[1].iov_len = sizeof(trans_fd);
 	struct msghdr msg;
 	msg.msg_namelen = 0;
 	msg.msg_iov = vec;
 	msg.msg_iovlen = 1;
-	msg.msg_controllen = 0;
+	cmsghdr cm;
+	msg.msg_control = &cm;
+	msg.msg_controllen = CMSG_LEN(sizeof(int));
+
 	int nr = recvmsg(fd, &msg, 0);
 	if(nr < 0)
 	{
@@ -206,8 +244,16 @@ int recv_fd(int fd)
 		return -2;
 	}
 	puts(">>>");
-	cout << errmsg << endl;
-	cout << trans_fd << endl;
-	return 0;
+	cout << "recv " << nr << " chars\n";
+	cout << "errmsg is " << errmsg << endl;
+	int len = strlen(errmsg);
+	if(errmsg[len] == 0 && errmsg[len+1])
+	{
+		return *(int *)CMSG_DATA(&cm);
+	}
+	else
+	{
+		return -3;
+	}
 }
 
