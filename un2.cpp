@@ -20,27 +20,26 @@
 #include <sys/un.h>
 using namespace std;
 
-int bind_un(const char *name = NULL);
-
-int send_fd(int fd, const char *dest, int fd_to_send, const char *errmsg);
+int bind_un(const char *name);
+int send_fd(int fd, const char *dest, int fd_to_send, const char *strmsg);
 int recv_fd(int fd);
 
 int main(int argc, char *argv[])
 {
 	if(argc == 1)
 	{
-		int fd = bind_un();
-		cout << "bind fd is " << fd << endl;
+		int fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+		cout << "client fd is " << fd << endl;
 		if(fd < 0) return 0;
-		int open_fd = open("fdun.txt", O_RDONLY);
+		int open_fd = open("test.txt", O_RDONLY);
 		cout << "open_fd is " << open_fd << endl;
-		cout << "send_fd " << send_fd(fd, "test.domain", open_fd, "abcd") << " chars\n";
+		cout << "send_fd " << send_fd(fd, "un.domain", open_fd, "abcd") << " chars\n";
 		close(open_fd);
 		sleep(600);
 	}
 	else
 	{
-		int fd = bind_un("test.domain");
+		int fd = bind_un("un.domain");
 		cout << "bind fd is " << fd << endl;
 		if(fd < 0) return 0;
 		for(int counter = 1; ;counter++)
@@ -49,7 +48,7 @@ int main(int argc, char *argv[])
 			cout << "trans_fd is " << trans_fd << endl;
 			if(trans_fd >= 0)
 			{
-				char bufs[256];
+				char bufs[64];
 				int nbufs = read(trans_fd, bufs, 16);
 				if(nbufs > 0)
 				{
@@ -71,7 +70,7 @@ int bind_un(const char *name)
 	struct sockaddr_un un;
 	memset(&un, 0, sizeof(un));
 	un.sun_family = AF_UNIX;
-	if(name) strcpy(un.sun_path, name);
+	strcpy(un.sun_path, name);
 	int len = offsetof(sockaddr_un, sun_path) + strlen(un.sun_path);
 	int rval, err;
 	if(bind(fd, (sockaddr*)&un, len) < 0)
@@ -88,9 +87,8 @@ errout:
 	return rval;
 }
 
-int send_fd(int fd, const char *dest, int fd_to_send, const char *errmsg)
+int send_fd(int fd, const char *dest, int fd_to_send, const char *strmsg)
 {
-	//errmsg + \0 + char
 	struct msghdr msg;
 	struct sockaddr_un un;
 	memset(&un, 0, sizeof(un));
@@ -98,22 +96,18 @@ int send_fd(int fd, const char *dest, int fd_to_send, const char *errmsg)
 	strcpy(un.sun_path, dest);
 	msg.msg_name = (sockaddr *)&un;
 	msg.msg_namelen = sizeof(un);
-
 	struct iovec vec[2];
 	char tmp[2];
 	tmp[0] = 0;
 	if(fd_to_send >= 0) tmp[1] = 1;
 	else tmp[1] = 0;
-	vec[0].iov_base = (void *)errmsg;
-	vec[0].iov_len = strlen(errmsg);
+	vec[0].iov_base = (void *)strmsg;
+	vec[0].iov_len = strlen(strmsg);
 	vec[1].iov_base = tmp;
 	vec[1].iov_len = 2;
 	msg.msg_iov = vec;
 	msg.msg_iovlen = 2;
-
 	msg.msg_controllen = 0;
-	//这里一定要从堆里分配空间
-	//不能从栈上分配, 不然CMSG_DATA会把上个变量冲掉
 	struct cmsghdr *cmp = (struct cmsghdr *)malloc(CMSG_LEN(sizeof(int)));
 	if(cmp && fd_to_send >= 0)
 	{
@@ -130,16 +124,16 @@ int send_fd(int fd, const char *dest, int fd_to_send, const char *errmsg)
 int recv_fd(int fd)
 {
 	struct msghdr msg;
-	char errmsg[256];
-	memset(errmsg, 0, 256);
+	char strmsg[256];
+	memset(strmsg, 0, 256);
 	struct iovec vec[1];
-	vec[0].iov_base = errmsg;
+	vec[0].iov_base = strmsg;
 	vec[0].iov_len = 255;
 	struct cmsghdr *cmp = (struct cmsghdr *)malloc(CMSG_LEN(sizeof(int)));
 	if(cmp == NULL)
 	{
 		cout << "malloc error\n";
-		return -9;
+		return -1;
 	}
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
@@ -153,24 +147,20 @@ int recv_fd(int fd)
 	if(nr < 0)
 	{
 		cout << "recvmsg error " << errno << endl;
-		return -1;
+		return -2;
 	}
 	else if(nr == 0)
 	{
 		puts("connection closed by server");
-		return -2;
+		return -3;
 	}
 	puts(">>>");
 	cout << "recv " << nr << " chars\n";
-	cout << "errmsg is " << errmsg << endl;
-	int len = strlen(errmsg);
-	if(errmsg[len] == 0 && errmsg[len+1])
-	{
+	cout << "strmsg is " << strmsg << endl;
+	int len = strlen(strmsg);
+	if(strmsg[len] == 0 && strmsg[len+1])
 		return *(int *)CMSG_DATA(cmp);
-	}
 	else
-	{
-		return -3;
-	}
+		return -4;
 }
 

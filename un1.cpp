@@ -24,24 +24,22 @@ int serv_listen(const char *name);
 int serv_accept(int listenfd, uid_t *uidptr);
 int cli_conn(const char *name);
 
-int send_fd(int fd, int fd_to_send, const char *errmsg);
+int send_fd(int fd, int fd_to_send, const char *strmsg);
 int recv_fd(int fd);
 
 int main(int argc, char *argv[])
 {
-	//server
+	//server without parameter
 	if(argc == 1)
 	{
-		int lfd = serv_listen("test.domain");
+		int lfd = serv_listen("un.domain");
 		cout << "listen fd is " << lfd << endl;
 		if(lfd < 0) return 0;
 		uid_t uid;
 		int fd = serv_accept(lfd, &uid);
 		cout << "accept fd is " << fd << endl;
-		cout << "client uid is " << uid << endl;
 		if(fd < 0) return 0;
-		int open_fd = open("fdun.txt", O_RDONLY);
-		cout << "open_fd is " << open_fd << endl;
+		cout << "client uid is " << uid << endl;
 		while(true)
 		{
 			char buf[128];
@@ -49,31 +47,33 @@ int main(int argc, char *argv[])
 			if(n <= 0) { close(fd); break; }
 			buf[n] = 0;
 			puts(buf);
+
+			int open_fd = open("test.txt", O_RDONLY);
+			cout << "open_fd is " << open_fd << endl;
+			if(open_fd < 0) break;
 			cout << "send_fd " << send_fd(fd, open_fd, "abcd") << " chars\n";
-			//被发送者关闭的描述符并不真正关闭文件或设备,
-			//因为描述符在接收进程里仍视为打开的,
-			//即使接收者还没有明确地收到这个描述符
 			close(open_fd);
 			sleep(600);
 		}
 	}
-	//client
+	//client with some parameters
 	else
 	{
-		int fd = cli_conn("test.domain");
+		int fd = cli_conn("un.domain");
 		cout << "connect fd is " << fd << endl;
 		if(fd < 0) return 0;
 		for(int counter = 1; ;counter++)
 		{
-			char buf[8];
-			sprintf(buf, ">>>%4d", counter);
-			//对端关闭了socket write会产生SIGPIPE 默认是退出程序
-			write(fd, buf, 7);
+			char buf[16];
+			sprintf(buf, "\n>>>%04d", counter);
+			//对端关闭了socket再write会产生SIGPIPE,默认退出程序
+			write(fd, buf, strlen(buf));
+			puts("\n>>>");
 			int trans_fd = recv_fd(fd);
 			cout << "trans_fd is " << trans_fd << endl;
 			if(trans_fd >= 0)
 			{
-				char bufs[256];
+				char bufs[64];
 				int nbufs = read(trans_fd, bufs, 16);
 				if(nbufs > 0)
 				{
@@ -105,9 +105,14 @@ int serv_listen(const char *name)
 		rval = -2;
 		goto errout;
 	}
-	if(listen(fd, 10) < 0)
+	if(chmod(un.sun_path, S_IRWXU|S_IRWXO) < 0)
 	{
 		rval = -3;
+		goto errout;
+	}
+	if(listen(fd, 10) < 0)
+	{
+		rval = -4;
 		goto errout;
 	}
 	return fd;
@@ -152,14 +157,16 @@ int cli_conn(const char *name)
 {
 	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if(fd < 0) return -1;
+	int err, rval;
+	socklen_t len2;
+
 	struct sockaddr_un un;
 	memset(&un, 0, sizeof(un));
 	un.sun_family = AF_UNIX;
 	sprintf(un.sun_path, "%05d", getpid());
 	int len = offsetof(sockaddr_un, sun_path) + strlen(un.sun_path);
 	unlink(un.sun_path);
-	int err, rval;
-	socklen_t len2;
+	//和tcp一样, 不bind直接connect也是可以的
 	if(bind(fd, (sockaddr*)&un, len) < 0)
 	{
 		rval = -2;
@@ -184,16 +191,16 @@ errout:
 	return rval;
 }
 
-int send_fd(int fd, int fd_to_send, const char *errmsg)
+int send_fd(int fd, int fd_to_send, const char *strmsg)
 {
-	//errmsg + \0 + char
+	//strmsg + \0 + char
 	struct iovec vec[2];
 	char tmp[2];
 	tmp[0] = 0;
 	if(fd_to_send >= 0) tmp[1] = 1;
 	else tmp[1] = 0;
-	vec[0].iov_base = (void *)errmsg;
-	vec[0].iov_len = strlen(errmsg);
+	vec[0].iov_base = (void *)strmsg;
+	vec[0].iov_len = std::min(strlen(strmsg), size_t(255));
 	vec[1].iov_base = tmp;
 	vec[1].iov_len = 2;
 	struct msghdr msg;
@@ -205,6 +212,7 @@ int send_fd(int fd, int fd_to_send, const char *errmsg)
 	//这里一定要从堆里分配空间
 	//不能从栈上分配, 不然CMSG_DATA会把上个变量冲掉
 	struct cmsghdr *cmp = (struct cmsghdr *)malloc(CMSG_LEN(sizeof(int)));
+	//就不手动free了
 	if(cmp && fd_to_send >= 0)
 	{
 		cmp->cmsg_level = SOL_SOCKET;
@@ -219,10 +227,10 @@ int send_fd(int fd, int fd_to_send, const char *errmsg)
 
 int recv_fd(int fd)
 {
-	char errmsg[256];
-	memset(errmsg, 0, 256);
+	char strmsg[256];
+	memset(strmsg, 0, 256);
 	struct iovec vec[1];
-	vec[0].iov_base = errmsg;
+	vec[0].iov_base = strmsg;
 	vec[0].iov_len = 255;
 	struct msghdr msg;
 	msg.msg_namelen = 0;
@@ -232,7 +240,7 @@ int recv_fd(int fd)
 	if(cmp == NULL)
 	{
 		cout << "malloc error\n";
-		return -9;
+		return -1;
 	}
 	msg.msg_control = cmp;
 	msg.msg_controllen = CMSG_LEN(sizeof(int));
@@ -241,24 +249,19 @@ int recv_fd(int fd)
 	if(nr < 0)
 	{
 		cout << "recvmsg error " << errno << endl;
-		return -1;
+		return -2;
 	}
 	else if(nr == 0)
 	{
 		puts("connection closed by server");
-		return -2;
-	}
-	puts(">>>");
-	cout << "recv " << nr << " chars\n";
-	cout << "errmsg is " << errmsg << endl;
-	int len = strlen(errmsg);
-	if(errmsg[len] == 0 && errmsg[len+1])
-	{
-		return *(int *)CMSG_DATA(cmp);
-	}
-	else
-	{
 		return -3;
 	}
+	cout << "recv " << nr << " chars\n";
+	cout << "strmsg is " << strmsg << endl;
+	int len = strlen(strmsg);
+	if(strmsg[len] == 0 && strmsg[len+1])
+		return *(int *)CMSG_DATA(cmp);
+	else
+		return -4;
 }
 
