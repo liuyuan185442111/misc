@@ -1,3 +1,8 @@
+/**
+ * 2019-3-10
+ * Boyer-Moort sring-search algorithm
+ * reference: http://www.ruanyifeng.com/blog/2013/05/boyer-moore_string_search_algorithm.html
+ */
 #ifndef _BOYERMOORE_H
 #define _BOYERMOORE_H
 #include <string.h>
@@ -5,14 +10,18 @@
 #include <algorithm>
 #ifdef BM_DEBUG_SHOW
 #include <iostream>
+#include <string>
 #endif
 
 class BoyerMoore
 {
 	const bool need_free;
 	const char *pattern;
-	const size_t len;
+	const int len;
 	std::unordered_multimap<char, int> badtable;
+#ifdef BM_ENABLE_GOOD_TABLE
+	std::unordered_map<int, int> goodtable;
+#endif
 
 	int bad_forward(char bad_char, int bad_pos)
 	{
@@ -22,6 +31,36 @@ class BoyerMoore
 			[&forward,bad_pos](const std::pair<char,int>& x){if(bad_pos>x.second)forward=std::min(forward,bad_pos-x.second);});
 		return forward;
 	}
+#ifdef BM_ENABLE_GOOD_TABLE
+	int good_forward(int good_pos)
+	{
+		auto it = goodtable.find(good_pos);
+		if(it != goodtable.end()) return it->second;
+		return len;
+	}
+	void make_goodtable()
+	{
+		for(int i=len-1; i; --i)
+		{
+			for(int j=i-1; j>i-len; --j)
+			{
+				int m=i, n=j;
+				for(; m<len; ++m, ++n)
+				{
+					if(n >= 0 && pattern[m] != pattern[n])
+						break;
+				}
+				if(m == len)
+				{
+#ifdef BM_DEBUG_SHOW
+					cout << "make_goodtable " << i << ":" << i - j << endl;
+#endif
+					goodtable.emplace(i, i - j);
+				}
+			}
+		}
+	}
+#endif
 public:
 	//if pattern_str is nullptr, strlen would coredump
 	BoyerMoore(const char *pattern_str, bool deep_copy = false) : len(strlen(pattern_str)), need_free(deep_copy)
@@ -40,6 +79,9 @@ public:
 
 		for(int pos = 0; *pattern_str; ++pattern_str, ++pos)
 			badtable.emplace(*pattern_str, pos);
+#ifdef BM_ENABLE_GOOD_TABLE
+		make_goodtable();
+#endif
 	}
 	~BoyerMoore()
 	{
@@ -48,7 +90,7 @@ public:
 	const char *findin(const char *text)
 	{
 		if(len == 0) return "";
-		size_t text_len = strlen(text);
+		int text_len = strlen(text);
 		while(text_len >= len)
 		{
 #ifdef BM_DEBUG_SHOW
@@ -61,18 +103,25 @@ public:
 			for(; b != pattern; --a, --b)
 			{
 #ifdef BM_DEBUG_SHOW
-				for(int i=b-pattern; i; --i) std::cout << '-';
-				std::cout << "*\n";
-				std::cout << string(text, b-pattern) << a << endl;
-				std::cout << string(pattern, b-pattern) << b << endl;
+				std::cout << std::string(b-pattern, '-') << "*\n";
+				std::cout << std::string(text, b-pattern) << a << endl;
+				std::cout << std::string(pattern, b-pattern) << b << endl;
 #endif
 				if(*a != *b)
 				{
-					int forward = bad_forward(*a, b-pattern);
+					int pos = b-pattern;
+					int forward = bad_forward(*a, pos);
+#ifdef BM_ENABLE_GOOD_TABLE
+					if(pos < len - 1) forward = std::max(forward, good_forward(pos+1));
+#endif
 					text += forward;
 					text_len -= forward;
 #ifdef BM_DEBUG_SHOW
-					std::cout << "forward " << forward << endl;
+					std::cout << "bad_forward " << bad_forward(*a, pos) << endl;
+#ifdef BM_ENABLE_GOOD_TABLE
+					if(pos < len - 1)
+						std::cout << "good_forward " << good_forward(pos+1) << endl;
+#endif
 #endif
 					break;
 				}
