@@ -110,12 +110,12 @@ public:
 				if(*a != *b)
 				{
 					int pos = b-pattern;
-					int forward = bad_forward(*a, pos);
+					int step = bad_forward(*a, pos);
 #ifdef BM_ENABLE_GOOD_TABLE
-					if(pos < len - 1) forward = std::max(forward, good_forward(pos+1));
+					if(pos < len - 1) step = std::max(step, good_forward(pos+1));
 #endif
-					text += forward;
-					text_len -= forward;
+					text += step;
+					text_len -= step;
 #ifdef BM_DEBUG_SHOW
 					std::cout << "bad_forward " << bad_forward(*a, pos) << endl;
 #ifdef BM_ENABLE_GOOD_TABLE

@@ -8,6 +8,9 @@
 #include <string>
 #include <vector>
 #include <map>
+#define BM_ENABLE_GOOD_TABLE
+#include "boyermoore.h"
+#include "sunday.h"
 
 using std::string;
 using std::cout;
@@ -42,10 +45,11 @@ public:
 	}
 	int search(const string &str)
 	{
+		Sunday bm(str.c_str());
 		int ret_c = 0;
 		for(const auto &i:strs)
 		{
-			if(i.find(str) != std::string::npos) ++ret_c;
+			if(strcmp(bm.findin(i.c_str()), "") != 0) ++ret_c;
 		}
 		return ret_c;
 	}
@@ -59,6 +63,7 @@ int main()
 	s.make_strs(3200, 6400, 10000);
 	struct timeval start, stop;
 	gettimeofday(&start, NULL);
+	//cout << "find " << s.search("1111111111111111111111112");
 	cout << "find " << s.search("45645678901234567890456456789012345678904564567890123456789045645678904564567890123456789045645678901234567890456456789012345678904564567890");
 	gettimeofday(&stop, NULL);
 	cout << " using " << stop.tv_sec*1000 + stop.tv_usec/1000 - start.tv_sec*1000 - start.tv_usec/1000 << "ms" << endl;
