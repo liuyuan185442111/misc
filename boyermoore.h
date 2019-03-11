@@ -65,8 +65,7 @@ public:
 	//if pattern_str is nullptr, strlen would coredump
 	BoyerMoore(const char *pattern_str, bool deep_copy = false) : len(strlen(pattern_str)), need_free(deep_copy)
 	{
-		if(!deep_copy)
-			pattern = pattern_str;
+		if(!deep_copy) pattern = pattern_str;
 		else
 		{
 #if _SVID_SOURCE || _BSD_SOURCE || _XOPEN_SOURCE >= 500
@@ -83,10 +82,7 @@ public:
 		make_goodtable();
 #endif
 	}
-	~BoyerMoore()
-	{
-		if(need_free) free((void *)pattern);
-	}
+	~BoyerMoore() { if(need_free) free((void *)pattern); }
 	const char *findin(const char *text)
 	{
 		if(len == 0) return "";
@@ -103,16 +99,16 @@ public:
 			for(; b != pattern; --a, --b)
 			{
 #ifdef BM_DEBUG_SHOW
-				std::cout << std::string(b-pattern, '-') << "*\n";
-				std::cout << std::string(text, b-pattern) << a << endl;
-				std::cout << std::string(pattern, b-pattern) << b << endl;
+				std::cout << std::string(b - pattern, '-') << "*\n";
+				std::cout << std::string(text, b - pattern) << a << endl;
+				std::cout << std::string(pattern, b - pattern) << b << endl;
 #endif
 				if(*a != *b)
 				{
-					int pos = b-pattern;
+					int pos = b - pattern;
 					int step = bad_forward(*a, pos);
 #ifdef BM_ENABLE_GOOD_TABLE
-					if(pos < len - 1) step = std::max(step, good_forward(pos+1));
+					if(pos < len - 1) step = std::max(step, good_forward(pos + 1));
 #endif
 					text += step;
 					text_len -= step;
@@ -120,7 +116,7 @@ public:
 					std::cout << "bad_forward " << bad_forward(*a, pos) << endl;
 #ifdef BM_ENABLE_GOOD_TABLE
 					if(pos < len - 1)
-						std::cout << "good_forward " << good_forward(pos+1) << endl;
+						std::cout << "good_forward " << good_forward(pos + 1) << endl;
 #endif
 #endif
 					break;

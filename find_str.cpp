@@ -72,7 +72,7 @@ int main()
 	s.make_strs(5000, 9800, 10000);
 
 	string pattern("p4rDtntwBOohZzovBXPIvmQyAlW3BsV1aY3tUofJRt9T3es1aj4UKG0Da04m6F0Qkyem6KzoPucNMU7gyPoXDpbKCYyiqXZSIJkHhOi3719vNCsOyJdofOYinSJxhWNZjVvuBME92OfYCqxKPjtLiNd1U2Aeqfpuq2LWaaw9iIFUEnMVesydIX4Q1Lj5uJKq91JPHht4z5EZ4OidE3RhdcIoyVFsbhwXDSeCQVFilps5oaVY7SfHEwnQcWffR7eT4dqV1cvSJ6jqzaWA1jGlpirfIvSzyn9v6ZNP7nyagxzs");
-	pattern = "890";
+	pattern = "456";
 	struct timeval start, stop;
 	gettimeofday(&start, nullptr);
 	cout << "find " << s.search1(pattern.c_str()) << endl;

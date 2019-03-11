@@ -20,17 +20,14 @@ class Sunday
 		return len + 1;
 	}
 public:
-	Sunday(const char *pattern_str, bool deep_copy=false) : len(strlen(pattern_str)), need_free(deep_copy)
+	Sunday(const char *pattern_str, bool deep_copy = false) : len(strlen(pattern_str)), need_free(deep_copy)
 	{
 		if(deep_copy) pattern = strdup(pattern_str);
 		else pattern = pattern_str;
 		for(int i=0; i<len; ++i, ++pattern_str)
 			move_table[*pattern_str] = len - i;
 	}
-	~Sunday()
-	{
-		if(need_free) free((void *)pattern);
-	}
+	~Sunday() { if(need_free) free((void *)pattern); }
 	const char *findin(const char *text)
 	{
 		if(len == 0) return "";
