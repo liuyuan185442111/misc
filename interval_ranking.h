@@ -107,7 +107,6 @@ void IntervalRankingList<KeyType, ScoreType, ScoreCmp>::load(void *buf, size_t l
 			_last_reform_time = time(nullptr);
 		}
 	}
-	_ready = true;
 }
 
 template <typename KeyType, typename ScoreType, typename ScoreCmp>
@@ -215,7 +214,6 @@ bool IntervalRankingList<KeyType, ScoreType, ScoreCmp>::update(KeyType key, Scor
 template <typename KeyType, typename ScoreType, typename ScoreCmp>
 bool IntervalRankingList<KeyType, ScoreType, ScoreCmp>::remove(KeyType key)
 {
-	if(!_ready) return false;
 	auto it = _hashMap.find(key);
 	if(it == _hashMap.end()) return false;
 	RankInfo *target = it->second;
@@ -250,7 +248,6 @@ bool IntervalRankingList<KeyType, ScoreType, ScoreCmp>::remove(KeyType key)
 template <typename KeyType, typename ScoreType, typename ScoreCmp>
 bool IntervalRankingList<KeyType, ScoreType, ScoreCmp>::reform()
 {
-	if(!_ready) return false;
 	if(try_stable_sort())
 	{
 		save();
