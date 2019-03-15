@@ -1,3 +1,16 @@
+  /// remove_reference
+  template<typename _Tp>
+    struct remove_reference
+    { typedef _Tp   type; };
+
+  template<typename _Tp>
+    struct remove_reference<_Tp&>
+    { typedef _Tp   type; };
+
+  template<typename _Tp>
+    struct remove_reference<_Tp&&>
+    { typedef _Tp   type; };
+
   /**
    *  @brief  Convert a value to an rvalue.
    *  @param  __t  A thing of arbitrary type.
