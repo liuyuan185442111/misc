@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <functional>
 #include <new>
+#include <string.h>
 
 template <typename Key, typename Comparator = std::less<Key> >
 class SkipList
@@ -20,17 +21,22 @@ public:
     void Insert(const Key& key);
 
     bool Contains(const Key& key) const;
+	int get_max_height() const
+	{
+		return max_height_;
+	}
 
     // Iteration over the contents of a skip list
     class Iterator
     {
-    public:
-        // Initialize an iterator over the specified list.
-        // The returned iterator is not valid.
-        explicit Iterator(const SkipList* list);
+    private:
+        const SkipList* list_;
+        Node* node_;
 
-        // Returns true iff the iterator is positioned at a valid node.
-        bool Valid() const;
+    public:
+        explicit Iterator(const SkipList* list) : list_(list), node_(NULL) { }
+        bool Valid() const { return node_ != NULL; }
+		int Height()const{return node_->height;}
 
         // Returns the key at the current position.
         // REQUIRES: Valid()
@@ -54,11 +60,6 @@ public:
         // Position at the last entry in list.
         // Final state of iterator is Valid() iff list is not empty.
         void SeekToLast();
-
-    private:
-        const SkipList* list_;
-        Node* node_;
-        // Intentionally copyable
     };
 
 private:
@@ -76,7 +77,8 @@ private:
     int RandomHeight();
     bool Equal(const Key& a, const Key& b) const
     {
-        return (compare_(a, b) == 0);
+		return a==b;
+        //return (compare_(a, b) == 0);
     }
 
     // Return true if key is greater than the data stored in "n"
@@ -106,22 +108,19 @@ private:
 template <typename Key, class Comparator>
 struct SkipList<Key,Comparator>::Node
 {
-    explicit Node(const Key& k) : key(k) { }
+    explicit Node(const Key& k, int h) : key(k), height(h) { }
 
     Key const key;
+	int height;
 
     Node* Next(int n)
     {
         assert(n >= 0);
-        // Use an 'acquire load' so that we observe a fully initialized
-        // version of the returned Node.
         return next_[n];
     }
     void SetNext(int n, Node* x)
     {
         assert(n >= 0);
-        // Use a 'release store' so that anybody who reads through this
-        // pointer observes a fully initialized version of the inserted node.
         next_[n] = x;
     }
 
@@ -135,20 +134,7 @@ typename SkipList<Key,Comparator>::Node*
 SkipList<Key,Comparator>::NewNode(const Key& key, int height)
 {
     void* mem = malloc(sizeof(Node) + sizeof(Node *) * (height - 1));
-    return ::new (mem) Node(key);
-}
-
-template <typename Key, class Comparator>
-inline SkipList<Key,Comparator>::Iterator::Iterator(const SkipList* list)
-{
-    list_ = list;
-    node_ = NULL;
-}
-
-template <typename Key, class Comparator>
-inline bool SkipList<Key,Comparator>::Iterator::Valid() const
-{
-    return node_ != NULL;
+    return new (mem) Node(key, height);
 }
 
 template <typename Key, class Comparator>
@@ -339,15 +325,6 @@ void SkipList<Key,Comparator>::Insert(const Key& key)
         {
             prev[i] = head_;
         }
-        //fprintf(stderr, "Change height from %d to %d\n", max_height_, height);
-
-        // It is ok to mutate max_height_ without any synchronization
-        // with concurrent readers.  A concurrent reader that observes
-        // the new value of max_height_ will see either the old value of
-        // new level pointers from head_ (NULL), or a new value set in
-        // the loop below.  In the former case the reader will
-        // immediately drop to the next level since NULL sorts after all
-        // keys.  In the latter case the reader will use the new node.
         max_height_ = height;
     }
 
@@ -373,9 +350,64 @@ bool SkipList<Key,Comparator>::Contains(const Key& key) const
     }
 }
 
+
+void show(const SkipList<int> &s)
+{
+	SkipList<int>::Iterator it(&s);
+	int columns = 0;
+	for(it.SeekToFirst(); it.Valid(); it.Next())
+	{
+		++columns;
+	}
+	int max_height_ = s.get_max_height();
+
+	int **p = new int*[max_height_];
+	for(int i=0; i<max_height_; ++i)
+	{
+		p[i] = new int[columns];
+		memset(p[i], 0, sizeof(int)*columns);
+	}
+
+
+	{
+		int j=0;
+		for(it.SeekToFirst(); it.Valid(); it.Next(), ++j)
+		{
+			for(int i=0; i<it.Height(); ++i)
+			{
+				p[i][j] = it.key();
+			}
+		}
+	}
+
+	for(int i=max_height_-1; i>=0; --i)
+	{
+		for(int j=0; j<columns; ++j)
+		{
+			if(p[i][j] == 0)
+				printf("->");
+			else
+				printf("%2d", p[i][j]);
+			printf("->");
+		}
+		printf("\n");
+	}
+	printf("\n");
+
+	for(int i=0; i<max_height_; ++i)
+	{
+		delete [] p[i];
+	}
+	delete [] p;
+}
+
 int main()
 {
+	srand(time(NULL));
     SkipList<int> s;
-    s.Insert(4);
+	SkipList<int>::Iterator it(&s);
+	for(int i=1;i<26;++i)
+		s.Insert(i);
+	show(s);
     return 0;
 }
