@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <functional>
 #include <new>
-#include <string.h>
+#include <iterator>
 
 template <typename Key, typename Comparator = std::less<Key> >
 class SkipList
@@ -16,15 +16,13 @@ private:
 
 public:
     SkipList();
+    ~SkipList();
 
     // 不能重复插入
     void Insert(const Key& key);
 
     bool Contains(const Key& key) const;
-	int get_max_height() const
-	{
-		return max_height_;
-	}
+	int debug_get_max_height() const { return max_height_; }
 
     // Iteration over the contents of a skip list
     class Iterator
@@ -34,6 +32,8 @@ public:
         Node* node_;
 
     public:
+		typedef std::forward_iterator_tag iterator_category;
+		typedef std::ptrdiff_t difference_type;
         explicit Iterator(const SkipList* list) : list_(list), node_(NULL) { }
         bool Valid() const { return node_ != NULL; }
 		int Height()const{return node_->height;}
@@ -55,12 +55,33 @@ public:
 
         // Position at the first entry in list.
         // Final state of iterator is Valid() iff list is not empty.
-        void SeekToFirst();
+        Iterator& SeekToFirst()
+		{
+			node_ = list_->head_->Next(0);
+			return *this;
+		}
 
         // Position at the last entry in list.
         // Final state of iterator is Valid() iff list is not empty.
         void SeekToLast();
+
+		Iterator& operator++()
+		{
+			Next();
+			return *this;
+		}
+		Iterator operator++(int)
+		{
+			Iterator tmp(*this);
+			Next();
+			return tmp;
+		}
+		bool operator==(Iterator rhs) { return list_ == rhs.list_ && node_ == rhs.node_; }
+		bool operator!=(Iterator rhs) { return !(operator==(rhs)); }
     };
+
+	Iterator begin() { return Iterator(this).SeekToFirst(); }
+	Iterator end() { return Iterator(this); }
 
 private:
     enum { kMaxHeight = 12 };
@@ -70,15 +91,14 @@ private:
 
     Node* const head_;
 
-    //当前的最大高度， 被Insert修改
+    //当前的最大高度, 不含, 被Insert修改
     int max_height_;
 
     Node* NewNode(const Key& key, int height);
     int RandomHeight();
     bool Equal(const Key& a, const Key& b) const
     {
-		return a==b;
-        //return (compare_(a, b) == 0);
+		return !compare_(a, b) && !compare_(b, a);
     }
 
     // Return true if key is greater than the data stored in "n"
@@ -171,12 +191,6 @@ inline void SkipList<Key,Comparator>::Iterator::Seek(const Key& target)
 }
 
 template <typename Key, class Comparator>
-inline void SkipList<Key,Comparator>::Iterator::SeekToFirst()
-{
-    node_ = list_->head_->Next(0);
-}
-
-template <typename Key, class Comparator>
 inline void SkipList<Key,Comparator>::Iterator::SeekToLast()
 {
     node_ = list_->FindLast();
@@ -206,7 +220,7 @@ template <typename Key, class Comparator>
 bool SkipList<Key,Comparator>::KeyIsAfterNode(const Key& key, Node* n) const
 {
     // NULL n is considered infinite
-    return (n != NULL) && (compare_(n->key, key) < 0);
+    return (n != NULL) && compare_(n->key, key);
 }
 
 template <typename Key, class Comparator>
@@ -246,9 +260,9 @@ SkipList<Key,Comparator>::FindLessThan(const Key& key) const
     int level = max_height_ - 1;
     while (true)
     {
-        assert(x == head_ || compare_(x->key, key) < 0);
+        assert(x == head_ || compare_(x->key, key));
         Node* next = x->Next(level);
-        if (next == NULL || compare_(next->key, key) >= 0)
+        if (next == NULL || !compare_(next->key, key))
         {
             if (level == 0)
             {
@@ -268,8 +282,7 @@ SkipList<Key,Comparator>::FindLessThan(const Key& key) const
 }
 
 template <typename Key, class Comparator>
-typename SkipList<Key,Comparator>::Node* SkipList<Key,Comparator>::FindLast()
-const
+typename SkipList<Key,Comparator>::Node* SkipList<Key,Comparator>::FindLast() const
 {
     Node* x = head_;
     int level = max_height_ - 1;
@@ -308,10 +321,21 @@ SkipList<Key,Comparator>::SkipList()
 }
 
 template <typename Key, class Comparator>
+SkipList<Key,Comparator>::~SkipList()
+{
+	Node *cur = head_;
+	Node *next;
+	do
+	{
+		next = cur->Next(0);
+		free(cur);
+		cur = next;
+	} while(cur);
+}
+
+template <typename Key, class Comparator>
 void SkipList<Key,Comparator>::Insert(const Key& key)
 {
-    // TODO(opt): We can use a barrier-free variant of FindGreaterOrEqual()
-    // here since Insert() is externally synchronized.
     Node* prev[kMaxHeight];
     Node* x = FindGreaterOrEqual(key, prev);
 
@@ -350,17 +374,15 @@ bool SkipList<Key,Comparator>::Contains(const Key& key) const
     }
 }
 
-
-void show(const SkipList<int> &s)
+#include <string.h>
+void print_skiplist(SkipList<int> &s)
 {
-	SkipList<int>::Iterator it(&s);
 	int columns = 0;
-	for(it.SeekToFirst(); it.Valid(); it.Next())
-	{
+	SkipList<int>::Iterator it(&s);
+	for(SkipList<int>::Iterator it = s.begin(); it != s.end(); ++it)
 		++columns;
-	}
-	int max_height_ = s.get_max_height();
 
+	int max_height_ = s.debug_get_max_height();
 	int **p = new int*[max_height_];
 	for(int i=0; i<max_height_; ++i)
 	{
@@ -368,10 +390,9 @@ void show(const SkipList<int> &s)
 		memset(p[i], 0, sizeof(int)*columns);
 	}
 
-
 	{
-		int j=0;
-		for(it.SeekToFirst(); it.Valid(); it.Next(), ++j)
+		int j = 0;
+		for(SkipList<int>::Iterator it = s.begin(); it != s.end(); ++it, ++j)
 		{
 			for(int i=0; i<it.Height(); ++i)
 			{
@@ -382,6 +403,7 @@ void show(const SkipList<int> &s)
 
 	for(int i=max_height_-1; i>=0; --i)
 	{
+		printf("HEAD->");
 		for(int j=0; j<columns; ++j)
 		{
 			if(p[i][j] == 0)
@@ -390,7 +412,7 @@ void show(const SkipList<int> &s)
 				printf("%2d", p[i][j]);
 			printf("->");
 		}
-		printf("\n");
+		printf("NULL\n");
 	}
 	printf("\n");
 
@@ -405,9 +427,10 @@ int main()
 {
 	srand(time(NULL));
     SkipList<int> s;
-	SkipList<int>::Iterator it(&s);
-	for(int i=1;i<26;++i)
+	for(int i=10; i<55; ++i)
+	{
 		s.Insert(i);
-	show(s);
+		print_skiplist(s);
+	}
     return 0;
 }
