@@ -64,6 +64,13 @@ inline void SkipList<Key,Comparator>::Iterator::Prev()
 }
 
 template <typename Key, class Comparator>
+inline typename SkipList<Key,Comparator>::Iterator& SkipList<Key,Comparator>::Iterator::SeekToFirst()
+{
+	node_ = list_->head_->Next(0);
+	return *this;
+}
+
+template <typename Key, class Comparator>
 inline void SkipList<Key,Comparator>::Iterator::SeekToLast()
 {
     node_ = list_->FindLast();
@@ -209,7 +216,7 @@ SkipList<Key,Comparator>::~SkipList()
 }
 
 template <typename Key, class Comparator>
-void SkipList<Key,Comparator>::Insert(const Key& key)
+void SkipList<Key,Comparator>::insert(const Key& key)
 {
     Node* prev[kMaxHeight];
     Node* x = FindGreaterOrEqual(key, prev);
