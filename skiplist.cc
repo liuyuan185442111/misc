@@ -4,6 +4,8 @@
 #define assert(...)
 #endif
 
+#include <stdlib.h> // for rand()
+
 template <typename Key, class Comparator>
 struct SkipList<Key,Comparator>::Node
 {
@@ -37,21 +39,43 @@ SkipList<Key,Comparator>::NewNode(const Key& key, int height)
 }
 
 template <typename Key, class Comparator>
-inline const Key& SkipList<Key,Comparator>::Iterator::key() const
+inline int SkipList<Key,Comparator>::iterator::height() const
+{
+	assert(Valid());
+	return node_->height;
+}
+
+template <typename Key, class Comparator>
+inline const Key& SkipList<Key,Comparator>::iterator::operator*() const
 {
     assert(Valid());
     return node_->key;
 }
 
 template <typename Key, class Comparator>
-inline void SkipList<Key,Comparator>::Iterator::Next()
+inline typename SkipList<Key,Comparator>::iterator& SkipList<Key,Comparator>::iterator::operator++()
+{
+	Next();
+	return *this;
+}
+
+template <typename Key, class Comparator>
+inline typename SkipList<Key,Comparator>::iterator SkipList<Key,Comparator>::iterator::operator++(int)
+{
+	iterator tmp(*this);
+	Next();
+	return tmp;
+}
+
+template <typename Key, class Comparator>
+inline void SkipList<Key,Comparator>::iterator::Next()
 {
     assert(Valid());
     node_ = node_->Next(0);
 }
 
 template <typename Key, class Comparator>
-inline void SkipList<Key,Comparator>::Iterator::Prev()
+inline void SkipList<Key,Comparator>::iterator::Prev()
 {
     // Instead of using explicit "prev" links, we just search for the
     // last node that falls before key.
@@ -64,14 +88,14 @@ inline void SkipList<Key,Comparator>::Iterator::Prev()
 }
 
 template <typename Key, class Comparator>
-inline typename SkipList<Key,Comparator>::Iterator& SkipList<Key,Comparator>::Iterator::SeekToFirst()
+inline typename SkipList<Key,Comparator>::iterator& SkipList<Key,Comparator>::iterator::SeekToFirst()
 {
 	node_ = list_->head_->Next(0);
 	return *this;
 }
 
 template <typename Key, class Comparator>
-inline void SkipList<Key,Comparator>::Iterator::SeekToLast()
+inline void SkipList<Key,Comparator>::iterator::SeekToLast()
 {
     node_ = list_->FindLast();
     if (node_ == list_->head_)
@@ -79,7 +103,6 @@ inline void SkipList<Key,Comparator>::Iterator::SeekToLast()
         node_ = NULL;
     }
 }
-
 
 template <typename Key, class Comparator>
 int SkipList<Key,Comparator>::RandomHeight()
@@ -91,9 +114,13 @@ int SkipList<Key,Comparator>::RandomHeight()
     {
         height++;
     }
-    assert(height > 0);
-    assert(height <= kMaxHeight);
     return height;
+}
+
+template <typename Key, class Comparator>
+bool SkipList<Key,Comparator>::Equal(const Key& a, const Key& b) const
+{
+	return !compare_(a, b) && !compare_(b, a);
 }
 
 template <typename Key, class Comparator>
@@ -108,7 +135,7 @@ typename SkipList<Key,Comparator>::Node* SkipList<Key,Comparator>::FindGreaterOr
 {
     Node* x = head_;
     int level = max_height_ - 1;
-	if(level < 0) return NULL;
+	if (level < 0) return NULL;
     while (true)
     {
         Node* next = x->Next(level);
@@ -139,6 +166,7 @@ SkipList<Key,Comparator>::FindLessThan(const Key& key) const
 {
     Node* x = head_;
     int level = max_height_ - 1;
+	if (level < 0) return NULL;
     while (true)
     {
         assert(x == head_ || compare_(x->key, key));
@@ -167,6 +195,7 @@ typename SkipList<Key,Comparator>::Node* SkipList<Key,Comparator>::FindLast() co
 {
     Node* x = head_;
     int level = max_height_ - 1;
+	if (level < 0) return NULL;
     while (true)
     {
         Node* next = x->Next(level);
@@ -192,7 +221,7 @@ typename SkipList<Key,Comparator>::Node* SkipList<Key,Comparator>::FindLast() co
 template <typename Key, class Comparator>
 SkipList<Key,Comparator>::SkipList()
     : compare_(Comparator()),
-      head_(NewNode(0 /* any key will do */, kMaxHeight)),
+      head_(NewNode(Key() /* any key will do */, kMaxHeight)),
       max_height_(0)
 {
     for (int i = 0; i < kMaxHeight; i++)
@@ -249,8 +278,8 @@ size_t SkipList<Key,Comparator>::erase(const Key& key)
     Node* x = FindGreaterOrEqual(key, prev);
     if(x == NULL || !Equal(key, x->key)) return 0;
 
-	int i=0;
-	for(; i<x->height; ++i)
+	int i = 0;
+	for (; i < x->height; i++)
 	{
 		if(prev[i] == head_ && x->Next(i) == NULL)
 		{
@@ -260,7 +289,7 @@ size_t SkipList<Key,Comparator>::erase(const Key& key)
 		}
 		prev[i]->SetNext(i, x->Next(i));
 	}
-	for(; i<x->height; ++i)
+	for (; i < x->height; i++)
 		prev[i]->SetNext(i, NULL);
 
 	x->~Node();
@@ -268,17 +297,13 @@ size_t SkipList<Key,Comparator>::erase(const Key& key)
 }
 
 template <typename Key, class Comparator>
-bool SkipList<Key,Comparator>::Contains(const Key& key) const
+size_t SkipList<Key,Comparator>::count(const Key& key) const
 {
     Node* x = FindGreaterOrEqual(key, NULL);
     if (x != NULL && Equal(key, x->key))
-    {
-        return true;
-    }
+        return 1;
     else
-    {
-        return false;
-    }
+        return 0;
 }
 
 #ifndef DEBUG

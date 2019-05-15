@@ -1,10 +1,10 @@
 #include "skiplist.h"
 #include <string.h>
 
-void print_skiplist(SkipList<int> &s)
+void print_skiplist(SkipList<const int> &s)
 {
 	int columns = 0;
-	for(SkipList<int>::Iterator it = s.begin(); it != s.end(); ++it)
+	for(SkipList<const int>::iterator it = s.begin(); it != s.end(); ++it)
 		++columns;
 
 	int max_height = s.max_height();
@@ -17,11 +17,11 @@ void print_skiplist(SkipList<int> &s)
 
 	{
 		int j = 0;
-		for(SkipList<int>::Iterator it = s.begin(); it != s.end(); ++it, ++j)
+		for(SkipList<const int>::iterator it = s.begin(); it != s.end(); ++it, ++j)
 		{
-			for(int i=0; i<it.Height(); ++i)
+			for(int i=0; i<it.height(); ++i)
 			{
-				p[i][j] = it.key();
+				p[i][j] = *it;
 			}
 		}
 	}
@@ -53,7 +53,7 @@ void print_skiplist(SkipList<int> &s)
 int main()
 {
 	srand(time(NULL));
-    SkipList<int> s;
+    SkipList<const int> s;
 	for(int i=80; i>60; --i) s.insert(i);
 	print_skiplist(s);
 	for(int i=80; i>60; --i) s.erase(i);
@@ -64,7 +64,7 @@ int main()
 	}
 	for(int i=10; i<555999; ++i)
 	{
-		assert(s.Contains(i));
+		assert(s.count(i));
 	}
 	for(int i=10; i<555999; ++i)
 	{
@@ -72,5 +72,8 @@ int main()
 	}
 	s.insert(666687);
 	print_skiplist(s);
+
+	SkipList<const int>::iterator it = s.begin();
+	printf("%d\n", *it);
     return 0;
 }
