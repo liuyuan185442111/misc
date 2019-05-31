@@ -1,53 +1,108 @@
-db/dbformat.h
+#include <cassert>  
+#include <string>  
+#include <iostream>
+#include <chrono>
 
-// Grouping of constants.  We may want to make some of these
-// parameters set via options.
-namespace config {
-static const int kNumLevels = 7;
+#include "leveldb/db.h"  
 
-// Level-0 compaction is started when we hit this many files.
-static const int kL0_CompactionTrigger = 4;
+#define TEST_FREQUENCY  (10000)
 
-// Soft limit on number of level-0 files.  We slow down writes at this point.
-static const int kL0_SlowdownWritesTrigger = 8;
-
-// Maximum number of level-0 files.  We stop writes at this point.
-static const int kL0_StopWritesTrigger = 12;
-
-// Maximum level to which a new compacted memtable is pushed if it
-// does not create overlap.  We try to push to level 2 to avoid the
-// relatively expensive level 0=>1 compactions and to avoid some
-// expensive manifest file operations.  We do not push all the way to
-// the largest level since that can generate a lot of wasted disk
-// space if the same key space is being repeatedly overwritten.
-static const int kMaxMemCompactLevel = 2;
-
-}  // namespace config
-
-
-db/version_set.cc
-static const int kTargetFileSize = 2 * 1048576;
-
-// Maximum bytes of overlaps in grandparent (i.e., level+2) before we
-// stop building a single file in a level->level+1 compaction.
-static const int64_t kMaxGrandParentOverlapBytes = 10 * kTargetFileSize;
-
-// Maximum number of bytes in all compacted files.  We avoid expanding
-// the lower level file set of a compaction if it would make the
-// total compaction cover more than this many bytes.
-static const int64_t kExpandedCompactionByteSizeLimit = 25 * kTargetFileSize;
-
-static double MaxBytesForLevel(int level) {
-  // Note: the result for level zero is not really used since we set
-  // the level-0 compaction threshold based on number of files.
-  double result = 10 * 1048576.0;  // Result for both level-0 and level-1
-  while (level > 1) {
-    result *= 10;
-    level--;
-  }
-  return result;
+char* randomstr()
+{
+    static char buf[1024];
+    int len = rand() % 768 + 255;
+    for (int i = 0; i < len; ++i) {
+        buf[i] = 'A' + rand() % 26;
+    }
+    buf[len] = '\0';
+    return buf;
 }
 
-static uint64_t MaxFileSizeForLevel(int level) {
-  return kTargetFileSize;  // We could vary per level to reduce number of files?
+int main() 
+{
+    leveldb::DB* db;
+    leveldb::Options options;
+    options.create_if_missing = true;
+
+    // 打开数据库
+    leveldb::Status status = leveldb::DB::Open(options, "./testdb", &db);
+    assert(status.ok());
+
+    srand(2017);
+    std::string k[TEST_FREQUENCY];
+    for (int i = 0; i < TEST_FREQUENCY; ++i) {
+        k[i] = (randomstr());
+    }
+    std::string v("壹贰叁肆伍陆柒捌玖拾");
+    v.append(v).append(v).append(v).append(v).append(v);
+
+    // 测试添加
+    {
+        auto start = std::chrono::system_clock::now();
+        for (int i = 0; i < TEST_FREQUENCY; ++i) {
+            status = db->Put(leveldb::WriteOptions(), k[i], v);
+            assert(status.ok());
+        }
+        auto end = std::chrono::system_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+        std::cout << TEST_FREQUENCY <<"次添加耗时: "
+            << double(duration.count()) * std::chrono::microseconds::period::num / std::chrono::microseconds::period::den
+            << "秒" << std::endl;
+    }
+    // 测试获取
+    {
+        auto start = std::chrono::system_clock::now();
+        std::string v2[TEST_FREQUENCY];
+        for (int i = 0; i < TEST_FREQUENCY; ++i) {
+            status = db->Get(leveldb::ReadOptions(), k[i], &v2[i]);
+            assert(status.ok());
+        }
+        auto end = std::chrono::system_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+        std::cout << TEST_FREQUENCY <<"次获取耗时: "
+            << double(duration.count()) * std::chrono::microseconds::period::num / std::chrono::microseconds::period::den
+            << "秒" << std::endl;
+        // 验证获取结果是否正确
+        std::string ss;
+        for (int i = 0; i < TEST_FREQUENCY; ++i) {
+            if (v2[i] != v) {
+                std::cout << "第 " << i << " 个结果不正确" << std::endl;
+                std::cout << v2[i] << std::endl;
+            }
+        }
+    }
+    // 测试修改
+    {
+        auto start = std::chrono::system_clock::now();
+        v.append(v);
+        for (int i = 0; i < TEST_FREQUENCY; ++i) {
+            status = db->Put(leveldb::WriteOptions(), k[i], v);
+            assert(status.ok());
+        }
+        auto end = std::chrono::system_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+        std::cout << TEST_FREQUENCY <<"次修改耗时: "
+            << double(duration.count()) * std::chrono::microseconds::period::num / std::chrono::microseconds::period::den
+            << "秒" << std::endl;
+    }
+
+    // 测试删除
+    {
+        auto start = std::chrono::system_clock::now();
+        for (int i = 0; i < TEST_FREQUENCY; ++i) {
+            status = db->Delete(leveldb::WriteOptions(), k[i]);
+            assert(status.ok());
+        }
+        auto end = std::chrono::system_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+        std::cout << TEST_FREQUENCY <<"次删除耗时: "
+            << double(duration.count()) * std::chrono::microseconds::period::num / std::chrono::microseconds::period::den
+            << "秒" << std::endl;
+    }
+    delete db;
+    return 0;
 }
