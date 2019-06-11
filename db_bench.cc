@@ -165,6 +165,7 @@ static void AppendWithSpace(std::string* str, Slice msg) {
 
 class Stats {
  private:
+  const int threadid;
   double start_;
   double finish_;
   double seconds_;
@@ -176,7 +177,7 @@ class Stats {
   std::string message_;
 
  public:
-  Stats() { Start(); }
+  Stats(int tid) : threadid(tid) { Start(); }
 
   void Start() {
     next_report_ = 100;
@@ -217,7 +218,7 @@ class Stats {
       double micros = now - last_op_finish_;
       hist_.Add(micros);
       if (micros > 20000) {
-        fprintf(stderr, "long op: %.1f micros%30s\r", micros, "");
+        fprintf(stderr, "thread %d long op: %.1f micros%40s\r", threadid, micros, "");
         fflush(stderr);
       }
       last_op_finish_ = now;
@@ -232,7 +233,7 @@ class Stats {
       else if (next_report_ < 100000) next_report_ += 10000;
       else if (next_report_ < 500000) next_report_ += 50000;
       else                            next_report_ += 100000;
-      fprintf(stderr, "... finished %d ops%30s\r", done_, "");
+      fprintf(stderr, "thread %d ... finished %d ops%40s\r", threadid, done_, "");
       fflush(stderr);
     }
   }
@@ -297,7 +298,7 @@ struct ThreadState {
   SharedState* shared;
 
   ThreadState(int index)
-      : tid(index),
+      : tid(index), stats(tid),
         rand(1000 + index) {
   }
 };
