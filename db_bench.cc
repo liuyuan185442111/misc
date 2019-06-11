@@ -39,7 +39,6 @@
 //      compact     -- Compact the entire DB
 //      stats       -- Print DB stats
 //      sstables    -- Print sstable info
-//      heapprofile -- Dump a heap profile (if supported by this port)
 static const char* FLAGS_benchmarks =
     "fillseq,"
     "fillsync,"
@@ -181,12 +180,12 @@ class Stats {
 
   void Start() {
     next_report_ = 100;
-    last_op_finish_ = start_;
     hist_.Clear();
     done_ = 0;
     bytes_ = 0;
     seconds_ = 0;
     start_ = Env::Default()->NowMicros();
+    last_op_finish_ = start_;
     finish_ = start_;
     message_.clear();
   }
@@ -305,7 +304,8 @@ struct ThreadState {
 
 }  // namespace
 
-class Benchmark {
+class Benchmark
+{
  private:
   Cache* cache_;
   const FilterPolicy* filter_policy_;
@@ -501,12 +501,12 @@ class Benchmark {
         method = &Benchmark::SnappyCompress;
       } else if (name == Slice("snappyuncomp")) {
         method = &Benchmark::SnappyUncompress;
-      } else if (name == Slice("heapprofile")) {
-        HeapProfile();
       } else if (name == Slice("stats")) {
         PrintStats("leveldb.stats");
       } else if (name == Slice("sstables")) {
         PrintStats("leveldb.sstables");
+      } else if (name == Slice("nextrandom")) {
+        NextRandom();
       } else {
         if (name != Slice()) {  // No error message for empty name
           fprintf(stderr, "unknown benchmark '%s'\n", name.ToString().c_str());
@@ -675,6 +675,24 @@ class Benchmark {
     }
   }
 
+  void NextRandom() {
+	  leveldb::Random rand(3);
+	  std::set<int> sets;
+	  sets.insert(rand.Next());
+	  for(;;) {
+		  if(sets.size() % 1000000 == 0)
+			  printf("current set size: %d millon\n", (int)sets.size()/1000000);
+		  if(sets.size() >= 20000000) {
+			  printf("end: current set size: %d\n", (int)sets.size());
+			  return;
+		  }
+		  if(!sets.insert(rand.Next()).second) {
+			  printf("repeat: current set size: %d\n", (int)sets.size());
+			  return;
+		  }
+	  }
+  }
+
   void Open() {
     assert(db_ == NULL);
     Options options;
@@ -698,6 +716,10 @@ class Benchmark {
     DoWrite(thread, false);
   }
 
+  int RealKey(int k) {
+	  //return k % FLAGS_num;
+	  return k;
+  }
   void DoWrite(ThreadState* thread, bool seq) {
     if (num_ != FLAGS_num) {
       char msg[100];
@@ -712,7 +734,7 @@ class Benchmark {
     for (int i = 0; i < num_; i += entries_per_batch_) {
       batch.Clear();
       for (int j = 0; j < entries_per_batch_; j++) {
-        const int k = seq ? i+j : (thread->rand.Next() % FLAGS_num);
+        const int k = seq ? i+j : RealKey(thread->rand.Next());
         char key[100];
         snprintf(key, sizeof(key), "%016d", k);
         batch.Put(key, gen.Generate(value_size_));
@@ -760,7 +782,7 @@ class Benchmark {
     int found = 0;
     for (int i = 0; i < reads_; i++) {
       char key[100];
-      const int k = thread->rand.Next() % FLAGS_num;
+      const int k = RealKey(thread->rand.Next());
       snprintf(key, sizeof(key), "%016d", k);
       if (db_->Get(options, key, &value).ok()) {
         found++;
@@ -777,7 +799,7 @@ class Benchmark {
     std::string value;
     for (int i = 0; i < reads_; i++) {
       char key[100];
-      const int k = thread->rand.Next() % FLAGS_num;
+      const int k = RealKey(thread->rand.Next());
       snprintf(key, sizeof(key), "%016d.", k);
       db_->Get(options, key, &value);
       thread->stats.FinishedSingleOp();
@@ -803,7 +825,7 @@ class Benchmark {
     for (int i = 0; i < reads_; i++) {
       Iterator* iter = db_->NewIterator(options);
       char key[100];
-      const int k = thread->rand.Next() % FLAGS_num;
+      const int k = RealKey(thread->rand.Next());
       snprintf(key, sizeof(key), "%016d", k);
       iter->Seek(key);
       if (iter->Valid() && iter->key() == key) found++;
@@ -822,7 +844,7 @@ class Benchmark {
     for (int i = 0; i < num_; i += entries_per_batch_) {
       batch.Clear();
       for (int j = 0; j < entries_per_batch_; j++) {
-        const int k = seq ? i+j : (thread->rand.Next() % FLAGS_num);
+        const int k = seq ? i+j : RealKey(thread->rand.Next());
         char key[100];
         snprintf(key, sizeof(key), "%016d", k);
         batch.Delete(key);
@@ -859,7 +881,7 @@ class Benchmark {
           }
         }
 
-        const int k = thread->rand.Next() % FLAGS_num;
+        const int k = RealKey(thread->rand.Next());
         char key[100];
         snprintf(key, sizeof(key), "%016d", k);
         Status s = db_->Put(write_options_, key, gen.Generate(value_size_));
@@ -885,32 +907,12 @@ class Benchmark {
     }
     fprintf(stdout, "\n%s\n", stats.c_str());
   }
-
-  static void WriteToFile(void* arg, const char* buf, int n) {
-    reinterpret_cast<WritableFile*>(arg)->Append(Slice(buf, n));
-  }
-
-  void HeapProfile() {
-    char fname[100];
-    snprintf(fname, sizeof(fname), "%s/heap-%04d", FLAGS_db, ++heap_counter_);
-    WritableFile* file;
-    Status s = Env::Default()->NewWritableFile(fname, &file);
-    if (!s.ok()) {
-      fprintf(stderr, "%s\n", s.ToString().c_str());
-      return;
-    }
-    bool ok = port::GetHeapProfile(WriteToFile, file);
-    delete file;
-    if (!ok) {
-      fprintf(stderr, "heap profiling not supported\n");
-      Env::Default()->DeleteFile(fname);
-    }
-  }
 };
 
 }  // namespace leveldb
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
   FLAGS_write_buffer_size = leveldb::Options().write_buffer_size;
   FLAGS_block_size = leveldb::Options().block_size;
   FLAGS_open_files = leveldb::Options().max_open_files;
