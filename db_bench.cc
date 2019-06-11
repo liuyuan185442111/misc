@@ -18,6 +18,11 @@
 #include "util/mutexlock.h"
 #include "util/random.h"
 #include "util/testutil.h"
+#if defined(__linux)
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
 
 // Comma-separated list of operations to run in the specified order
 //   Actual benchmarks:
@@ -57,6 +62,8 @@ static const char* FLAGS_benchmarks =
     "snappycomp,"
     "snappyuncomp,"
     ;
+
+static bool err_redirect = false;
 
 // Number of key/values to place in database
 static int FLAGS_num = 1000000;
@@ -218,7 +225,10 @@ class Stats {
       double micros = now - last_op_finish_;
       hist_.Add(micros);
       if (micros > 20000) {
-        fprintf(stderr, "thread %d long op: %.1f micros%40s\r", threadid, micros, "");
+        if(!err_redirect)
+          fprintf(stderr, "thread %d long op: %.1f micros%40s\r", threadid, micros, "");
+        else
+          fprintf(stderr, "thread %d long op: %.1f micros\n", threadid, micros);
         fflush(stderr);
       }
       last_op_finish_ = now;
@@ -233,8 +243,10 @@ class Stats {
       else if (next_report_ < 100000) next_report_ += 10000;
       else if (next_report_ < 500000) next_report_ += 50000;
       else                            next_report_ += 100000;
-      fprintf(stderr, "thread %d ... finished %d ops%40s\r", threadid, done_, "");
-      fflush(stderr);
+      if(!err_redirect) {
+        fprintf(stderr, "thread %d ... finished %d ops%40s\r", threadid, done_, "");
+        fflush(stderr);
+	  }
     }
   }
 
@@ -334,6 +346,7 @@ class Benchmark
              / 1048576.0));
     PrintWarnings();
     fprintf(stdout, "------------------------------------------------\n");
+	fflush(stdout);
   }
 
   void PrintWarnings() {
@@ -358,12 +371,12 @@ class Benchmark
   }
 
   void PrintEnvironment() {
-    fprintf(stderr, "LevelDB:    version %d.%d\n",
+    fprintf(stdout, "LevelDB:    version %d.%d\n",
             kMajorVersion, kMinorVersion);
 
 #if defined(__linux)
     time_t now = time(NULL);
-    fprintf(stderr, "Date:       %s", ctime(&now));  // ctime() adds newline
+    fprintf(stdout, "Date:       %s", ctime(&now));  // ctime() adds newline
 
     FILE* cpuinfo = fopen("/proc/cpuinfo", "r");
     if (cpuinfo != NULL) {
@@ -386,8 +399,8 @@ class Benchmark
         }
       }
       fclose(cpuinfo);
-      fprintf(stderr, "CPU:        %d * %s\n", num_cpus, cpu_type.c_str());
-      fprintf(stderr, "CPUCache:   %s\n", cache_size.c_str());
+      fprintf(stdout, "CPU:        %d * %s\n", num_cpus, cpu_type.c_str());
+      fprintf(stdout, "CPUCache:   %s\n", cache_size.c_str());
     }
 #endif
   }
@@ -623,7 +636,7 @@ class Benchmark
       bytes += size;
     }
     // Print so result is not dead
-    fprintf(stderr, "... crc=0x%x\r", static_cast<unsigned int>(crc));
+    fprintf(stdout, "... crc=0x%x\n", static_cast<unsigned int>(crc));
 
     thread->stats.AddBytes(bytes);
     thread->stats.AddMessage(label);
@@ -914,6 +927,18 @@ class Benchmark
 
 int main(int argc, char** argv)
 {
+#if defined(__linux)
+	struct stat buf;
+	fstat(fileno(stderr), &buf);
+	if(S_ISREG(buf.st_mode))
+		err_redirect = true;
+#endif
+  for (int i = 0; i < argc; i++) {
+    printf("%s ", argv[i]);
+  }
+  printf("\n\n");
+  fflush(stdout);
+
   FLAGS_write_buffer_size = leveldb::Options().write_buffer_size;
   FLAGS_block_size = leveldb::Options().block_size;
   FLAGS_open_files = leveldb::Options().max_open_files;
