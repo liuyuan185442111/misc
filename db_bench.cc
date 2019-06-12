@@ -519,8 +519,6 @@ class Benchmark
         PrintStats("leveldb.stats");
       } else if (name == Slice("sstables")) {
         PrintStats("leveldb.sstables");
-      } else if (name == Slice("nextrandom")) {
-        NextRandom();
       } else {
         if (name != Slice()) {  // No error message for empty name
           fprintf(stderr, "unknown benchmark '%s'\n", name.ToString().c_str());
@@ -687,24 +685,6 @@ class Benchmark
     } else {
       thread->stats.AddBytes(bytes);
     }
-  }
-
-  void NextRandom() {
-	  leveldb::Random rand(3);
-	  std::set<int> sets;
-	  sets.insert(rand.Next());
-	  for(;;) {
-		  if(sets.size() % 1000000 == 0)
-			  printf("current set size: %d millon\n", (int)sets.size()/1000000);
-		  if(sets.size() >= 20000000) {
-			  printf("end: current set size: %d\n", (int)sets.size());
-			  return;
-		  }
-		  if(!sets.insert(rand.Next()).second) {
-			  printf("repeat: current set size: %d\n", (int)sets.size());
-			  return;
-		  }
-	  }
   }
 
   void Open() {
