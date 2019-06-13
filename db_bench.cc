@@ -1035,6 +1035,10 @@ int main(int argc, char** argv)
       FLAGS_bloom_bits = n;
     } else if (sscanf(argv[i], "--open_files=%d%c", &n, &junk) == 1) {
       FLAGS_open_files = n;
+    } else if (sscanf(argv[i], "--weight_r=%d%c", &n, &junk) == 1) {
+      FLAGS_weight_r = n;
+    } else if (sscanf(argv[i], "--weight_u=%d%c", &n, &junk) == 1) {
+      FLAGS_weight_u = n;
     } else if (strncmp(argv[i], "--db=", 5) == 0) {
       FLAGS_db = argv[i] + 5;
     } else {
