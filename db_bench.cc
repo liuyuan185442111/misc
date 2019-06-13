@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif
+#include <numeric>
 
 // Comma-separated list of operations to run in the specified order
 //   Actual benchmarks:
@@ -111,6 +112,13 @@ static bool FLAGS_use_existing_db = false;
 // Use the db with the following name.
 static const char* FLAGS_db = NULL;
 
+//新插入权重
+int FLAGS_weight_w = 1;
+//读权重
+int FLAGS_weight_r = 1;
+//更新权重
+int FLAGS_weight_u = 1;
+
 namespace leveldb {
 
 namespace {
@@ -168,6 +176,18 @@ static void AppendWithSpace(std::string* str, Slice msg) {
     str->push_back(' ');
   }
   str->append(msg.data(), msg.size());
+}
+
+int ChooseItem(Random &rand, int *weight_vec, int vec_size)
+{
+	int sum = std::accumulate(weight_vec, weight_vec + vec_size, 0);
+	int r = rand.Uniform(sum);
+	for(int i=0; i<vec_size; ++i)
+	{
+		if(r < weight_vec[i]) return i;
+		r -= weight_vec[i];
+	}
+	return vec_size - 1;
 }
 
 class Stats {
@@ -519,6 +539,9 @@ class Benchmark
         PrintStats("leveldb.stats");
       } else if (name == Slice("sstables")) {
         PrintStats("leveldb.sstables");
+      } else if (name == Slice("wru")) {
+        fresh_db = true;
+		  method = &Benchmark::WriteReadUpdate;
       } else {
         if (name != Slice()) {  // No error message for empty name
           fprintf(stderr, "unknown benchmark '%s'\n", name.ToString().c_str());
@@ -901,6 +924,62 @@ class Benchmark
     }
     fprintf(stdout, "\n%s\n", stats.c_str());
   }
+
+  void WriteReadUpdate(ThreadState* thread) {
+		RandomGenerator gen;
+		std::vector<int> keys_vec;
+		Random r1(5939), r2(5399), r3(5333);
+		int weight_vec[3] = {FLAGS_weight_w, FLAGS_weight_r, FLAGS_weight_u};
+		char key_buf[100];
+		char val_buf[102400];
+		int n_find = 0, n_update = 0;
+		{
+			const int k = r2.Next();
+			snprintf(key_buf, sizeof(key_buf), "%016d", k);
+			size_t value_size = value_size_/2 + r3.Uniform(value_size_/2);
+			db_->Put(write_options_, Slice(key_buf, strlen(key_buf)), Slice(gen.Generate(value_size)));
+			keys_vec.push_back(k);
+		}
+		ReadOptions options;
+		while(keys_vec.size() < (size_t)num_)
+		{
+			switch(ChooseItem(r1,weight_vec,3))
+			{
+				case 0:
+					{
+						const int k = r2.Next();
+						snprintf(key_buf, sizeof(key_buf), "%016d", k);
+						size_t value_size = value_size_/2 + r3.Uniform(value_size_/2);
+						db_->Put(write_options_, Slice(key_buf, strlen(key_buf)), Slice(gen.Generate(value_size)));
+						keys_vec.push_back(k);
+					}
+					break;
+				case 1:
+					{
+						const int k = keys_vec[r3.Uniform(keys_vec.size())];
+						snprintf(key_buf, sizeof(key_buf), "%016d", k);
+						size_t val_len = sizeof(val_buf);
+						std::string value;
+						db_->Get(options, Slice(key_buf, strlen(key_buf)), &value);
+						++n_find;
+					}
+					break;
+				case 2:
+					{
+						const int k = keys_vec[r3.Uniform(keys_vec.size())];
+						snprintf(key_buf, sizeof(key_buf), "%016d", k);
+						size_t value_size = value_size_/2 + r3.Uniform(value_size_/2);
+						db_->Put(write_options_, Slice(key_buf, strlen(key_buf)), Slice(gen.Generate(value_size)));
+						++n_update;
+					}
+					break;
+			}
+			thread->stats.FinishedSingleOp();
+		}
+		char msg[100];
+		snprintf(msg, sizeof(msg), "(w:%d r:%d u:%d)", (int)keys_vec.size(), n_find, n_update);
+		thread->stats.AddMessage(msg);
+	}
 };
 
 }  // namespace leveldb
