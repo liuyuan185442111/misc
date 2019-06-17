@@ -118,6 +118,8 @@ int FLAGS_weight_w = 1;
 int FLAGS_weight_r = 1;
 //更新权重
 int FLAGS_weight_u = 1;
+//热点数据数量
+int FLAGS_hot_size = 10000;
 
 namespace leveldb {
 
@@ -956,7 +958,7 @@ class Benchmark
 					break;
 				case 1:
 					{
-						const int k = keys_vec[r3.Uniform(keys_vec.size())];
+						const int k = keys_vec[r3.Uniform(keys_vec.size()) % FLAGS_hot_size];
 						snprintf(key_buf, sizeof(key_buf), "%016d", k);
 						size_t val_len = sizeof(val_buf);
 						std::string value;
@@ -966,7 +968,7 @@ class Benchmark
 					break;
 				case 2:
 					{
-						const int k = keys_vec[r3.Uniform(keys_vec.size())];
+						const int k = keys_vec[r3.Uniform(keys_vec.size()) % FLAGS_hot_size];
 						snprintf(key_buf, sizeof(key_buf), "%016d", k);
 						size_t value_size = value_size_/2 + r3.Uniform(value_size_/2);
 						db_->Put(write_options_, Slice(key_buf, strlen(key_buf)), Slice(gen.Generate(value_size)));
@@ -1039,6 +1041,8 @@ int main(int argc, char** argv)
       FLAGS_weight_r = n;
     } else if (sscanf(argv[i], "--weight_u=%d%c", &n, &junk) == 1) {
       FLAGS_weight_u = n;
+    } else if (sscanf(argv[i], "--hot_size=%d%c", &n, &junk) == 1) {
+      FLAGS_hot_size = n;
     } else if (strncmp(argv[i], "--db=", 5) == 0) {
       FLAGS_db = argv[i] + 5;
     } else {
