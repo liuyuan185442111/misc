@@ -1,123 +1,95 @@
+//四则运算, 支持小括号
 #include <iostream>
 #include <string>
 #include <stack>
-using namespace std;
 
-stack<double> num_stk;
-stack<char> oper_stk;
-string experssion;
-double result;
-int number_flag;
-
-void pop_caculate();
-int cal_priority(char c);
-string::size_type get_number_size(string &expr,string::size_type currentPos);
-bool is_number(char c);
-void caculate(string expr);
-
-int main()
+namespace {
+bool is_number_char(char c)
 {
-    cout << "input experssion!" << endl;
-    while (cin >> experssion) {
-        number_flag = 0;
-        caculate(experssion);
-    }
+	return std::isdigit(c) || c == '-';
 }
-
-/*
- * get number length from currentPos of string expr
-*/
-string::size_type get_number_size(string &expr,string::size_type currentPos)
+size_t get_number_length(const std::string &expr, size_t currentPos)
 {
-    string numbers = "0123456789.";
-    return expr.find_first_not_of(numbers,currentPos) - currentPos;
+    const std::string numbers = "0123456789.";
+	size_t beginPos = (expr[currentPos] == '-') ? currentPos+1 : currentPos;
+    return expr.find_first_not_of(numbers,beginPos) - currentPos;
 } 
-
-/*
- * char c is number?
-*/
-bool is_number(char c)
+int get_priority(char c)
 {
-    string numbers = "0123456789-";
-    if (numbers.find(c) == string::npos) {
-        return false;
-    }
-    return true;
-
+	if (c == '(') return 0;
+	if (c == '+') return 1;
+	if (c == '-') return 2;
+	if (c == '*') return 3;
+	if (c == '/') return 4;
+	//其他运算符优先级等同于+, 计算结果恒为0
+	return 1;
 }
-/*
- * the main caculate method
-*/
-void caculate(string expr)
+void pop_caculate(std::stack<double> &num_stk, std::stack<char> &oper_stk)
 {
-    string::size_type size = 0;
-    double num = 0;
-    for (string::size_type i=0;i<expr.size();) {
-        if (number_flag == 0 && is_number(expr[i])) {
-            num = stod(expr.substr(i));
-            if (expr[i] == '-') {
-            ++i;
-            num = -stod(expr.substr(i));
-            }
-            size = get_number_size(expr,i);
-        num_stk.push(num);
-        i += size;
-        cout << "num:" << num << endl;
-            number_flag = 1;
-        } else {
-        number_flag = 0;
-        if (oper_stk.empty()) {
-                oper_stk.push(expr[i]);
-        } else if (expr[i] == '(') {
-            oper_stk.push(expr[i]);
-        } else if (expr[i] == ')') {
-                while (oper_stk.top() != '(') {
-                    pop_caculate();
-            }
-            oper_stk.pop();
-        } else if (cal_priority(expr[i]) <= cal_priority(oper_stk.top())) {
-                pop_caculate();
-            oper_stk.push(expr[i]);
-        } else {
-                oper_stk.push(expr[i]);
-        }
-        ++i;
-        }
-    }
-    while (!oper_stk.empty()) {
-        pop_caculate();
-    }
-    result = num_stk.top();
-    cout << result << endl;
-}
-/*
- * pop and caculate the two stack to caculate
-*/
-void pop_caculate()
-{
-    double left=0,right=0,res=0;
+    double right = num_stk.top();
+    num_stk.pop();
+    double left = num_stk.top();
+    num_stk.pop();
     char oper = oper_stk.top();
-    right = num_stk.top();
-    num_stk.pop();
-    left = num_stk.top();
-    num_stk.pop();
     oper_stk.pop();
+	double res = 0;
     if (oper == '+') res = left + right;
     else if (oper == '-') res = left - right;
     else if (oper == '*') res = left * right;
     else if (oper == '/') res = left / right;
     num_stk.push(res);
-    cout << "caculate:" << left << oper << right << "=" << res << endl;
+	std::cout << "caculate: " << left << oper << right << "=" << res << std::endl;
 }
-/* 
- *  caculate operator priority 
-*/
-int cal_priority(char c)
+}
+
+using namespace std;
+double caculate(const std::string &expr)
 {
-    if (c == '(') return 0;
-    else if (c == '+') return 1;
-    else if (c == '-') return 2;
-    else if (c == '*') return 3;
-    else if (c == '/') return 4;
-    return 0;
+	std::stack<double> num_stk;
+	std::stack<char> oper_stk;
+	bool number_flag = false;
+	for(size_t i=0,s=expr.size(); i<s; )
+	{
+		if(number_flag == false && is_number_char(expr[i]))
+		{
+			num_stk.push(strtod(&expr[i], nullptr));
+			std::cout << "resolve num " << strtod(&expr[i], nullptr) << std::endl;
+			i += get_number_length(expr, i);
+			number_flag = true;
+		}
+		else
+		{
+			number_flag = false;
+			if(oper_stk.empty()) {
+				oper_stk.push(expr[i]);
+			} else if(expr[i] == '(') {
+				oper_stk.push(expr[i]);
+			} else if(expr[i] == ')') {
+				while(oper_stk.top() != '(') {
+					pop_caculate(num_stk, oper_stk);
+				}
+				oper_stk.pop();
+			} else if(get_priority(expr[i]) <= get_priority(oper_stk.top())) {
+				pop_caculate(num_stk, oper_stk);
+				oper_stk.push(expr[i]);
+			} else {
+				oper_stk.push(expr[i]);
+			}
+			++i;
+		}
+	}
+	while(!oper_stk.empty()) {
+		pop_caculate(num_stk, oper_stk);
+	}
+	return num_stk.top();
+}
+
+int main()
+{
+	string experssion;
+    cout << "input experssion:" << endl;
+    while (cin >> experssion) {
+		cout << experssion << '=' << caculate(experssion) << endl << endl;
+    }
+	return 0;
 }
