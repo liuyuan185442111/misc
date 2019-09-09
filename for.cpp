@@ -1,60 +1,62 @@
-//½«×Ö·û´®ÀàĞÍµÄËÄÔòÔËËã±í´ïÊ½´æÈë¶ş²æÊ÷ÖĞ£¬Ö§³ÖĞ¡ÊıÔËËãºÍ¶à¼¶À¨ºÅÔËËã£¬Í¬Ê±ÄÜ¹»½«¶ş²æÊ÷½á¹¹Êä³öµ½ÆÁÄ»»òÕßÄ³¸ötxtÎÄ¼ş(Ò»¿Ãºá×ÅµÄ¶ş²æÊ÷)£¬Ä¿Ç°Ò»´óÈ±ÏİÊÇ²»ÄÜ¼ì²éÊäÈëÊÇ·ñÓĞÎó,
+//å°†å­—ç¬¦ä¸²ç±»å‹çš„å››åˆ™è¿ç®—è¡¨è¾¾å¼å­˜å…¥äºŒå‰æ ‘ä¸­ï¼Œæ”¯æŒå°æ•°è¿ç®—å’Œå¤šçº§æ‹¬å·è¿ç®—ï¼ŒåŒæ—¶èƒ½å¤Ÿå°†äºŒå‰æ ‘ç»“æ„è¾“å‡ºï¼Œç›®å‰ä¸€å¤§ç¼ºé™·æ˜¯ä¸èƒ½æ£€æŸ¥è¾“å…¥æ˜¯å¦æœ‰è¯¯
 
 /*
-²âÊÔÑùÀı:1+2  1*9/3  764+743/90*45+56-87   8*(9+2*(3+(4*(5+6*(7+8)))))    [(7.1-5.6)*0.9-1.15]/2.5       [(7-5)*0.9-1]/2   [(7-5)*9-1]/2
+æµ‹è¯•æ ·ä¾‹:1+2  1*9/3  764+743/90*45+56-87   8*(9+2*(3+(4*(5+6*(7+8)))))    [(7.1-5.6)*0.9-1.15]/2.5       [(7-5)*0.9-1]/2   [(7-5)*9-1]/2
         {[4+3*(5+6)]*[2+8*(1+2)]+5}/4    {[4+3*(5+6)]*[2+8*(1+2)]}/4 
         a+g  a+g/c
 */
 
-#include<iostream>//¼Ì³Ğ×Ôostream
-#include<fstream>
-#include<string>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <math.h>
+#include <algorithm>
 using namespace std;
 
-//½«×Ö·û´®×ª»»³ÉdoubleÀàĞÍÊı×Ö,Ö§³ÖĞ¡Êı
-double strToDouble(string& s,int start,int end)
+double strToDouble(const std::string& s, int start, int end)
 {
     double num = 0.0;
     int dot = 0;
-    for (int i = start; i <= end; ++i)
+    for(int i = start; i <= end; ++i)
     {
-        if (s[i] == '.')
+        if(s[i] == '.')
             dot = i;
         else
             num = num * 10 + s[i] - '0';
     }
-    if (dot != 0)
+    if(dot != 0)
         return num / pow(10, end - start - dot);
     return num;
 }
 
-//±í´ïÊ½»ùÀà
+//è¡¨è¾¾å¼åŸºç±»
 class Expression
 {
 public:
-    Expression() { leftChild = rightChild = nullptr; }
+    Expression() { leftChild = rightChild = NULL; }
     Expression(Expression* theLeftChild, Expression* theRightChild) {
         leftChild = theLeftChild; 
         rightChild = theRightChild; 
     }
 public:
-    Expression* leftChild, *rightChild;//ÔËËã·û½Úµã¿Ï¶¨ÓĞÁ½¸ö½Úµã:µ«ÊÇÎªÁË·½±ã·ÅÔÚ»ùÀàÖĞ
+    Expression* leftChild, *rightChild;//è¿ç®—ç¬¦èŠ‚ç‚¹è‚¯å®šæœ‰ä¸¤ä¸ªèŠ‚ç‚¹:ä½†æ˜¯ä¸ºäº†æ–¹ä¾¿æ”¾åœ¨åŸºç±»ä¸­
 };
-//³£ÊıÀà
+
+//å¸¸æ•°ç±»
 class Constant :public Expression
 {
     friend class Operation;
-    friend double getResult(Expression*);//·µ»Ø¶ş²æÊ÷ÔËËã½á¹¹
+    friend double getResult(Expression*);//è¿”å›äºŒå‰æ ‘è¿ç®—ç»“æ„
 public:
     Constant(string value) { this->value = value; }//O(1)
 private:
-    string value;//¼ÈÄÜ´æÊı×ÖÓÖÄÜ´æ±äÁ¿
+    string value;//æ—¢èƒ½å­˜æ•°å­—åˆèƒ½å­˜å˜é‡
 };
-//ÔËËã·ûÀà
+//è¿ç®—ç¬¦ç±»
 class Operation :public Expression
 {
-    friend void output(Operation,ostream&);//Êä³öÊ÷µÄ½á¹¹
-    friend double getResult(Expression*);//·µ»Ø¶ş²æÊ÷ÔËËã½á¹¹
+    friend void output(Operation,ostream&);//è¾“å‡ºæ ‘çš„ç»“æ„
+    friend double getResult(Expression*);//è¿”å›äºŒå‰æ ‘è¿ç®—ç»“æ„
 public:
     Operation(Expression* theLeftChild, char theType, Expression* theRightChild)//O(1)
     {
@@ -63,39 +65,29 @@ public:
         type = theType;
         depth = 1;
     }
-    void inOrder(Expression* ,int ,ostream& out)const;//ÖĞĞò±éÀúO(n)
+    void inOrder(Expression* ,int ,ostream& out)const;//ä¸­åºéå†O(n)
 private:
-    char type;//+ - * / ËÄÖÖÔËËã·ûÖĞµÄÒ»ÖÖ
-    int depth;//µİ¹éÉî¶È
+    char type;//+ - * / å››ç§è¿ç®—ç¬¦ä¸­çš„ä¸€ç§
+    int depth;//é€’å½’æ·±åº¦
 };
-//×¢£ºÕâ¶ù±ØĞë¼ÓÒıÓÃ,ÇÒcout±ØĞëÊ¹ÓÃostream,¶ø²»ÄÜÊÇiostream£¬ÒòÎªiostreamÊÇostream×ÓÀà
-//Õâ¶ùÊ¹ÓÃcout·½±ãÖØ¶¨Ïò£¬ÄÜ¹»Ñ¡ÔñĞ´Èë¶ÔÏó
+
+//æ³¨ï¼šè¿™å„¿å¿…é¡»åŠ å¼•ç”¨,ä¸”coutå¿…é¡»ä½¿ç”¨ostream,è€Œä¸èƒ½æ˜¯iostreamï¼Œå› ä¸ºiostreamæ˜¯ostreamå­ç±»
+//è¿™å„¿ä½¿ç”¨coutæ–¹ä¾¿é‡å®šå‘ï¼Œèƒ½å¤Ÿé€‰æ‹©å†™å…¥å¯¹è±¡
 void output(Operation o,ostream& out=cout)//O(1)
 {
-    //Êä³öÊ±ÓÃµ½ÁËÖĞĞò±éÀú
-    o.inOrder(&o, o.depth,out);
-}
-void deleteSpace(string& s)//È¥³ı×Ö·û´®ÖĞµÄ¿Õ¸ñ  O(n)
-{
-    string expression = "";
-    for (size_t i = 0; i < s.size(); ++i)
-    {
-        if (s[i] != ' ')
-            expression += s[i];
-    }
-    s = expression;
-    //cout << s << endl;
+    //è¾“å‡ºæ—¶ç”¨åˆ°äº†ä¸­åºéå†
+    o.inOrder(&o, o.depth, out);
 }
 double getResult(Expression* o)//O(n)
 {
-    //Ê¹ÓÃºóĞò±éÀúµÄË¼Ïë
+    //ä½¿ç”¨ååºéå†çš„æ€æƒ³
     double leftResult = 0,rightResult=0;
-    //Èç¹ûÊÇ×ó×ÓÊ÷²»Îª¿Õ·µ»Ø×ó×ÓÊ÷µÄÔËËã½á¹û£¬·ñÔòËµÃ÷Õâ¸ö½ÚµãÊÇÒ¶×Ó£¬·µ»ØÒ¶×ÓµÄÖµ¼´¿É
+    //å¦‚æœæ˜¯å·¦å­æ ‘ä¸ä¸ºç©ºè¿”å›å·¦å­æ ‘çš„è¿ç®—ç»“æœï¼Œå¦åˆ™è¯´æ˜è¿™ä¸ªèŠ‚ç‚¹æ˜¯å¶å­ï¼Œè¿”å›å¶å­çš„å€¼å³å¯
     if (o->leftChild)leftResult = getResult(o->leftChild);
     else return strToDouble(((Constant*)o)->value,0, (((Constant*)o)->value).length()-1);
     if (o->rightChild)rightResult = getResult(o->rightChild);
     else return strToDouble(((Constant*)o)->value, 0, (((Constant*)o)->value).length() - 1);
-    //È¡³öÔËËã·û
+    //å–å‡ºè¿ç®—ç¬¦
     switch (((Operation*)o)->type)
     {
     case '+':return leftResult + rightResult; 
@@ -105,7 +97,7 @@ double getResult(Expression* o)//O(n)
     }
     return 0;
 }
-//ÔËËã·ûÀà·½·¨ÊµÏÖ
+//è¿ç®—ç¬¦ç±»æ–¹æ³•å®ç°
 void Operation::inOrder(Expression* t,int d,ostream& out)const//O(n)
 {
     ++d;
@@ -121,14 +113,14 @@ void Operation::inOrder(Expression* t,int d,ostream& out)const//O(n)
         inOrder(t->leftChild,d,out);
     }
 }
-//¼ì²éÊÇ·ñĞèÒªÉ¾³ıÁ½¶ËÀ¨ºÅ
+//æ£€æŸ¥æ˜¯å¦éœ€è¦åˆ é™¤ä¸¤ç«¯æ‹¬å·
 bool deleteBracket(string& expression,int& start,int& end) //O(n)
 {
     int lastPS = -1, lastMD = -1;
-    int brackets = 0;//ÓÃÀ´¼ÇÂ¼À¨ºÅÊı£¬Åöµ½(¼ÓÒ»£¬Åöµ½)¼õÒ»£¬µ±bracketsÎª0Ê±±íÊ¾µ±Ç°¶ÁÈ¡µÄ×Ö·ûÔÚÀ¨ºÅÍâ
+    int brackets = 0;//ç”¨æ¥è®°å½•æ‹¬å·æ•°ï¼Œç¢°åˆ°(åŠ ä¸€ï¼Œç¢°åˆ°)å‡ä¸€ï¼Œå½“bracketsä¸º0æ—¶è¡¨ç¤ºå½“å‰è¯»å–çš„å­—ç¬¦åœ¨æ‹¬å·å¤–
         for (size_t i = start; i <= end; ++i)
         {
-            //µ±Ç°×Ö·û²»ÊÇÊı×Ö
+            //å½“å‰å­—ç¬¦ä¸æ˜¯æ•°å­—
             if (!(expression[i] >= '0'&&expression[i] <= '9') && !(expression[i] >= 'a'&&expression[i] <= 'z') && !(expression[i] >= 'A'&&expression[i] <= 'Z') && !(expression[i] == '.'))
             {
                 switch (expression[i])
@@ -152,11 +144,11 @@ bool deleteBracket(string& expression,int& start,int& end) //O(n)
         return false;
 }
 
-//×î¹Ø¼üµÄº¯Êı:½«×Ö·û´®×ª»¯³ÉÊ÷
-Expression* strToTree(string& expression, int start, int end)//startÎª×Ö·û´®ÖĞÒª×ª»¯²¿·ÖµÄÆğÊ¼Î»ÖÃ£¬endÊÇ½áÊøÎ»ÖÃO(n^2)
+//æœ€å…³é”®çš„å‡½æ•°:å°†å­—ç¬¦ä¸²è½¬åŒ–æˆæ ‘
+Expression* strToTree(string& expression, int start, int end)//startä¸ºå­—ç¬¦ä¸²ä¸­è¦è½¬åŒ–éƒ¨åˆ†çš„èµ·å§‹ä½ç½®ï¼Œendæ˜¯ç»“æŸä½ç½®O(n^2)
 {
-    //Èç¹û±í´ïÊ½×îÍâ²ã´øÀ¨ºÅ£¬½«ÆğÊ¼Î»ÖÃºÍ½áÊøÎ»ÖÃ·Ö±ğÏòÖĞ¼äÃ»ÓĞÀ¨ºÅµÄÎ»ÖÃ¿¿
-    //ÎªÁË²»Ó°Ïì (1+2)*(3+4) ÕâÖÖ±í´ïÊ½µÄ¼ÆËã£¬Òª¼ì²é×óÓÒÀ¨ºÅÊÇ·ñ¿ÉÒÔÈ¥³ı:ÏÈ±éÀúÕû¸ö×Ö·û´®£¬ÕÒ³öËãÊ½ÖĞÊÇ·ñ´æÔÚlastPS(×îºóÒ»´Î³öÏÖµÄ²»ÔÚÀ¨ºÅÖĞµÄ¼ÓºÅ»ò¼õºÅ)ºÍlastMD(×îºóÒ»´Î³öÏÖµÄ²»ÔÚÀ¨ºÅÖĞµÄ³ËºÅ»ò³ıºÅ)
+    //å¦‚æœè¡¨è¾¾å¼æœ€å¤–å±‚å¸¦æ‹¬å·ï¼Œå°†èµ·å§‹ä½ç½®å’Œç»“æŸä½ç½®åˆ†åˆ«å‘ä¸­é—´æ²¡æœ‰æ‹¬å·çš„ä½ç½®é 
+    //ä¸ºäº†ä¸å½±å“ (1+2)*(3+4) è¿™ç§è¡¨è¾¾å¼çš„è®¡ç®—ï¼Œè¦æ£€æŸ¥å·¦å³æ‹¬å·æ˜¯å¦å¯ä»¥å»é™¤:å…ˆéå†æ•´ä¸ªå­—ç¬¦ä¸²ï¼Œæ‰¾å‡ºç®—å¼ä¸­æ˜¯å¦å­˜åœ¨lastPS(æœ€åä¸€æ¬¡å‡ºç°çš„ä¸åœ¨æ‹¬å·ä¸­çš„åŠ å·æˆ–å‡å·)å’ŒlastMD(æœ€åä¸€æ¬¡å‡ºç°çš„ä¸åœ¨æ‹¬å·ä¸­çš„ä¹˜å·æˆ–é™¤å·)
     while (start <= end && (expression[start] == '(' && expression[end] == ')' || (expression[start] == '[' && expression[end] == ']') || (expression[start] == '{' && expression[end] == '}')))
     {
         if (deleteBracket(expression, start, end))
@@ -170,11 +162,11 @@ Expression* strToTree(string& expression, int start, int end)//startÎª×Ö·û´®ÖĞÒª
     int lastPS = -1, lastMD = -1;
     if (start > end)
         return new Constant("0");
-    bool findOperation = false;//¼ÇÂ¼ÊÇ·ñÓĞ²éÕÒµ½²Ù×÷·û£¬Èç¹ûÃ»ÓĞ±íÊ¾Õâ¸ö×Ö·û´®È«ÊÇÊı×Ö
-    //²éÕÒ×îºó³öÏÖµÄ¼Ó¼õºÅºÍ³Ë³ıºÅ
+    bool findOperation = false;//è®°å½•æ˜¯å¦æœ‰æŸ¥æ‰¾åˆ°æ“ä½œç¬¦ï¼Œå¦‚æœæ²¡æœ‰è¡¨ç¤ºè¿™ä¸ªå­—ç¬¦ä¸²å…¨æ˜¯æ•°å­—
+    //æŸ¥æ‰¾æœ€åå‡ºç°çš„åŠ å‡å·å’Œä¹˜é™¤å·
     for (int i = start; i <= end;++i)
     {
-        //µ±Ç°×Ö·û²»ÊÇÊı×Ö
+        //å½“å‰å­—ç¬¦ä¸æ˜¯æ•°å­—
         if (!(expression[i] >= '0'&&expression[i] <= '9') && !(expression[i]>='a'&&expression[i]<='z') && !(expression[i]>='A'&&expression[i]<='Z') &&!(expression[i]=='.'))
         {
             findOperation = true;
@@ -193,14 +185,14 @@ Expression* strToTree(string& expression, int start, int end)//startÎª×Ö·û´®ÖĞÒª
             }
         }
     }
-    //ÅĞ¶ÏÕâ¸ö±í´ïÊ½ÊÇ²»ÊÇÈ«ÊÇÊı×Ö
+    //åˆ¤æ–­è¿™ä¸ªè¡¨è¾¾å¼æ˜¯ä¸æ˜¯å…¨æ˜¯æ•°å­—
     if (!findOperation)
     {
         string str = "";
         return new Constant(str.assign(expression, start, end - start + 1));
     }
 
-    //Èç¹ûÕâ¸ö±í´ïÊ½ÖĞÃ»ÓĞ¼Ó¼õºÅ¾ÍÓÃ³Ë³ıºÅ
+    //å¦‚æœè¿™ä¸ªè¡¨è¾¾å¼ä¸­æ²¡æœ‰åŠ å‡å·å°±ç”¨ä¹˜é™¤å·
     if (lastPS == -1)
         lastPS = lastMD;
     return new Operation(strToTree(expression, start, lastPS - 1), expression[lastPS], strToTree(expression, lastPS + 1, end));
@@ -208,24 +200,14 @@ Expression* strToTree(string& expression, int start, int end)//startÎª×Ö·û´®ÖĞÒª
 
 int main()
 {
-    fstream fout;
-    fout.open("input.txt");
-    if (!fout.is_open())
-    {
-        cerr << "wrong" << endl;
-        system("pause");
-        exit(EXIT_FAILURE);
-    }
-    cout << "ÇëÊäÈëÕıÈ·¸ñÊ½µÄËÄÔòÔËËã±í´ïÊ½£¬×¢ÒâÔÚÓ¢ÎÄÊäÈë·¨ÏÂÊäÈëÀ¨ºÅ" << endl;
-    string expression;
-    getline(cin,expression);//cinÖ»ÄÜ¶ÁÈ¡
-    deleteSpace(expression);//È¥³ı¿Õ¸ñ
-    Expression* fun = strToTree(expression,0,expression.length()-1);
+	std::cout << "è¯·è¾“å…¥æ­£ç¡®æ ¼å¼çš„å››åˆ™è¿ç®—è¡¨è¾¾å¼ï¼Œæ³¨æ„åœ¨è‹±æ–‡è¾“å…¥æ³•ä¸‹è¾“å…¥æ‹¬å·ï¼š" << std::endl;
+	std::string expression;
+    getline(cin, expression);
+	expression.erase(std::remove(expression.begin(), expression.end(), ' '), expression.end());
 
-    output(*(Operation*)fun,fout);//Ö»´«ÈëÒ»¸ö²ÎÊı»áÔÚ¿ØÖÆÌ¨Êä³öÊ÷µÄ½á¹¹ 
+    Expression* fun = strToTree(expression,0,expression.length()-1);
     output(*(Operation*)fun);
     cout<<getResult(fun)<<endl;
 
-    system("pause");
     return 0;
 }
