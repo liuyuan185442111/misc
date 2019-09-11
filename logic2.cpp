@@ -47,7 +47,6 @@ bool pop_caculate(std::stack<int> &num_stk, std::stack<char> &oper_stk)
 }
 }
 
-//using namespace std;
 int caculate(const std::string &expr)
 {
 	std::stack<int> num_stk;
