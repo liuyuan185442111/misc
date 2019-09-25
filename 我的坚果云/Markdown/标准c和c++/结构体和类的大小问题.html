@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>结构体和类的大小问题</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>看这样一个笔试题：</p>
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-preprocessor">#include &lt;iostream&gt;</span>
+<span class="hljs-keyword">using</span> <span class="hljs-keyword">namespace</span> <span class="hljs-built_in">std</span>;
+<span class="hljs-preprocessor">#pragma pack(8)</span>
+<span class="hljs-keyword">struct</span> example1
+{
+    <span class="hljs-keyword">short</span> a;
+    <span class="hljs-keyword">int</span> b;
+};
+<span class="hljs-keyword">struct</span> example2
+{
+    <span class="hljs-keyword">char</span> c;
+    example1 struct1;
+    <span class="hljs-keyword">short</span> e;
+};
+<span class="hljs-preprocessor">#pragma pack()</span>
+<span class="hljs-keyword">int</span> main(<span class="hljs-keyword">int</span> argc, <span class="hljs-keyword">char</span>* argv[])
+{
+    example2 struct2;
+    <span class="hljs-built_in">cout</span> &lt;&lt; <span class="hljs-keyword">sizeof</span>(example1) &lt;&lt; endl;
+    <span class="hljs-built_in">cout</span> &lt;&lt; <span class="hljs-keyword">sizeof</span>(example2) &lt;&lt; endl;
+    <span class="hljs-built_in">cout</span> &lt;&lt; (<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)(&amp;struct2.struct1) - (<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)(&amp;struct2) &lt;&lt; endl;
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+<p>问程序的输出结果是什么？ <br>
+答案是 8，16，4</p>
+
+
+
+<h2 id="1-自然对界">1. 自然对界</h2>
+
+<p>struct是一种复合数据类型，其构成元素既可以是基本数据类型的变量，也可以是复合数据类型（如struct、union等）。对于struct，编译器会自动进行成员变量的对齐，以提高运算效率。缺省情况下，编译器为struct的每个成员按其自然对界（natural alignment）条件分配空间。各个成员按照它们被声明的顺序在内存中顺序存储，第一个成员的地址和整个结构的地址相同。 <br>
+自然对界指按struct的成员中size最大的成员对齐，例如： <br>
+struct natural_align <br>
+{ <br>
+char a; <br>
+short b; <br>
+char c; <br>
+}; <br>
+在上述struct中，size最大的是short，其长度为2字节，因而struct中的char成员a、c都以2为单位对齐，sizeof(natural_align)的结果等于6。如果改为： <br>
+struct natural_align <br>
+{ <br>
+char a; <br>
+int b; <br>
+char c; <br>
+}; <br>
+其结果则变为12。</p>
+
+<h2 id="2-指定对界">2. 指定对界</h2>
+
+<p>我们也可以屏蔽掉默认的对齐长度，编译器提供了”#pragma pack”来让用户自定义对齐长度。 <br>
+语法：<code>#pragma pack([push|pop][, identifier][, n])</code> <br>
+调用pack时不指定参数，n将被设成默认值； <br>
+push：可选参数，将当前指定的packing alignment进行压栈操作（这里的栈是编译器的栈），同时设置当前的packing alignment为n；如果n没有指定，则只将当前的packing alignment压栈。 <br>
+pop：可选参数，从栈中删除最顶端的记录；如果没有指定n，则当前栈顶记录即为新的packing alignment；如果指定了n，则n将成为新的packing aligment。 <br>
+n：可选参数，指定packing alignment的数值，以字节为单位，缺省数值是8，合法的数值是1、2、4、8、16。 <br>
+identifier：可选参数，当同push一起使用时，赋予当前被压入栈中的记录一个名称；当同pop一起使用时，pop出所有的记录直到identifier被pop出，如果identifier没有被找到，则忽略pop操作。</p>
+
+<pre class="prettyprint"><code class=" hljs cs"><span class="hljs-preprocessor">#<span class="hljs-keyword">pragma</span> pack(n)</span>
+将按照n个字节对齐
+<span class="hljs-preprocessor">#<span class="hljs-keyword">pragma</span> pack()</span>
+恢复默认对齐长度
+
+<span class="hljs-preprocessor">#<span class="hljs-keyword">pragma</span> pack(push,n)</span>
+把原来对齐长度压栈，并设新的为n
+<span class="hljs-preprocessor">#<span class="hljs-keyword">pragma</span> pack(pop)</span>
+恢复栈顶的对齐长度</code></pre>
+
+
+
+<h2 id="3-完整的对齐规则">3. 完整的对齐规则</h2>
+
+<p>总结整理猜测 by liuyuan185442111</p>
+
+<ul>
+<li>每个成员按其类型的对齐参数（通常是这个类型的大小）和指定对齐参数中较小的一个来进行内存地址对齐；</li>
+<li>复杂类型（如结构体）的对齐参数是它最长成员的对齐参数；</li>
+<li>结构体s1做为结构体s2的成员变量时s1的成员变量的内存布局和它单独出现时的内存布局相同；</li>
+<li>数组成员的内存分配情况完全等同于单个数组元素的堆砌，例如int a[3];就相当于int a1,a2,a3;一样；</li>
+<li>结构体对齐后的长度必须是所有成员最大对齐参数和指定对齐参数中较小的一个的整数倍。</li>
+</ul>
+
+<h3 id="例一">例一</h3>
+
+<p>struct s1 <br>
+{ <br>
+    char a; <br>
+    int b; <br>
+}; <br>
+struct s2 <br>
+{ <br>
+    char c; <br>
+    s1 d; <br>
+    long long e; <br>
+}; <br>
+sizeof(s1)是8，s1的对齐参数是最大的成员也就是b的大小，为4。 <br>
+c占1字节；d按4字节对齐；e占8字节，e按8字节对齐，所以内存布局就是这样：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs brainfuck"><span class="hljs-comment">c</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-comment">a</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span>
+<span class="hljs-comment">bbbb</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span><span class="hljs-literal">-</span>
+<span class="hljs-comment">eeeeeeee</span></code></pre>
+
+<p>检验如下：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-keyword">struct</span> s2 t;  
+<span class="hljs-built_in">printf</span>(<span class="hljs-string">"%d"</span>,<span class="hljs-keyword">sizeof</span>(<span class="hljs-keyword">struct</span> s2));  
+<span class="hljs-built_in">printf</span>(<span class="hljs-string">",%d"</span>,(<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)&amp;t.d-(<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)&amp;t.c);  
+<span class="hljs-built_in">printf</span>(<span class="hljs-string">",%d"</span>,(<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)&amp;t.d.b-(<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)&amp;t.d);  
+<span class="hljs-built_in">printf</span>(<span class="hljs-string">",%d\n"</span>,(<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)&amp;t.e-(<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span>)&amp;t.d.b);  
+<span class="hljs-comment">//输出是24,4,4,8.</span></code></pre>
+
+<h3 id="例二">例二</h3>
+
+<p>在例一开头加上<code>#pragma pack(4)</code>，输出结果为20,4,4,4 <br>
+内存布局为：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs livecodeserver">c<span class="hljs-comment">---</span>
+<span class="hljs-operator">a</span><span class="hljs-comment">---</span>
+bbbb
+eeee
+eeee</code></pre>
+
+
+
+<h2 id="延伸至类">延伸至类</h2>
+
+<p>c++的类又有点不一样，因为类中可能有虚指针，指向虚基类的指针。以下测试和结论基于window和vc。</p>
+
+<h3 id="继承">继承</h3>
+
+<pre><code>class A
+{
+    int ma;
+};
+class B:A
+{
+    int mb;
+};
+B b;
+</code></pre>
+
+<p>b的内存结构是ma，mb依次排列。也就是说，普通继承关系，派生类对象的内存布局是先基类的成员，后派生类自己的成员。具体规则和struct中有struct成员的规则相同。</p>
+
+<h3 id="虚函数">虚函数</h3>
+
+<p>带有虚函数的类，会有一个指向虚函数表的指针，这个指针会放在所有数据成员的前边，也就是说这个指针在对象内存区块的起始位置。</p>
+
+<pre class="prettyprint"><code class=" hljs cs">class A
+{
+    <span class="hljs-keyword">int</span> ma;
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-title">A</span>():<span class="hljs-title">ma</span>(1) {}
+    <span class="hljs-keyword">virtual</span> ~A() {}
+};
+class B:A
+{
+    <span class="hljs-keyword">int</span> mb;
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-title">B</span>():<span class="hljs-title">mb</span>(2) {}
+};
+B b;</code></pre>
+
+<p>b的内存布局是： <br>
+00 31 42 00 // 指向虚函数表的指针 <br>
+01 00 00 00 <br>
+02 00 00 00</p>
+
+
+
+<h3 id="虚继承">虚继承</h3>
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-keyword">class</span> A
+{
+    <span class="hljs-keyword">int</span> a;
+<span class="hljs-keyword">public</span>:
+    A():a(<span class="hljs-number">1</span>){}
+};
+
+<span class="hljs-keyword">class</span> B:<span class="hljs-keyword">virtual</span> A
+{
+    <span class="hljs-keyword">int</span> b;
+<span class="hljs-keyword">public</span>:
+    B():b(<span class="hljs-number">2</span>){}
+};
+
+<span class="hljs-keyword">class</span> C:<span class="hljs-keyword">virtual</span> A
+{
+    <span class="hljs-keyword">int</span> c;
+<span class="hljs-keyword">public</span>:
+    C():c(<span class="hljs-number">3</span>){}
+};
+
+<span class="hljs-keyword">class</span> D:B,C
+{
+    <span class="hljs-keyword">int</span> d;
+<span class="hljs-keyword">public</span>:
+    D():d(<span class="hljs-number">4</span>){}
+};
+
+<span class="hljs-keyword">void</span> main()
+{
+    A a;
+    B b;
+    C c;
+    D d;
+}</code></pre>
+
+<p>结果： <br>
+<img src="http://img.blog.csdn.net/20150526230134814" alt="对象的地址" title=""></p>
+
+<p><img src="http://img.blog.csdn.net/20150526230330236" alt="内存" title=""> <br>
+a： <br>
+01 00 00 00 <br>
+b： <br>
+1C 00 47 00 // 指针 <br>
+02 00 00 00 <br>
+01 00 00 00 <br>
+c： <br>
+28 00 47 00 // 指针 <br>
+03 00 00 00 <br>
+01 00 00 00 <br>
+d： <br>
+40 00 47 00 02 00 00 00 <br>
+34 00 47 00 03 00 00 00 <br>
+04 00 00 00 01 00 00 00</p>
+
+<p>b和c起始地址有一个指针，指向一个关于偏移量的数组，用来实现虚继承，关于这个指针，有些复杂，就不说了。 <br>
+还有一点，b,c,d中，class A中的数据都被放到了末尾。</p>
+
+
+
+<h3 id="例子">例子</h3>
+
+<pre class="prettyprint"><code class=" hljs vala"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">A</span>
+{</span>
+    <span class="hljs-keyword">double</span> a;
+};
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">B</span>:<span class="hljs-title">virtual</span> <span class="hljs-title">public</span> <span class="hljs-title">A</span>
+{</span>
+    <span class="hljs-keyword">int</span> b;
+};
+<span class="hljs-comment">//sizeof(A):8,sizeof(B):16</span></code></pre>
+
+<pre class="prettyprint"><code class=" hljs cs">class A
+{
+    <span class="hljs-keyword">double</span> a;
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-keyword">virtual</span> ~<span class="hljs-title">A</span>(){}
+};
+
+class B:<span class="hljs-keyword">public</span> A
+{
+    <span class="hljs-keyword">int</span> b;
+};
+<span class="hljs-comment">//sizeof(A):16,sizeof(B):24</span></code></pre>
+
+<h2 id="静态变量">静态变量</h2>
+
+<p>static成员存储在静态区，不占用类的大小。 <br>
+这样对类取sizeof和对象的sizeof就相同了。 <br>
+比如：</p>
+
+<pre class="prettyprint"><code class=" hljs vala"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Test</span>
+{</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> i;
+};
+<span class="hljs-keyword">int</span> Test::i = <span class="hljs-number">1</span>;</code></pre>
+
+<p><code>static int i;</code>相当于声明；<code>int Test::i = 1;</code>才是定义。 <br>
+i相当于一个全局变量，不过作用域限于Test。</p>
+
+<h2 id="参考">参考</h2>
+
+<p><a href="http://blog.chinaunix.net/uid-25445243-id-2354324.html">http://blog.chinaunix.net/uid-25445243-id-2354324.html</a> <br>
+<a href="http://blog.csdn.net/pizi0475/article/details/6292556">C++类的大小——sizeof()</a></p></div></body>
+</html>

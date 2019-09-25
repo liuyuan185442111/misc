@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STL的其他算法</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>在<a href="http://blog.csdn.net/liuyuan185442111/article/details/46553499" target="_blank">STL的基础算法</a>中说明了一些STL的一些基础算法，剩下的内容在下面说明。</p>
+
+<h2 id="迭代器">迭代器</h2>
+
+<p>每个STL算法的声明，都表现出他所需要的最低程度的迭代器类型。例如find()需要一个InputIterator，这是它的最低要求，但它也可以接受更高类型的迭代器，如ForwardIterator，BidirectionIterator或RandomAccessIterator。</p>
+
+
+
+<h2 id="接受函数对象">接受函数对象</h2>
+
+<p>许多STL算法不只支持一个版本。这一类算法的某个版本采用缺省运算行为，另一个版本提供额外参数，接受外界传入一个函数对象，以便采用其他策略，例如unique()。有些算法干脆将这样的两个版本分为不同名称的实体，附从的那个以_if作为结尾，例如find_if()。</p>
+
+<p>采用重载函数的那些算法接受的函数对象类型被声明为BinaryPredicate，它接受两个参数，返回true或false，通常具有判断两个参数是否相等的语义。</p>
+
+<p>以if结尾的算法需要的函数对象类型被声明为Predicate或UnaryPredicate，它接受一个参数，返回true或false，通常具有判断参数是否满足特定条件的语义。</p>
+
+
+
+<h2 id="质变算法">质变算法</h2>
+
+<p>质变算法（mutating algorithms）通常提供两个版本：一个是in-place版，就地改变其操作对象；另一个是copy版，将修改后的操作对象复制到它处。copy版总是以_copy作为函数名称的结尾，例如replace()和replace_copy()。并不是所有的质变算法都有copy版，例如sort()就没有。</p>
+
+
+
+<h2 id="关于删除元素">关于删除元素</h2>
+
+<p>如果经STL算法处理后，序列元素会减少，比如remove，unique，序列实际大小并没有减少，需要调用容器的erase放来来删除序列结尾的多余元素。</p>
+
+
+
+<h2 id="简单遍历">简单遍历</h2>
+
+<p>count，count_if <br>
+min_element，max_element <br>
+for_each，transform，generate <br>
+generate_n</p>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">/**************** 简单遍历 ****************/</span>
+
+<span class="hljs-comment">// 统计序列中等于val的元素的数目</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> T&gt;
+<span class="hljs-keyword">typename</span> iterator_traits&lt;InputIterator&gt;::difference_type
+count (InputIterator first, InputIterator last, <span class="hljs-keyword">const</span> T&amp; val)
+{
+    <span class="hljs-keyword">typename</span> iterator_traits&lt;InputIterator&gt;::difference_type ret = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        <span class="hljs-keyword">if</span> (*first == val) ++ret;
+        ++first;
+    }
+    <span class="hljs-keyword">return</span> ret;
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> UnaryPredicate&gt;
+<span class="hljs-keyword">typename</span> iterator_traits&lt;InputIterator&gt;::difference_type
+count_if (InputIterator first, InputIterator last, UnaryPredicate pred)
+{
+    <span class="hljs-keyword">typename</span> iterator_traits&lt;InputIterator&gt;::difference_type ret = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        <span class="hljs-keyword">if</span> (pred(*first)) ++ret;
+        ++first;
+    }
+    <span class="hljs-keyword">return</span> ret;
+}
+
+<span class="hljs-comment">// 返回序列中最小元素的位置</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator&gt;
+ForwardIterator min_element ( ForwardIterator first, ForwardIterator last )
+{
+    <span class="hljs-keyword">if</span> (first==last) <span class="hljs-keyword">return</span> last;
+    ForwardIterator smallest = first;
+
+    <span class="hljs-keyword">while</span> (++first!=last)
+        <span class="hljs-keyword">if</span> (*first&lt;*smallest)
+            smallest=first;
+    <span class="hljs-keyword">return</span> smallest;
+}
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> Compare&gt;
+ForwardIterator min_element (ForwardIterator first, ForwardIterator last, Compare comp);
+
+<span class="hljs-comment">// 返回序列中最大元素的位置</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator&gt;
+ForwardIterator max_element (ForwardIterator first, ForwardIterator last);
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> Compare&gt;
+ForwardIterator max_element (ForwardIterator first, ForwardIterator last, Compare comp);
+
+<span class="hljs-comment">// 对序列的每个元素调用fn</span>
+<span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> Function&gt;
+Function for_each(InputIterator first, InputIterator last, Function fn)
+{
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        fn (*first);
+        ++first;
+    }
+    <span class="hljs-keyword">return</span> fn;
+}
+
+<span class="hljs-comment">// 对序列的每个元素调用op, 将结果写入到新序列中</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> OutputIterator, <span class="hljs-keyword">class</span> UnaryOperator&gt;
+OutputIterator transform (InputIterator first1, InputIterator last1,
+                          OutputIterator result, UnaryOperator op)
+{
+    <span class="hljs-keyword">while</span> (first1 != last1)
+    {
+        *result = op(*first1);
+        ++result;
+        ++first1;
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator1, <span class="hljs-keyword">class</span> InputIterator2,
+         <span class="hljs-keyword">class</span> OutputIterator, <span class="hljs-keyword">class</span> BinaryOperation&gt;
+OutputIterator transform (InputIterator1 first1, InputIterator1 last1,
+                          InputIterator2 first2, OutputIterator result,
+                          BinaryOperation binary_op)
+{
+    <span class="hljs-keyword">while</span> (first1 != last1)
+    {
+        *result=binary_op(*first1,*first2++);
+        ++result;
+        ++first1;
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+
+<span class="hljs-comment">// 为序列元素赋值</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> Generator&gt;
+<span class="hljs-keyword">void</span> generate ( ForwardIterator first, ForwardIterator last, Generator gen )
+{
+    <span class="hljs-keyword">while</span> (first != last)
+    {
+        *first = gen();
+        ++first;
+    }
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> OutputIterator, <span class="hljs-keyword">class</span> Size, <span class="hljs-keyword">class</span> Generator&gt;
+<span class="hljs-keyword">void</span> generate_n ( OutputIterator first, Size n, Generator gen )
+{
+    <span class="hljs-keyword">while</span> (n&gt;<span class="hljs-number">0</span>)
+    {
+        *first = gen();
+        ++first;
+        --n;
+    }
+}</code></pre>
+
+
+
+<h2 id="二分查找">二分查找</h2>
+
+<p>lower_bound，upper_bound，equal_range，binary_search </p>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">/**************** 二分查找 ****************/</span>
+
+<span class="hljs-comment">// 返回序列中第一个不小于val的元素</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> T&gt;
+ForwardIterator lower_bound (ForwardIterator first, ForwardIterator last, <span class="hljs-keyword">const</span> T&amp; val);
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> T, <span class="hljs-keyword">class</span> Compare&gt;
+ForwardIterator lower_bound (ForwardIterator first, ForwardIterator last, <span class="hljs-keyword">const</span> T&amp; val, Compare comp);
+
+<span class="hljs-comment">// 返回序列中第一个大于val的元素</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> T&gt;
+ForwardIterator upper_bound (ForwardIterator first, ForwardIterator last, <span class="hljs-keyword">const</span> T&amp; val);
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> T, <span class="hljs-keyword">class</span> Compare&gt;
+ForwardIterator upper_bound (ForwardIterator first, ForwardIterator last, <span class="hljs-keyword">const</span> T&amp; val, Compare comp);
+
+<span class="hljs-comment">// 等价于make_pair(lower_bound(first,last,val), upper_bound(first,last,val));</span>
+<span class="hljs-comment">// 但效率会更高</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> T&gt;
+pair&lt;ForwardIterator,ForwardIterator&gt;
+equal_range (ForwardIterator first, ForwardIterator last, <span class="hljs-keyword">const</span> T&amp; val)
+{
+    ForwardIterator it = <span class="hljs-built_in">std</span>::lower_bound (first,last,val);
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">std</span>::make_pair ( it, <span class="hljs-built_in">std</span>::upper_bound(it,last,val) );
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> T, <span class="hljs-keyword">class</span> Compare&gt;
+pair&lt;ForwardIterator,ForwardIterator&gt;
+equal_range (ForwardIterator first, ForwardIterator last, <span class="hljs-keyword">const</span> T&amp; val, Compare comp);
+
+<span class="hljs-comment">// 二分查找序列中第一个与val等价的元素</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> T&gt;
+<span class="hljs-keyword">bool</span> binary_search (ForwardIterator first, ForwardIterator last, <span class="hljs-keyword">const</span> T&amp; val)
+{
+    first = <span class="hljs-built_in">std</span>::lower_bound(first,last,val);
+    <span class="hljs-keyword">return</span> (first!=last &amp;&amp; !(val&lt;*first));
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> T, <span class="hljs-keyword">class</span> Compare&gt;
+<span class="hljs-keyword">bool</span> binary_search (ForwardIterator first, ForwardIterator last, <span class="hljs-keyword">const</span> T&amp; val, Compare comp);</code></pre>
+
+
+
+<h2 id="部分排序">部分排序</h2>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">/**************** 部分排序 ****************/</span>
+<span class="hljs-comment">/**使用堆排序, 排序完毕, [first,middle)有序, [middle,last)不一定有序
+首先利用max_heap()将[first,Middle)组织成一个max-heap,
+然后将[middle,last)中的每一个元素与max-heap的最大值比较,
+如果小于该最大值, 就互换位置并重新保持max-heap的状态,
+当走遍[middle,last)时, 较大的元素都已经抽离出[first,middle),
+再以sort_heap()将[first,middle)做一次排序即可.
+*/</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> RandomAccessIterator&gt;
+<span class="hljs-keyword">void</span> partial_sort (RandomAccessIterator first, RandomAccessIterator middle,
+                   RandomAccessIterator last);
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> RandomAccessIterator, <span class="hljs-keyword">class</span> Compare&gt;
+<span class="hljs-keyword">void</span> partial_sort (RandomAccessIterator first, RandomAccessIterator middle,
+                   RandomAccessIterator last, Compare comp);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> RandomAccessIterator&gt;
+  RandomAccessIterator
+    partial_sort_copy (InputIterator first,InputIterator last,
+                       RandomAccessIterator result_first,
+                       RandomAccessIterator result_last);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> RandomAccessIterator, <span class="hljs-keyword">class</span> Compare&gt;
+  RandomAccessIterator
+    partial_sort_copy (InputIterator first,InputIterator last,
+                       RandomAccessIterator result_first,
+                       RandomAccessIterator result_last, Compare comp);</code></pre>
+
+
+
+<h2 id="randomshuffle">random_shuffle</h2>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">/**************** random_shuffle ****************/</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _RandomAccessIter&gt;
+<span class="hljs-keyword">inline</span> <span class="hljs-keyword">void</span> random_shuffle(_RandomAccessIter __first, _RandomAccessIter __last)
+{
+    <span class="hljs-keyword">if</span> (__first == __last) <span class="hljs-keyword">return</span>;
+    <span class="hljs-keyword">for</span> (_RandomAccessIter __i = __first + <span class="hljs-number">1</span>; __i != __last; ++__i)
+        iter_swap(__i, __first + rand() % ((__i - __first) + <span class="hljs-number">1</span>));
+}
+
+<span class="hljs-comment">// 随机数产生器通过引用传递, 因为每次重新构造一个随机数产生器, 产生的随机序列可能就会相同</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _RandomAccessIter, <span class="hljs-keyword">class</span> _RandomNumberGenerator&gt;
+<span class="hljs-keyword">void</span> random_shuffle(_RandomAccessIter __first, _RandomAccessIter __last,
+                    _RandomNumberGenerator&amp; __rand)
+{
+    <span class="hljs-keyword">if</span> (__first == __last) <span class="hljs-keyword">return</span>;
+    <span class="hljs-keyword">for</span> (_RandomAccessIter __i = __first + <span class="hljs-number">1</span>; __i != __last; ++__i)
+        iter_swap(__i, __first + __rand((__i - __first) + <span class="hljs-number">1</span>));
+}</code></pre>
+
+
+
+<h2 id="交换">交换</h2>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">// 交换两个序列</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator1, <span class="hljs-keyword">class</span> ForwardIterator2&gt;
+ForwardIterator2 swap_ranges (ForwardIterator1 first1, ForwardIterator1 last1,
+                              ForwardIterator2 first2)
+{
+    <span class="hljs-keyword">while</span> (first1!=last1)
+    {
+        swap (*first1, *first2);
+        ++first1;
+        ++first2;
+    }
+    <span class="hljs-keyword">return</span> first2;
+}
+
+<span class="hljs-comment">// 逆序序列</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> BidirectionalIterator&gt;
+<span class="hljs-keyword">void</span> reverse (BidirectionalIterator first, BidirectionalIterator last)
+{
+    <span class="hljs-keyword">while</span> ((first!=last)&amp;&amp;(first!=--last))
+    {
+        <span class="hljs-built_in">std</span>::iter_swap (first,last);
+        ++first;
+    }
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> BidirectionalIterator, <span class="hljs-keyword">class</span> OutputIterator&gt;
+OutputIterator reverse_copy (BidirectionalIterator first,
+                             BidirectionalIterator last, OutputIterator result)
+{
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        --last;
+        *result = *last;
+        ++result;
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+
+<span class="hljs-comment">// 翻转序列, 交换序列[first,middle)和[middle,last)</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator&gt;
+<span class="hljs-keyword">void</span> rotate (ForwardIterator first, ForwardIterator middle,
+             ForwardIterator last)
+{
+    ForwardIterator next = middle;
+    <span class="hljs-keyword">while</span> (first!=next)
+    {
+        swap (*first++,*next++);
+        <span class="hljs-keyword">if</span> (next==last) next=middle;
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (first==middle) middle=next;
+    }
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> OutputIterator&gt;
+OutputIterator rotate_copy (ForwardIterator first, ForwardIterator middle,
+                            ForwardIterator last, OutputIterator result)
+{
+    result=<span class="hljs-built_in">std</span>::copy (middle,last,result);
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">std</span>::copy (first,middle,result);
+}</code></pre>
+
+
+
+<h2 id="两个有序序列的操作">两个有序序列的操作</h2>
+
+<p>merge，set_union，set_intersection，set_difference，set_symmetric_difference，它们都是稳定的 <br>
+includes</p>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">// 将两个有序序列合并为一个</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator1, <span class="hljs-keyword">class</span> InputIterator2, <span class="hljs-keyword">class</span> OutputIterator&gt;
+OutputIterator merge (InputIterator1 first1, InputIterator1 last1,
+                      InputIterator2 first2, InputIterator2 last2,
+                      OutputIterator result);
+
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator1, <span class="hljs-keyword">class</span> InputIterator2,
+         <span class="hljs-keyword">class</span> OutputIterator, <span class="hljs-keyword">class</span> Compare&gt;
+OutputIterator merge (InputIterator1 first1, InputIterator1 last1,
+                      InputIterator2 first2, InputIterator2 last2,
+                      OutputIterator result, Compare comp);
+
+
+<span class="hljs-comment">// 可接受STL的set/multiset，不可接受hash_set/hash_multiset</span>
+<span class="hljs-comment">// 并集, 如果某个值在s1中出现m次, 在s2中出现n次, 那么该值在输出区间中会出现max(m,n)次, 其中m个来自s1, 其余来自s2</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _InputIter1, <span class="hljs-keyword">class</span> _InputIter2, <span class="hljs-keyword">class</span> _OutputIter&gt;
+_OutputIter set_union(_InputIter1 __first1, _InputIter1 __last1,
+                      _InputIter2 __first2, _InputIter2 __last2,
+                      _OutputIter __result)
+{
+    <span class="hljs-keyword">while</span> (__first1 != __last1 &amp;&amp; __first2 != __last2)
+    {
+        <span class="hljs-keyword">if</span> (*__first1 &lt; *__first2)
+        {
+            *__result = *__first1;
+            ++__first1;
+        }
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (*__first2 &lt; *__first1)
+        {
+            *__result = *__first2;
+            ++__first2;
+        }
+        <span class="hljs-keyword">else</span>
+        {
+            *__result = *__first1;
+            ++__first1;
+            ++__first2;
+        }
+        ++__result;
+    }
+    <span class="hljs-keyword">return</span> copy(__first2, __last2, copy(__first1, __last1, __result));
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _InputIter1, <span class="hljs-keyword">class</span> _InputIter2, <span class="hljs-keyword">class</span> _OutputIter,
+         <span class="hljs-keyword">class</span> _Compare&gt;
+_OutputIter set_union(_InputIter1 __first1, _InputIter1 __last1,
+                      _InputIter2 __first2, _InputIter2 __last2,
+                      _OutputIter __result, _Compare __comp);
+
+
+<span class="hljs-comment">// 交集</span>
+<span class="hljs-comment">// 如果某个值在s1中出现m次, 在s2中出现n次, 那么该值在输出区间中会出现min(m,n)次, 全部来自s1</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _InputIter1, <span class="hljs-keyword">class</span> _InputIter2, <span class="hljs-keyword">class</span> _OutputIter&gt;
+_OutputIter set_intersection(_InputIter1 __first1, _InputIter1 __last1,
+                             _InputIter2 __first2, _InputIter2 __last2,
+                             _OutputIter __result)
+{
+    <span class="hljs-keyword">while</span> (__first1 != __last1 &amp;&amp; __first2 != __last2)
+        <span class="hljs-keyword">if</span> (*__first1 &lt; *__first2)
+            ++__first1;
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (*__first2 &lt; *__first1)
+            ++__first2;
+        <span class="hljs-keyword">else</span>
+        {
+            *__result = *__first1;
+            ++__first1;
+            ++__first2;
+            ++__result;
+        }
+    <span class="hljs-keyword">return</span> __result;
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _InputIter1, <span class="hljs-keyword">class</span> _InputIter2, <span class="hljs-keyword">class</span> _OutputIter,
+         <span class="hljs-keyword">class</span> _Compare&gt;
+_OutputIter set_intersection(_InputIter1 __first1, _InputIter1 __last1,
+                             _InputIter2 __first2, _InputIter2 __last2,
+                             _OutputIter __result, _Compare __comp);
+
+<span class="hljs-comment">// 差集</span>
+<span class="hljs-comment">// 如果某个值在s1中出现m次, 在s2中出现n次, 那么该值在输出区间中会出现max(m-n,0)次, 全部来自s1</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _InputIter1, <span class="hljs-keyword">class</span> _InputIter2, <span class="hljs-keyword">class</span> _OutputIter&gt;
+_OutputIter set_difference(_InputIter1 __first1, _InputIter1 __last1,
+                           _InputIter2 __first2, _InputIter2 __last2,
+                           _OutputIter __result)
+{
+    <span class="hljs-keyword">while</span> (__first1 != __last1 &amp;&amp; __first2 != __last2)
+        <span class="hljs-keyword">if</span> (*__first1 &lt; *__first2)
+        {
+            *__result = *__first1;
+            ++__first1;
+            ++__result;
+        }
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (*__first2 &lt; *__first1)
+            ++__first2;
+        <span class="hljs-keyword">else</span>
+        {
+            ++__first1;
+            ++__first2;
+        }
+    <span class="hljs-keyword">return</span> copy(__first1, __last1, __result);
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _InputIter1, <span class="hljs-keyword">class</span> _InputIter2, <span class="hljs-keyword">class</span> _OutputIter,
+         <span class="hljs-keyword">class</span> _Compare&gt;
+_OutputIter set_difference(_InputIter1 __first1, _InputIter1 __last1,
+                           _InputIter2 __first2, _InputIter2 __last2,
+                           _OutputIter __result, _Compare __comp);
+
+
+<span class="hljs-comment">// 对称差集</span>
+<span class="hljs-comment">// (s1-s2)∪(s2-s1)</span>
+<span class="hljs-comment">// 如果某个值在s1中出现m次, 在s2中出现n次, 那么该值在输出区间中会出现|m-n|次, 如果m&gt;n, 来自s1;如果n&gt;m,来自s2</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _InputIter1, <span class="hljs-keyword">class</span> _InputIter2, <span class="hljs-keyword">class</span> _OutputIter&gt;
+_OutputIter
+set_symmetric_difference(_InputIter1 __first1, _InputIter1 __last1,
+                         _InputIter2 __first2, _InputIter2 __last2,
+                         _OutputIter __result)
+{
+    <span class="hljs-keyword">while</span> (__first1 != __last1 &amp;&amp; __first2 != __last2)
+        <span class="hljs-keyword">if</span> (*__first1 &lt; *__first2)
+        {
+            *__result = *__first1;
+            ++__first1;
+            ++__result;
+        }
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (*__first2 &lt; *__first1)
+        {
+            *__result = *__first2;
+            ++__first2;
+            ++__result;
+        }
+        <span class="hljs-keyword">else</span>
+        {
+            ++__first1;
+            ++__first2;
+        }
+    <span class="hljs-keyword">return</span> copy(__first2, __last2, copy(__first1, __last1, __result));
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _InputIter1, <span class="hljs-keyword">class</span> _InputIter2, <span class="hljs-keyword">class</span> _OutputIter,
+         <span class="hljs-keyword">class</span> _Compare&gt;
+_OutputIter
+set_symmetric_difference(_InputIter1 __first1, _InputIter1 __last1,
+                         _InputIter2 __first2, _InputIter2 __last2,
+                         _OutputIter __result,
+                         _Compare __comp);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator1, <span class="hljs-keyword">class</span> InputIterator2&gt;
+  <span class="hljs-keyword">bool</span> includes ( InputIterator1 first1, InputIterator1 last1,
+                  InputIterator2 first2, InputIterator2 last2 );
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator1, <span class="hljs-keyword">class</span> InputIterator2, <span class="hljs-keyword">class</span> Compare&gt;
+  <span class="hljs-keyword">bool</span> includes ( InputIterator1 first1, InputIterator1 last1,
+                  InputIterator2 first2, InputIterator2 last2, Compare comp );</code></pre>
+
+
+
+<h2 id="查找">查找</h2>
+
+<p>find，find_if，find_end*，find_first_of*，adjacent_find* <br>
+unique，unique_copy <br>
+search*，search_n*序列</p>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">// 查找序列2在序列1中第一次出现的位置</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator1, <span class="hljs-keyword">class</span> ForwardIterator2&gt;
+ForwardIterator1 search (ForwardIterator1 first1, ForwardIterator1 last1,
+                         ForwardIterator2 first2, ForwardIterator2 last2);
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator1, <span class="hljs-keyword">class</span> ForwardIterator2, <span class="hljs-keyword">class</span> BinaryPredicate&gt;
+ForwardIterator1 search (ForwardIterator1 first1, ForwardIterator1 last1,
+                         ForwardIterator2 first2, ForwardIterator2 last2,
+                         BinaryPredicate pred);
+
+<span class="hljs-comment">// 查找序列中连续count个val第一次出现的位置</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> Size, <span class="hljs-keyword">class</span> T&gt;
+ForwardIterator search_n (ForwardIterator first, ForwardIterator last,
+                          Size count, <span class="hljs-keyword">const</span> T&amp; val);
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> Size, <span class="hljs-keyword">class</span> T, <span class="hljs-keyword">class</span> BinaryPredicate&gt;
+ForwardIterator search_n ( ForwardIterator first, ForwardIterator last,
+                           Size count, <span class="hljs-keyword">const</span> T&amp; val, BinaryPredicate pred );
+
+<span class="hljs-comment">// 查找序列中与val相等的第一个元素的位置</span>
+<span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> T&gt;
+InputIterator find (InputIterator first, InputIterator last, <span class="hljs-keyword">const</span> T&amp; val)
+{
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        <span class="hljs-keyword">if</span> (*first==val) <span class="hljs-keyword">return</span> first;
+        ++first;
+    }
+    <span class="hljs-keyword">return</span> last;
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> UnaryPredicate&gt;
+InputIterator find_if (InputIterator first, InputIterator last, UnaryPredicate pred);
+
+<span class="hljs-comment">// 查找序列2在序列1中最后一次出现的位置</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator1, <span class="hljs-keyword">class</span> ForwardIterator2&gt;
+ForwardIterator1 find_end (ForwardIterator1 first1, ForwardIterator1 last1,
+                           ForwardIterator2 first2, ForwardIterator2 last2);
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator1, <span class="hljs-keyword">class</span> ForwardIterator2, <span class="hljs-keyword">class</span> BinaryPredicate&gt;
+ForwardIterator1 find_end (ForwardIterator1 first1, ForwardIterator1 last1,
+                           ForwardIterator2 first2, ForwardIterator2 last2,
+                           BinaryPredicate pred);
+
+<span class="hljs-comment">// 查找序列2中任一元素在序列1中第一次出现的位置</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator1, <span class="hljs-keyword">class</span> ForwardIterator2&gt;
+ForwardIterator1 find_first_of (ForwardIterator1 first1, ForwardIterator1 last1,
+                                ForwardIterator2 first2, ForwardIterator2 last2);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator1, <span class="hljs-keyword">class</span> ForwardIterator2, <span class="hljs-keyword">class</span> BinaryPredicate&gt;
+ForwardIterator1 find_first_of (ForwardIterator1 first1, ForwardIterator1 last1,
+                                ForwardIterator2 first2, ForwardIterator2 last2,
+                                BinaryPredicate pred);
+
+<span class="hljs-comment">// 查找序列中第一次出现连续两个元素相等的位置</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator&gt;
+ForwardIterator adjacent_find (ForwardIterator first, ForwardIterator last)
+{
+  <span class="hljs-keyword">if</span> (first != last)
+  {
+    ForwardIterator next=first; ++next;
+    <span class="hljs-keyword">while</span> (next != last) {
+      <span class="hljs-keyword">if</span> (*first == *next)     <span class="hljs-comment">// or: if (pred(*first,*next)), for version (2)</span>
+        <span class="hljs-keyword">return</span> first;
+      ++first; ++next;
+    }
+  }
+  <span class="hljs-keyword">return</span> last;
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> BinaryPredicate&gt;
+ForwardIterator adjacent_find (ForwardIterator first, ForwardIterator last,
+                               BinaryPredicate pred);
+
+<span class="hljs-comment">// 将连续若干个相等元素中除第一个外的元素删除</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator&gt;
+ForwardIterator unique (ForwardIterator first, ForwardIterator last);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> BinaryPredicate&gt;
+ForwardIterator unique (ForwardIterator first, ForwardIterator last,
+                        BinaryPredicate pred);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> OutputIterator&gt;
+OutputIterator unique_copy (InputIterator first, InputIterator last,
+                            OutputIterator result);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> OutputIterator, <span class="hljs-keyword">class</span> BinaryPredicate&gt;
+OutputIterator unique_copy (InputIterator first, InputIterator last,
+                            OutputIterator result, BinaryPredicate pred);</code></pre>
+
+
+
+<h2 id="替换">替换</h2>
+
+<p>replace，replace_if，replace_copy，replace_copy_if</p>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">// 将序列中所有等于old_value的元素的值赋为new_value</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> T&gt;
+<span class="hljs-keyword">void</span> replace (ForwardIterator first, ForwardIterator last,
+              <span class="hljs-keyword">const</span> T&amp; old_value, <span class="hljs-keyword">const</span> T&amp; new_value)
+{
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        <span class="hljs-keyword">if</span> (*first == old_value) *first=new_value;
+        ++first;
+    }
+}
+
+<span class="hljs-keyword">template</span> &lt; <span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> UnaryPredicate, <span class="hljs-keyword">class</span> T &gt;
+<span class="hljs-keyword">void</span> replace_if (ForwardIterator first, ForwardIterator last,
+                 UnaryPredicate pred, <span class="hljs-keyword">const</span> T&amp; new_value)
+{
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        <span class="hljs-keyword">if</span> (pred(*first)) *first=new_value;
+        ++first;
+    }
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> OutputIterator, <span class="hljs-keyword">class</span> T&gt;
+OutputIterator replace_copy (InputIterator first, InputIterator last,
+                             OutputIterator result, <span class="hljs-keyword">const</span> T&amp; old_value, <span class="hljs-keyword">const</span> T&amp; new_value)
+{
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        *result = (*first==old_value)? new_value: *first;
+        ++first;
+        ++result;
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> OutputIterator, <span class="hljs-keyword">class</span> UnaryPredicate, <span class="hljs-keyword">class</span> T&gt;
+OutputIterator replace_copy_if (InputIterator first, InputIterator last,
+                                OutputIterator result, UnaryPredicate pred,
+                                <span class="hljs-keyword">const</span> T&amp; new_value)
+{
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        *result = (pred(*first))? new_value: *first;
+        ++first;
+        ++result;
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+</code></pre>
+
+
+
+<h2 id="删除">删除</h2>
+
+<p>remove，remove_if，remove_copy，remove_copy_if</p>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">// 将序列中所有等于val的元素都删除</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> T&gt;
+ForwardIterator remove (ForwardIterator first, ForwardIterator last, <span class="hljs-keyword">const</span> T&amp; val)
+{
+    ForwardIterator result = first;
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        <span class="hljs-keyword">if</span> (!(*first == val))
+        {
+            *result = *first;
+            ++result;
+        }
+        ++first;
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> ForwardIterator, <span class="hljs-keyword">class</span> UnaryPredicate&gt;
+ForwardIterator remove_if (ForwardIterator first, ForwardIterator last,
+                           UnaryPredicate pred)
+{
+    ForwardIterator result = first;
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        <span class="hljs-keyword">if</span> (!pred(*first))
+        {
+            *result = *first;
+            ++result;
+        }
+        ++first;
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> OutputIterator, <span class="hljs-keyword">class</span> T&gt;
+OutputIterator remove_copy (InputIterator first, InputIterator last,
+                            OutputIterator result, <span class="hljs-keyword">const</span> T&amp; val)
+{
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        <span class="hljs-keyword">if</span> (!(*first == val))
+        {
+            *result = *first;
+            ++result;
+        }
+        ++first;
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator, <span class="hljs-keyword">class</span> OutputIterator, <span class="hljs-keyword">class</span> UnaryPredicate&gt;
+OutputIterator remove_copy_if (InputIterator first, InputIterator last,
+                               OutputIterator result, UnaryPredicate pred)
+{
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        <span class="hljs-keyword">if</span> (!pred(*first))
+        {
+            *result = *first;
+            ++result;
+        }
+        ++first;
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+</code></pre>
+
+
+
+<h2 id="复杂的算法">复杂的算法</h2>
+
+<p>还有一些复杂的算法，比如inplace_merge，stable_partition，stable_sort，不准备再看了。 <br>
+sort，stable_sort，nth_element  <br>
+inplace_merge <br>
+partition，stable_partition</p>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">// 就地合并</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> BidirectionalIterator&gt;
+<span class="hljs-keyword">void</span> inplace_merge (BidirectionalIterator first, BidirectionalIterator middle,
+                    BidirectionalIterator last);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> BidirectionalIterator, <span class="hljs-keyword">class</span> Compare&gt;
+<span class="hljs-keyword">void</span> inplace_merge (BidirectionalIterator first, BidirectionalIterator middle,
+                    BidirectionalIterator last, Compare comp);
+
+
+<span class="hljs-comment">// 将排好序后应处于nth位置的元素置于nth位置, 它之前的元素都小于等于它, 之后的元素都大于等于它, 但前后两个子序列不一定是有序的</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> RandomAccessIterator&gt;
+<span class="hljs-keyword">void</span> nth_element (RandomAccessIterator first, RandomAccessIterator nth,
+                  RandomAccessIterator last);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> RandomAccessIterator, <span class="hljs-keyword">class</span> Compare&gt;
+<span class="hljs-keyword">void</span> nth_element (RandomAccessIterator first, RandomAccessIterator nth,
+                  RandomAccessIterator last, Compare comp);
+
+<span class="hljs-comment">// 排序</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> RandomAccessIterator&gt;
+<span class="hljs-keyword">void</span> sort (RandomAccessIterator first, RandomAccessIterator last);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> RandomAccessIterator, <span class="hljs-keyword">class</span> Compare&gt;
+<span class="hljs-keyword">void</span> sort (RandomAccessIterator first, RandomAccessIterator last, Compare comp);
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> RandomAccessIterator&gt;
+<span class="hljs-keyword">void</span> stable_sort ( RandomAccessIterator first, RandomAccessIterator last );
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> RandomAccessIterator, <span class="hljs-keyword">class</span> Compare&gt;
+<span class="hljs-keyword">void</span> stable_sort ( RandomAccessIterator first, RandomAccessIterator last,
+                   Compare comp );
+
+<span class="hljs-comment">// 将序列分为两部分, 前半部分pred为true, 后半部分pred为false</span>
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> BidirectionalIterator, <span class="hljs-keyword">class</span> UnaryPredicate&gt;
+BidirectionalIterator partition (BidirectionalIterator first,
+                                 BidirectionalIterator last, UnaryPredicate pred)
+{
+    <span class="hljs-keyword">while</span> (first!=last)
+    {
+        <span class="hljs-keyword">while</span> (pred(*first))
+        {
+            ++first;
+            <span class="hljs-keyword">if</span> (first==last) <span class="hljs-keyword">return</span> first;
+        }
+        <span class="hljs-keyword">do</span>
+        {
+            --last;
+            <span class="hljs-keyword">if</span> (first==last) <span class="hljs-keyword">return</span> first;
+        }
+        <span class="hljs-keyword">while</span> (!pred(*last));
+        swap (*first,*last);
+        ++first;
+    }
+    <span class="hljs-keyword">return</span> first;
+}
+
+<span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> BidirectionalIterator, <span class="hljs-keyword">class</span> UnaryPredicate&gt;
+BidirectionalIterator stable_partition (BidirectionalIterator first,
+                                        BidirectionalIterator last,
+                                        UnaryPredicate pred);</code></pre>
+
+
+
+<h2 id="stl的rotate算法">STL的rotate算法</h2>
+
+<p>STL的rotate算法，针对迭代器的类型不同，有三种：</p>
+
+
+
+<h3 id="对于前向迭代器分组交换">对于前向迭代器，分组交换</h3>
+
+<p>若<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-1-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-1" style="width: 0.696em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.536em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-2"><span class="mi" id="MathJax-Span-3" style="font-family: MathJax_Math-italic;">a</span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 0.67em; vertical-align: -0.063em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-1">a</script>长度大于<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-2-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-4" style="width: 0.536em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.429em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-5"><span class="mi" id="MathJax-Span-6" style="font-family: MathJax_Math-italic;">b</span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.003em; vertical-align: -0.063em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-2">b</script>，将<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-3-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-7" style="width: 1.229em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-8"><span class="mi" id="MathJax-Span-9" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-10" style="font-family: MathJax_Math-italic;">b</span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.003em; vertical-align: -0.063em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-3">ab</script>分成<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-4-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-11" style="width: 2.936em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.349em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.709em 1000em 2.883em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-12"><span class="msubsup" id="MathJax-Span-13"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-14" style="font-family: MathJax_Math-italic;">a</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.536em;"><span class="mn" id="MathJax-Span-15" style="font-size: 70.7%; font-family: MathJax_Main;">0</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span><span class="msubsup" id="MathJax-Span-16"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-17" style="font-family: MathJax_Math-italic;">a</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.536em;"><span class="mn" id="MathJax-Span-18" style="font-size: 70.7%; font-family: MathJax_Main;">1</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span><span class="mi" id="MathJax-Span-19" style="font-family: MathJax_Math-italic;">b</span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.203em; vertical-align: -0.263em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-4">a_0a_1b</script>，交换<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-5-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-20" style="width: 1.229em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.763em 1000em 2.669em -0.424em); top: -2.344em; left: 0.003em;"><span class="mrow" id="MathJax-Span-21"><span class="msubsup" id="MathJax-Span-22"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-23" style="font-family: MathJax_Math-italic;">a</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.536em;"><span class="mn" id="MathJax-Span-24" style="font-size: 70.7%; font-family: MathJax_Main;">0</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.349em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 0.87em; vertical-align: -0.263em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-5">a_0</script>和<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-6-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-25" style="width: 0.536em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.429em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-26"><span class="mi" id="MathJax-Span-27" style="font-family: MathJax_Math-italic;">b</span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.003em; vertical-align: -0.063em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-6">b</script>，得<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-7-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-28" style="width: 2.936em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.349em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.709em 1000em 2.883em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-29"><span class="mi" id="MathJax-Span-30" style="font-family: MathJax_Math-italic;">b</span><span class="msubsup" id="MathJax-Span-31"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-32" style="font-family: MathJax_Math-italic;">a</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.536em;"><span class="mn" id="MathJax-Span-33" style="font-size: 70.7%; font-family: MathJax_Main;">1</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span><span class="msubsup" id="MathJax-Span-34"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-35" style="font-family: MathJax_Math-italic;">a</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.536em;"><span class="mn" id="MathJax-Span-36" style="font-size: 70.7%; font-family: MathJax_Main;">0</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.203em; vertical-align: -0.263em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-7">ba_1a_0</script>，只需再交换<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-8-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-37" style="width: 1.229em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.763em 1000em 2.669em -0.424em); top: -2.344em; left: 0.003em;"><span class="mrow" id="MathJax-Span-38"><span class="msubsup" id="MathJax-Span-39"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-40" style="font-family: MathJax_Math-italic;">a</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.536em;"><span class="mn" id="MathJax-Span-41" style="font-size: 70.7%; font-family: MathJax_Main;">1</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.349em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 0.87em; vertical-align: -0.263em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-8">a_1</script>和<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-9-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-42" style="width: 1.229em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.763em 1000em 2.669em -0.424em); top: -2.344em; left: 0.003em;"><span class="mrow" id="MathJax-Span-43"><span class="msubsup" id="MathJax-Span-44"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-45" style="font-family: MathJax_Math-italic;">a</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.536em;"><span class="mn" id="MathJax-Span-46" style="font-size: 70.7%; font-family: MathJax_Main;">0</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.349em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 0.87em; vertical-align: -0.263em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-9">a_0</script>。 <br>
+若<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-10-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-47" style="width: 0.696em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.536em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-48"><span class="mi" id="MathJax-Span-49" style="font-family: MathJax_Math-italic;">a</span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 0.67em; vertical-align: -0.063em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-10">a</script>长度小于<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-11-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-50" style="width: 0.536em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.429em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-51"><span class="mi" id="MathJax-Span-52" style="font-family: MathJax_Math-italic;">b</span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.003em; vertical-align: -0.063em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-11">b</script>，将<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-12-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-53" style="width: 1.229em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.963em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-54"><span class="mi" id="MathJax-Span-55" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-56" style="font-family: MathJax_Math-italic;">b</span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.003em; vertical-align: -0.063em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-12">ab</script>分成<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-13-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-57" style="width: 2.829em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.243em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.709em 1000em 2.883em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-58"><span class="mi" id="MathJax-Span-59" style="font-family: MathJax_Math-italic;">a</span><span class="msubsup" id="MathJax-Span-60"><span style="display: inline-block; position: relative; width: 0.856em; height: 0px;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-61" style="font-family: MathJax_Math-italic;">b</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.429em;"><span class="mn" id="MathJax-Span-62" style="font-size: 70.7%; font-family: MathJax_Main;">0</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span><span class="msubsup" id="MathJax-Span-63"><span style="display: inline-block; position: relative; width: 0.856em; height: 0px;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-64" style="font-family: MathJax_Math-italic;">b</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.429em;"><span class="mn" id="MathJax-Span-65" style="font-size: 70.7%; font-family: MathJax_Main;">1</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.203em; vertical-align: -0.263em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-13">ab_0b_1</script>，交换<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-14-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-66" style="width: 0.696em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.536em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-67"><span class="mi" id="MathJax-Span-68" style="font-family: MathJax_Math-italic;">a</span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 0.67em; vertical-align: -0.063em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-14">a</script>和<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-15-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-69" style="width: 1.069em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.856em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.496em 1000em 2.669em -0.424em); top: -2.344em; left: 0.003em;"><span class="mrow" id="MathJax-Span-70"><span class="msubsup" id="MathJax-Span-71"><span style="display: inline-block; position: relative; width: 0.856em; height: 0px;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-72" style="font-family: MathJax_Math-italic;">b</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.429em;"><span class="mn" id="MathJax-Span-73" style="font-size: 70.7%; font-family: MathJax_Main;">0</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.349em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.203em; vertical-align: -0.263em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-15">b_0</script>，得<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-16-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-74" style="width: 2.829em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.243em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.709em 1000em 2.883em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-75"><span class="msubsup" id="MathJax-Span-76"><span style="display: inline-block; position: relative; width: 0.856em; height: 0px;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-77" style="font-family: MathJax_Math-italic;">b</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.429em;"><span class="mn" id="MathJax-Span-78" style="font-size: 70.7%; font-family: MathJax_Main;">0</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span><span class="mi" id="MathJax-Span-79" style="font-family: MathJax_Math-italic;">a</span><span class="msubsup" id="MathJax-Span-80"><span style="display: inline-block; position: relative; width: 0.856em; height: 0px;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-81" style="font-family: MathJax_Math-italic;">b</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.429em;"><span class="mn" id="MathJax-Span-82" style="font-size: 70.7%; font-family: MathJax_Main;">1</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.203em; vertical-align: -0.263em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-16">b_0ab_1</script>，只需再交换<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-17-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-83" style="width: 0.696em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.536em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mrow" id="MathJax-Span-84"><span class="mi" id="MathJax-Span-85" style="font-family: MathJax_Math-italic;">a</span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 0.67em; vertical-align: -0.063em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-17">a</script> 和<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-18-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-86" style="width: 1.069em; display: inline-block;"><span style="display: inline-block; position: relative; width: 0.856em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.496em 1000em 2.669em -0.424em); top: -2.344em; left: 0.003em;"><span class="mrow" id="MathJax-Span-87"><span class="msubsup" id="MathJax-Span-88"><span style="display: inline-block; position: relative; width: 0.856em; height: 0px;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-89" style="font-family: MathJax_Math-italic;">b</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.344em; left: 0.429em;"><span class="mn" id="MathJax-Span-90" style="font-size: 70.7%; font-family: MathJax_Main;">1</span><span style="display: inline-block; width: 0px; height: 2.509em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.349em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.203em; vertical-align: -0.263em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-18">b_1</script>。 <br>
+不断进行划分和交换，直到不能再划分为止。 <br>
+总共执行n/2到n次swap操作。 <br>
+很容易用递归实现：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl">void forward_rotate(<span class="hljs-keyword">int</span> <span class="hljs-variable">*first</span>, <span class="hljs-keyword">int</span> <span class="hljs-variable">*middle</span>, <span class="hljs-keyword">int</span> <span class="hljs-variable">*last</span>)
+{
+    <span class="hljs-keyword">if</span>(first == middle || middle == <span class="hljs-keyword">last</span>) <span class="hljs-keyword">return</span>;
+    <span class="hljs-keyword">int</span> <span class="hljs-variable">*next</span> = middle;
+    <span class="hljs-keyword">while</span>(<span class="hljs-number">1</span>)
+    {
+        swap(<span class="hljs-variable">*first</span>++, <span class="hljs-variable">*next</span>++);
+        <span class="hljs-keyword">if</span>(first == middle) {forward_rotate(first, <span class="hljs-keyword">next</span>, <span class="hljs-keyword">last</span>);<span class="hljs-keyword">return</span>;}
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(<span class="hljs-keyword">next</span> == <span class="hljs-keyword">last</span>) {forward_rotate(first, middle, <span class="hljs-keyword">last</span>);<span class="hljs-keyword">return</span>;}
+    }
+}</code></pre>
+
+<p>依照递归版本写出迭代版本来：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl">void forward_rotate_2(<span class="hljs-keyword">int</span> <span class="hljs-variable">*first</span>, <span class="hljs-keyword">int</span> <span class="hljs-variable">*middle</span>, <span class="hljs-keyword">int</span> <span class="hljs-variable">*last</span>)
+{
+    <span class="hljs-keyword">if</span>(first == middle || middle == <span class="hljs-keyword">last</span>) <span class="hljs-keyword">return</span>;
+    <span class="hljs-keyword">int</span> <span class="hljs-variable">*next</span> = middle;
+    <span class="hljs-keyword">while</span>(first != middle &amp;&amp; middle != <span class="hljs-keyword">last</span>)
+    {
+        swap(<span class="hljs-variable">*first</span>++, <span class="hljs-variable">*next</span>++);
+        <span class="hljs-keyword">if</span>(first == middle) middle = <span class="hljs-keyword">next</span>;
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(<span class="hljs-keyword">next</span> == <span class="hljs-keyword">last</span>) <span class="hljs-keyword">next</span> = middle;
+    }
+}</code></pre>
+
+<p>当执行next=middle时, first已经不等于middle了, 所以可省略while中first!=middle的判断：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl">void forward_rotate_3(<span class="hljs-keyword">int</span> <span class="hljs-variable">*first</span>, <span class="hljs-keyword">int</span> <span class="hljs-variable">*middle</span>, <span class="hljs-keyword">int</span> <span class="hljs-variable">*last</span>)
+{
+    <span class="hljs-keyword">if</span>(first == middle || middle == <span class="hljs-keyword">last</span>) <span class="hljs-keyword">return</span>;
+    <span class="hljs-keyword">int</span> <span class="hljs-variable">*next</span> = middle;
+    <span class="hljs-keyword">while</span>(middle != <span class="hljs-keyword">last</span>)
+    {
+        swap(<span class="hljs-variable">*first</span>++, <span class="hljs-variable">*next</span>++);
+        <span class="hljs-keyword">if</span>(first == middle) middle = <span class="hljs-keyword">next</span>;
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(<span class="hljs-keyword">next</span> == <span class="hljs-keyword">last</span>) <span class="hljs-keyword">next</span> = middle;
+    }
+}</code></pre>
+
+
+
+<h3 id="对于双向迭代器三次反转">对于双向迭代器，三次反转</h3>
+
+<p>利用<span class="MathJax_Preview"></span><span class="MathJax" id="MathJax-Element-19-Frame" role="textbox" aria-readonly="true" style=""><nobr><span class="math" id="MathJax-Span-91" style="width: 13.016em; display: inline-block;"><span style="display: inline-block; position: relative; width: 10.403em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(1.763em 1000em 3.149em -0.424em); top: -2.717em; left: 0.003em;"><span class="mrow" id="MathJax-Span-92"><span class="mi" id="MathJax-Span-93" style="font-family: MathJax_Math-italic;">b</span><span class="mi" id="MathJax-Span-94" style="font-family: MathJax_Math-italic;">a</span><span class="mo" id="MathJax-Span-95" style="font-family: MathJax_Main; padding-left: 0.269em;">=</span><span class="mo" id="MathJax-Span-96" style="font-family: MathJax_Main; padding-left: 0.269em;">(</span><span class="msubsup" id="MathJax-Span-97"><span style="display: inline-block; position: relative; width: 0.803em; height: 0px;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-98" style="font-family: MathJax_Math-italic;">b</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.877em; left: 0.429em;"><span class="mi" id="MathJax-Span-99" style="font-size: 70.7%; font-family: MathJax_Math-italic;">r</span><span style="display: inline-block; width: 0px; height: 2.456em;"></span></span></span></span><span class="msubsup" id="MathJax-Span-100"><span style="display: inline-block; position: relative; width: 0.749em; height: 0px;"><span style="position: absolute; clip: rect(1.816em 1000em 3.149em -0.424em); top: -2.717em; left: 0.003em;"><span class="mo" id="MathJax-Span-101" style="font-family: MathJax_Main;">)</span><span style="display: inline-block; width: 0px; height: 2.723em;"></span></span><span style="position: absolute; top: -2.931em; left: 0.376em;"><span class="mi" id="MathJax-Span-102" style="font-size: 70.7%; font-family: MathJax_Math-italic;">r</span><span style="display: inline-block; width: 0px; height: 2.456em;"></span></span></span></span><span class="mo" id="MathJax-Span-103" style="font-family: MathJax_Main;">(</span><span class="msubsup" id="MathJax-Span-104"><span style="display: inline-block; position: relative; width: 0.909em; height: 0px;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-105" style="font-family: MathJax_Math-italic;">a</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.824em; left: 0.536em;"><span class="mi" id="MathJax-Span-106" style="font-size: 70.7%; font-family: MathJax_Math-italic;">r</span><span style="display: inline-block; width: 0px; height: 2.456em;"></span></span></span></span><span class="msubsup" id="MathJax-Span-107"><span style="display: inline-block; position: relative; width: 0.749em; height: 0px;"><span style="position: absolute; clip: rect(1.816em 1000em 3.149em -0.424em); top: -2.717em; left: 0.003em;"><span class="mo" id="MathJax-Span-108" style="font-family: MathJax_Main;">)</span><span style="display: inline-block; width: 0px; height: 2.723em;"></span></span><span style="position: absolute; top: -2.931em; left: 0.376em;"><span class="mi" id="MathJax-Span-109" style="font-size: 70.7%; font-family: MathJax_Math-italic;">r</span><span style="display: inline-block; width: 0px; height: 2.456em;"></span></span></span></span><span class="mo" id="MathJax-Span-110" style="font-family: MathJax_Main; padding-left: 0.269em;">=</span><span class="mo" id="MathJax-Span-111" style="font-family: MathJax_Main; padding-left: 0.269em;">(</span><span class="msubsup" id="MathJax-Span-112"><span style="display: inline-block; position: relative; width: 0.909em; height: 0px;"><span style="position: absolute; clip: rect(1.976em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-113" style="font-family: MathJax_Math-italic;">a</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.824em; left: 0.536em;"><span class="mi" id="MathJax-Span-114" style="font-size: 70.7%; font-family: MathJax_Math-italic;">r</span><span style="display: inline-block; width: 0px; height: 2.456em;"></span></span></span></span><span class="msubsup" id="MathJax-Span-115"><span style="display: inline-block; position: relative; width: 0.803em; height: 0px;"><span style="position: absolute; clip: rect(1.709em 1000em 2.723em -0.424em); top: -2.557em; left: 0.003em;"><span class="mi" id="MathJax-Span-116" style="font-family: MathJax_Math-italic;">b</span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; top: -2.877em; left: 0.429em;"><span class="mi" id="MathJax-Span-117" style="font-size: 70.7%; font-family: MathJax_Math-italic;">r</span><span style="display: inline-block; width: 0px; height: 2.456em;"></span></span></span></span><span class="msubsup" id="MathJax-Span-118"><span style="display: inline-block; position: relative; width: 0.749em; height: 0px;"><span style="position: absolute; clip: rect(1.816em 1000em 3.149em -0.424em); top: -2.717em; left: 0.003em;"><span class="mo" id="MathJax-Span-119" style="font-family: MathJax_Main;">)</span><span style="display: inline-block; width: 0px; height: 2.723em;"></span></span><span style="position: absolute; top: -2.931em; left: 0.376em;"><span class="mi" id="MathJax-Span-120" style="font-size: 70.7%; font-family: MathJax_Math-italic;">r</span><span style="display: inline-block; width: 0px; height: 2.456em;"></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.723em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 1.403em; vertical-align: -0.397em;"></span></span></nobr></span><script type="math/tex" id="MathJax-Element-19"> ba=(b^r)^r(a^r)^r=(a^rb^r)^r </script>，先分别反转a、b，最后再对所有元素进行一次反转。 <br>
+总共执行了n次swap操作。 <br>
+例如：</p>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-keyword">void</span> bid_rotate(<span class="hljs-keyword">int</span> *first, <span class="hljs-keyword">int</span> *middle, <span class="hljs-keyword">int</span> *last)
+{
+    reverse(first, middle);
+    reverse(middle, last);
+    reverse(first, last);
+}</code></pre>
+
+
+
+<h3 id="对于随机访问迭代器一步到位">对于随机访问迭代器，一步到位</h3>
+
+<p>假定当区间为[0,1,2,3,4,5,6,7,8]，[first,middle)为[0,1,2]，[middle,last)为[3,4,5,6,7,8]。 <br>
+算法如下： <br>
+先将0取出，将3放入0的位置，将6放入3的位置，将0放入6的位置。 <br>
+依次进行即可。</p>
+
+
+
+<h3 id="参考">参考</h3>
+
+<p>SGI STL笔记（rotate算法介绍） <br>
+<a href="http://blog.chinaunix.net/uid-10647744-id-3274208.html" target="_blank">http://blog.chinaunix.net/uid-10647744-id-3274208.html</a> <br>
+数组左旋转k位 —— C++标准算法库中最悲剧的函数：rotate <br>
+<a href="http://www.cnblogs.com/flyinghearts/archive/2011/05/27/2060265.html" target="_blank">http://www.cnblogs.com/flyinghearts/archive/2011/05/27/2060265.html</a> <br>
+注：并不像文中说的那样，随机迭代器版本的rotate速度最快！</p>
+
+<h2 id="lowerbound和upperbound">lower_bound和upper_bound</h2>
+
+<p><a href="http://www.cplusplus.com/reference/algorithm/lower_bound/">cplusplus.com</a>上给出的实现：</p>
+
+<pre class="prettyprint"><code class=" hljs axapta">template &lt;<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForwardIterator</span>, <span class="hljs-title">class</span> <span class="hljs-title">T</span>&gt;
+  <span class="hljs-title">ForwardIterator</span> <span class="hljs-title">lower_bound</span> (<span class="hljs-title">ForwardIterator</span> <span class="hljs-title">first</span>, <span class="hljs-title">ForwardIterator</span> <span class="hljs-title">last</span>, <span class="hljs-title">const</span> <span class="hljs-title">T</span>&amp; <span class="hljs-title">val</span>)
+{</span>
+  ForwardIterator it;
+  iterator_traits&lt;ForwardIterator&gt;::difference_type <span class="hljs-keyword">count</span>, step;
+  <span class="hljs-keyword">count</span> = distance(first,last);
+  <span class="hljs-keyword">while</span> (<span class="hljs-keyword">count</span>&gt;<span class="hljs-number">0</span>)
+  {
+    it = first; step=<span class="hljs-keyword">count</span>/<span class="hljs-number">2</span>; advance (it,step);
+    <span class="hljs-keyword">if</span> (*it&lt;val) {
+      first=++it;
+      <span class="hljs-keyword">count</span>-=step+<span class="hljs-number">1</span>;
+    }
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">count</span>=step;
+  }
+  <span class="hljs-keyword">return</span> first;
+}
+
+template &lt;<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForwardIterator</span>, <span class="hljs-title">class</span> <span class="hljs-title">T</span>&gt;
+  <span class="hljs-title">ForwardIterator</span> <span class="hljs-title">upper_bound</span> (<span class="hljs-title">ForwardIterator</span> <span class="hljs-title">first</span>, <span class="hljs-title">ForwardIterator</span> <span class="hljs-title">last</span>, <span class="hljs-title">const</span> <span class="hljs-title">T</span>&amp; <span class="hljs-title">val</span>)
+{</span>
+  ForwardIterator it;
+  iterator_traits&lt;ForwardIterator&gt;::difference_type <span class="hljs-keyword">count</span>, step;
+  <span class="hljs-keyword">count</span> = std::distance(first,last);
+  <span class="hljs-keyword">while</span> (<span class="hljs-keyword">count</span>&gt;<span class="hljs-number">0</span>)
+  {
+    it = first; step=<span class="hljs-keyword">count</span>/<span class="hljs-number">2</span>; std::advance (it,step);
+    <span class="hljs-keyword">if</span> (!(val&lt;*it))
+      { first=++it; <span class="hljs-keyword">count</span>-=step+<span class="hljs-number">1</span>;  }
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">count</span>=step;
+  }
+  <span class="hljs-keyword">return</span> first;
+}</code></pre></div></body>
+</html>

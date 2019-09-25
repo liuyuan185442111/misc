@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hash 哈希表</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>我觉得hash提高查询速度的根本原因是分组。 <br>
+比如图书馆的书，如果是无序的，要找一本书，只能从头到尾依次找；如果将这些书分门别类，现在找一本书，直接去相应类别里，就快多了。从书名到其类别的转换就是一个映射过程，这是hash函数的作用。</p>
+
+<p>用c实现的一个简单的例子，对key按余数分组，数组存储本组的头指针，余数相同的key依次链到头指针后面。</p>
+
+<pre class="prettyprint"><code class=" hljs haskell"><span class="hljs-preprocessor">#define TABLE_SIZE 17</span>
+
+<span class="hljs-title">typedef</span> struct _NODE
+{
+    int <span class="hljs-typedef"><span class="hljs-keyword">data</span>;</span>
+    struct _NODE *next;
+} <span class="hljs-type">NODE</span>;
+
+<span class="hljs-title">typedef</span> struct _HASH_TABLE
+{
+    <span class="hljs-type">NODE</span> *value[<span class="hljs-type">TABLE_SIZE</span>];
+} <span class="hljs-type">HASH_TABLE</span>;
+
+<span class="hljs-title">int</span> hash_fun(int <span class="hljs-typedef"><span class="hljs-keyword">data</span>)</span>
+{
+    return <span class="hljs-typedef"><span class="hljs-keyword">data</span> % <span class="hljs-type">TABLE_SIZE</span>;</span>
+}
+
+<span class="hljs-type">HASH_TABLE</span> *create_hash_table()
+{
+    <span class="hljs-type">HASH_TABLE</span> *pHashTbl = (<span class="hljs-type">HASH_TABLE</span>*)malloc(sizeof(<span class="hljs-type">HASH_TABLE</span>));
+    memset(pHashTbl, <span class="hljs-number">0</span>, sizeof(<span class="hljs-type">HASH_TABLE</span>));
+    return pHashTbl;
+}
+
+<span class="hljs-title">void</span> delete_hash_table(<span class="hljs-type">HASH_TABLE</span> *pHashTbl)
+{
+    <span class="hljs-type">NODE</span> *head, *pre;
+    for(int i=<span class="hljs-number">0</span>; i&lt;<span class="hljs-type">TABLE_SIZE</span>; ++i)
+    {
+        head = pHashTbl-&gt;value[i];
+        <span class="hljs-keyword">if</span>(head == <span class="hljs-type">NULL</span>) continue;
+        while(head)
+        {
+            pre = head;
+            head = head-&gt;next;
+            free(pre);
+        }
+    }
+}
+
+<span class="hljs-type">NODE</span> *find_data_in_hash(<span class="hljs-type">HASH_TABLE</span> *pHashTbl, int <span class="hljs-typedef"><span class="hljs-keyword">data</span>)</span>
+{
+    <span class="hljs-keyword">if</span>(pHashTbl == <span class="hljs-type">NULL</span>)
+        return <span class="hljs-type">NULL</span>;
+
+    <span class="hljs-type">NODE</span> *pNode = pHashTbl-&gt;value[hash_fun(<span class="hljs-typedef"><span class="hljs-keyword">data</span>)];</span>
+    <span class="hljs-keyword">if</span>(pNode == <span class="hljs-type">NULL</span>)
+        return <span class="hljs-type">NULL</span>;
+
+    while(pNode)
+    {
+        <span class="hljs-keyword">if</span>(<span class="hljs-typedef"><span class="hljs-keyword">data</span> == pNode-&gt;<span class="hljs-keyword">data</span>)</span>
+            return pNode;
+        pNode = pNode-&gt;next;
+    }
+
+    return <span class="hljs-type">NULL</span>;
+}
+
+<span class="hljs-title">bool</span> insert_data_into_hash(<span class="hljs-type">HASH_TABLE</span> *pHashTbl, int <span class="hljs-typedef"><span class="hljs-keyword">data</span>)</span>
+{
+    <span class="hljs-keyword">if</span>(pHashTbl == <span class="hljs-type">NULL</span>)
+        return false;
+
+    <span class="hljs-keyword">if</span>(pHashTbl-&gt;value[hash_fun(<span class="hljs-typedef"><span class="hljs-keyword">data</span>)] == <span class="hljs-type">NULL</span>)</span>
+    {
+        <span class="hljs-type">NODE</span> *pNode = (<span class="hljs-type">NODE</span>*)malloc(sizeof(<span class="hljs-type">NODE</span>));
+        pNode-&gt;<span class="hljs-typedef"><span class="hljs-keyword">data</span> = <span class="hljs-keyword">data</span>;</span>
+        pNode-&gt;next = <span class="hljs-type">NULL</span>;
+        pHashTbl-&gt;value[hash_fun(<span class="hljs-typedef"><span class="hljs-keyword">data</span>)] = pNode;</span>
+        return true;
+    }
+
+    <span class="hljs-keyword">if</span>(find_data_in_hash(pHashTbl, <span class="hljs-typedef"><span class="hljs-keyword">data</span>) != <span class="hljs-type">NULL</span>)</span>
+        return false;
+
+    <span class="hljs-type">NODE</span> *pNode = pHashTbl-&gt;value[hash_fun(<span class="hljs-typedef"><span class="hljs-keyword">data</span>)];</span>
+    while(pNode-&gt;next)
+        pNode = pNode-&gt;next;
+
+    pNode-&gt;next = (<span class="hljs-type">NODE</span>*)malloc(sizeof(<span class="hljs-type">NODE</span>));
+    pNode-&gt;next-&gt;<span class="hljs-typedef"><span class="hljs-keyword">data</span> = <span class="hljs-keyword">data</span>;</span>
+    pNode-&gt;next-&gt;next = <span class="hljs-type">NULL</span>;
+
+    return true;
+}
+
+<span class="hljs-title">bool</span> delete_data_from_hash(<span class="hljs-type">HASH_TABLE</span> *pHashTbl, int <span class="hljs-typedef"><span class="hljs-keyword">data</span>)</span>
+{
+    <span class="hljs-keyword">if</span>(<span class="hljs-type">NULL</span> == pHashTbl || <span class="hljs-type">NULL</span> == pHashTbl-&gt;value[hash_fun(<span class="hljs-typedef"><span class="hljs-keyword">data</span>)])</span>
+        return false;
+
+    <span class="hljs-type">NODE</span> *pNode = find_data_in_hash(pHashTbl, <span class="hljs-typedef"><span class="hljs-keyword">data</span>);</span>
+    <span class="hljs-keyword">if</span>(<span class="hljs-type">NULL</span> == pNode) return false;
+
+    <span class="hljs-type">NODE</span> *pHead = pHashTbl-&gt;value[hash_fun(<span class="hljs-typedef"><span class="hljs-keyword">data</span>)];</span>
+    <span class="hljs-keyword">if</span>(pNode == pHead)
+    {
+        pHashTbl-&gt;value[hash_fun(<span class="hljs-typedef"><span class="hljs-keyword">data</span>)] = pNode-&gt;next;</span>
+    }
+    <span class="hljs-keyword">else</span>
+    {
+        while(pNode != pHead-&gt;next)
+            pHead = pHead-&gt;next;
+        pHead-&gt;next = pNode-&gt;next;
+    }
+    free(pNode);
+    return true;
+}</code></pre>
+
+<p>MPQ是Blizzard公司将游戏数据包装在一起的一种档案格式，里面有将文件名映射为整数的Hash算法：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> cryptTable[<span class="hljs-number">0x500</span>];
+<span class="hljs-keyword">void</span> prepareCryptTable()
+{
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> seed = <span class="hljs-number">0x00100001</span>, index1 = <span class="hljs-number">0</span>, index2 = <span class="hljs-number">0</span>, i;
+    <span class="hljs-keyword">for</span>( index1 = <span class="hljs-number">0</span>; index1 &lt; <span class="hljs-number">0x100</span>; index1++ )
+    {
+        <span class="hljs-keyword">for</span>( index2 = index1, i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">5</span>; i++, index2 += <span class="hljs-number">0x100</span> )
+        {
+            <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> temp1, temp2;
+            seed = (seed * <span class="hljs-number">125</span> + <span class="hljs-number">3</span>) % <span class="hljs-number">0x2AAAAB</span>;
+            temp1 = (seed &amp; <span class="hljs-number">0xFFFF</span>) &lt;&lt; <span class="hljs-number">0x10</span>;
+            seed = (seed * <span class="hljs-number">125</span> + <span class="hljs-number">3</span>) % <span class="hljs-number">0x2AAAAB</span>;
+            temp2 = (seed &amp; <span class="hljs-number">0xFFFF</span>);
+            cryptTable[index2] = ( temp1 | temp2 );
+       }
+   }
+}
+<span class="hljs-comment">//dwHashType为0,1或2，1和2用于校验</span>
+<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> HashString(<span class="hljs-keyword">char</span> *lpszFileName, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> dwHashType)
+{
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *key  = (<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *)lpszFileName;
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> seed1 = <span class="hljs-number">0x7FED7FED</span>;
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> seed2 = <span class="hljs-number">0xEEEEEEEE</span>;
+    <span class="hljs-keyword">int</span> ch;
+    <span class="hljs-keyword">while</span>(*key != <span class="hljs-number">0</span>)
+    {
+        ch = <span class="hljs-built_in">toupper</span>(*key++);
+        seed1 = cryptTable[(dwHashType &lt;&lt; <span class="hljs-number">8</span>) + ch] ^ (seed1 + seed2);
+        seed2 = ch + seed1 + seed2 + (seed2 &lt;&lt; <span class="hljs-number">5</span>) + <span class="hljs-number">3</span>;
+    }
+    <span class="hljs-keyword">return</span> seed1;
+}</code></pre>
+
+<p>用HashString构造哈希表时，如果两个文件名对应的位置相同，可以将它们链成一个链表，查找时 <br>
+当文件名对应的位置上有数据时，还要对比它们的文件名是不是相同。但Blizzard并没有在哈希表中存储原文件名，而是另外存储两个哈希值来校验字符串。Blizzard使用的哈希表没有使用链表，而采用“顺延”的方式来解决问题。</p>
+
+<p>其他比较简单一些的hash函数：</p>
+
+<pre class="prettyprint"><code class=" hljs objectivec"><span class="hljs-comment">/*key为一个字符串，nTableLength为哈希表的长度，该函数得到的hash值分布比较均匀*/</span>
+<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> getHashIndex(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *key, <span class="hljs-keyword">int</span> nTableLength)
+{
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> nHash = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">while</span>(*key)
+    {
+        nHash = (nHash&lt;&lt;<span class="hljs-number">5</span>) + nHash + *key++;
+    }
+    <span class="hljs-keyword">return</span> (nHash % nTableLength);
+}
+
+<span class="hljs-comment">//PHP中出现的字符串Hash函数</span>
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> hashpjw(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *arKey, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">int</span> nKeyLength)
+{
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> h = <span class="hljs-number">0</span>, g;
+    <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *arEnd = arKey + nKeyLength;
+
+    <span class="hljs-keyword">while</span>(arKey &lt; arEnd)
+    {
+        h = (h &lt;&lt; <span class="hljs-number">4</span>) + *arKey++;
+        <span class="hljs-keyword">if</span>((g = (h &amp; <span class="hljs-number">0xF0000000</span>)))
+        {
+            h = h ^ (g &gt;&gt; <span class="hljs-number">24</span>);
+            h = h ^ g;
+        }
+    }
+    <span class="hljs-keyword">return</span> h;
+}</code></pre>
+
+<p>参考 <br>
+从头到尾彻底解析Hash表算法 <br>
+<a href="http://kb.cnblogs.com/page/189480/" target="_blank">http://kb.cnblogs.com/page/189480/</a> <br>
+一步一步写算法（之hash表） <br>
+<a href="http://blog.csdn.net/feixiaoxing/article/details/6885657" target="_blank">http://blog.csdn.net/feixiaoxing/article/details/6885657</a> <br>
+打造最快的Hash表 <br>
+<a href="http://blog.chinaunix.net/uid-20558494-id-2803048.html" target="_blank">http://blog.chinaunix.net/uid-20558494-id-2803048.html</a></p></div></body>
+</html>

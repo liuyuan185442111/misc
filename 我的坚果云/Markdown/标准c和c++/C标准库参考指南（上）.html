@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C标准库参考指南（上）</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h2 id="前述">前述</h2>
+
+<p>c标准库参考指南 <br>
+A guide to the stranded C library</p>
+
+<p>本指南主要基于《C标准库》（P.J.Plauger，2009-7-1，人民邮电出版社），在用到c标准库的时候可以参考，同时本指南也有部分实现细节。由于时间和精力有限，很多方面被忽略掉了，比如硬件相关部分、区域化设置、大部分数学函数、内存分配算法、宽字符和多字符部分、其他复杂的算法等。</p>
+
+<p>东方肖遥 <br>
+185442111@qq.com <br>
+<a href="http://weibo.com/u/1901302255" target="_blank">http://weibo.com/u/1901302255</a> <br>
+<a href="http://blog.csdn.net/liuyuan185442111" target="_blank">http://blog.csdn.net/liuyuan185442111</a> <br>
+2014年9-10月 于北邮</p>
+
+<p>v1.1，稍微做了一些修改，2015年2月，于家 <br>
+v1.2，稍作修改，2015年6月，于学校 <br>
+v1.3，稍加整理格式，以作备份，2017年9月，于公司</p>
+
+<p>最初c89标准库只有15个头文件：</p>
+
+<table>
+<thead>
+<tr>
+  <th>头文件</th>
+  <th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>assert.h</td>
+  <td>断言相关</td>
+</tr>
+<tr>
+  <td>ctype.h</td>
+  <td>字符类型判断</td>
+</tr>
+<tr>
+  <td>errno.h</td>
+  <td>标准错误机制</td>
+</tr>
+<tr>
+  <td>float.h</td>
+  <td>浮点限制</td>
+</tr>
+<tr>
+  <td>limits.h</td>
+  <td>整型限制</td>
+</tr>
+<tr>
+  <td>locale.h</td>
+  <td>本地化接口</td>
+</tr>
+<tr>
+  <td>math.h</td>
+  <td>数学函数</td>
+</tr>
+<tr>
+  <td>setjmp.h</td>
+  <td>非本地跳转</td>
+</tr>
+<tr>
+  <td>signal.h</td>
+  <td>信号相关</td>
+</tr>
+<tr>
+  <td>stdarg.h</td>
+  <td>可变参数处理</td>
+</tr>
+<tr>
+  <td>stddef.h</td>
+  <td>一些宏和类型的定义</td>
+</tr>
+<tr>
+  <td>stdio.h</td>
+  <td>标准I/O库</td>
+</tr>
+<tr>
+  <td>stdlib.h</td>
+  <td>标准工具库</td>
+</tr>
+<tr>
+  <td>string.h</td>
+  <td>字符串及内存处理</td>
+</tr>
+<tr>
+  <td>time.h</td>
+  <td>时间相关</td>
+</tr>
+</tbody></table>
+
+
+<p>后来标准库扩充了一些，但这15个无疑是最常用的，《C标准库》一书也仅介绍了这15个头文件，在此我也仅介绍这15个头文件。 </p>
+
+<h2 id="断言asserth">断言（assert.h）</h2>
+
+<p>此头文件只包含一个assert宏，从用法上看它十分类似一个返回值是void的函数。如果条件为假，assert将输出一些信息并调用abort函数退出程序。 <br>
+一个可能的实现：</p>
+
+<pre><code>#ifdef NDEBUG
+#define assert(x) ((void)0)
+#else
+void _assert(const char*, const char*, int);
+#define assert(e) ((e) ? (void)0 : _assert(#e, __FILE__, __LINE__))
+#endif
+</code></pre>
+
+<p>assert应该只用在debug版本中。如果<code>#define NDEBUG</code>，之后的assert将会失效；可以重新<code>#undef NDEBUG</code>，但需要再次<code>#include assert.h</code>才能使后面的assert生效。 <br>
+因为需要被多次include，所以本头文件不需要通过“#ifndef机制”防止被多次包含。</p>
+
+
+
+<h2 id="字符类型判断ctypeh">字符类型判断（ctype.h）</h2>
+
+<p>此头文件定义了一批c语言字符分类函数。 <br>
+以下假定使用的字符集是ASCII。 <br>
+这些函数都只有一个参数，且参数和返回值均为int类型，比如<code>int isalpha(int);</code>。 <br>
+为了提高速度，很多函数的实现可能会采用查表法，在这里只描述其功能，而不细述其实现。 <br>
+下表列出了这些函数： <br>
+<img src="http://img.blog.csdn.net/20150622161220334" alt="函数说明" title=""></p>
+
+
+
+<h2 id="标准错误机制errnoh">标准错误机制（errno.h）</h2>
+
+<p>此头文件定义了一个表示错误信息的errno，errno等价于一个全局整型变量。 <br>
+另外还定义了表示错误编码的一些宏，他们都以”E”开头。比如： <br>
+<img src="http://img.blog.csdn.net/20150622161325594" alt="错误编码" title=""></p>
+
+
+
+<h2 id="浮点限制floath">浮点限制（float.h）</h2>
+
+<p>此头文件定义了浮点型变量的一些极限值和设置。</p>
+
+
+
+<h2 id="整型限制limitsh">整型限制（limits.h）</h2>
+
+<p>此头文件定义了整型变量的一些极限值和设置。</p>
+
+
+
+<h2 id="本地化localeh">本地化（locale.h）</h2>
+
+<p>c语言支持本地化设定，如本地格式时间和货币符号。 <br>
+此头文件包含一个类型定义，两个函数声明和一些宏定义。</p>
+
+
+
+<h3 id="类型定义">类型定义</h3>
+
+<pre><code>struct lconv;
+</code></pre>
+
+<p>其成员中有三个会影响浮点数的表达形式：</p>
+
+<pre><code>char *decimal_point; // 格式化非货币量中的小数点字符
+char *thousands_sep; // 用来对格式化的非货币量中小数点前面的数字进行分组的字符
+char *grouping; // 用来说明格式化的非货币量中每一组数字的数目
+</code></pre>
+
+<p>其他成员影响货币的表达形式。</p>
+
+<h3 id="函数声明">函数声明</h3>
+
+<pre><code>struct lconv *localeconv(void);
+</code></pre>
+
+<p>标准库定义了一个struct lconv类型的全局变量，此函数返回指向此变量的指针。</p>
+
+<pre><code>char *setlocale(int category, const char *locale);
+</code></pre>
+
+<p>此函数用来设定或恢复本地化配置。 <br>
+其中category参数可以为LC_COLLATE,LC_CTYPE,LC_MONETARY,LC_NUMERIC,LC_TIME,LC_ALL。</p>
+
+<table>
+<thead>
+<tr>
+  <th>参数</th>
+  <th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>LC_ALL</td>
+  <td>设置所有信息</td>
+</tr>
+<tr>
+  <td>LC_COLLATE</td>
+  <td>影响strcoll和strxfrm函数</td>
+</tr>
+<tr>
+  <td>LC_CTYPE</td>
+  <td>影响所有字符函数</td>
+</tr>
+<tr>
+  <td>LC_MONETARY</td>
+  <td>影响由localeconv函数提供的货币信息</td>
+</tr>
+<tr>
+  <td>LC_NUMERIC</td>
+  <td>影响十进制小数格式和localeconv函数提供的信息</td>
+</tr>
+<tr>
+  <td>LC_TIME</td>
+  <td>影响strftime函数</td>
+</tr>
+</tbody></table>
+
+
+<p>如果locale是一个指向字符串的指针且选择有效，则返回一个和新的区域设置指定的category相联系的字符串的指针；如果选择因故无法实现，则返回一个空指针且程序的区域设置不改变。如果locale参数是一个空指针，则返回一个和当前区域设置的category相联系的字符串的指针，程序的区域设置不改变。 <br>
+<code>"C"</code>为编译器指定的最小环境值，<code>""</code>指定了实现定义的本地环境，在程序启动时，程序执行与“<code>setlocale(LC_ALL, "C");</code>”等效的代码。</p>
+
+<p>此外，本文件还定义了NULL宏。gcc是这样说的：According to C89 std, NULL is defined in locale.h too。</p>
+
+<p>经测试，decimal_point的值会影响gcc中printf输出中的小数点，vc下无影响，thousands_sep和grouping不会对printf产生影响。</p>
+
+
+
+<h2 id="数学函数mathh">数学函数（math.h）</h2>
+
+<p>此头文件里的函数都是由专业人士编写，普通用户只需要了解怎么用就可以了。 <br>
+此头文件定义了一个宏HUGE_VAL，它展开为一个正的double类型的表达式。 <br>
+还声明了一些数学函数，除了frexp、ldexp、modf，其他函数的参数和返回值都是double类型。</p>
+
+<p>数学函数常会发生定义域错误和值域错误： <br>
+如发生定义域错误，errno设为EDOM。 <br>
+如发生值域错误：如果结果上溢，函数返回HUGE_VAL的值，符号与函数的正确值相同（除了tan函数），errno设为ERANGE；如果结果下溢，函数返回0，errno是否取宏ERANGE的值取决于实现。</p>
+
+<p>大部分函数的用法显而易见，所以仅把这些函数的声明列出来，对另外一些函数则进行详细说明。</p>
+
+
+
+<h3 id="三角函数和双曲函数">三角函数和双曲函数</h3>
+
+<pre><code>double sin(double x);
+double cos(double x);
+double tan(double x);
+double asin(double x);
+double acos(double x);
+double atan(double x);
+double atan2(double y, double x);
+double sinh(double x);
+double cosh(double x);
+double tanh(double x);
+</code></pre>
+
+<h3 id="指数函数对数函数幂函数">指数函数、对数函数、幂函数</h3>
+
+<pre><code>double exp(double x); // e的x方
+double log(double x); // 自然对数
+double log10(double x); // 以10为底x的对数
+double pow(double x, double y); //x的y次方
+double sqrt(double x); // x的平方根
+
+double frexp(double value, int *exp);
+</code></pre>
+
+<p>此函数把一个浮点数分为一个规格化小数和一个2的整数幂。假定返回值为x，x的范围为[1/2,1)，或者为0。参数和返回值满足value=x*2^exp，如果value为0，x和*exp都为0。</p>
+
+<pre><code>double ldexp(double x, int exp);
+</code></pre>
+
+<p>此函数计算一个浮点数和2的整数幂的乘积，它返回x*2^exp的值。</p>
+
+<pre><code>double modf(double value, double *iptr);
+</code></pre>
+
+<p>此函数把value分为整数和小数部分，他们的符号和value的符号相同，小数部分作为返回值，整数部分存放在iptr指向的double类型的对象中。</p>
+
+
+
+<h3 id="取整函数绝对值函数取余函数">取整函数、绝对值函数、取余函数</h3>
+
+<pre><code>double ceil(double x); // 不小于x的最小整数，ceil天花板。
+double floor(double x); // 不大于x的最大整数，floor地板。
+double fabs(double x); // x的绝对值
+double fmod(double x, double y); // x除以y的浮点余数
+</code></pre>
+
+
+
+<h2 id="非本地跳转setjmph">非本地跳转（setjmp.h）</h2>
+
+<p>此头文件包含：</p>
+
+<pre><code>typedef int jmp_buf[16];
+int setjmp(jmp_buf);
+void longjmp(jmp_buf, int);
+</code></pre>
+
+<p>setjmp和longjmp可能实现为宏定义。 <br>
+非本地跳转的原理非常简单： <br>
+1.setjmp(j)设置“jump”点，用正确的程序上下文填充jmp_buf对象j。这个上下文包括程序存放位置，栈和框架指针，其它重要的寄存器和内存数据。当初始化完jump的上下文，setjmp()返回0值。 <br>
+2.以后调用longjmp(j,r)的效果就是一个非局部的goto或“长跳转”到由j描述的上下文处（也就是原来调用setjmp(j)处）。当作为长跳转的目标而被调用时，setjmp()返回r或1（如果r设为0的话）。（记住，setjmp()不能在这种情况时返回0） <br>
+通过有两类返回值，setjmp()让你知道它正在被怎么使用。当设置j时，setjmp()如你期望地执行；但当作为长跳转的目标时，setjmp()就从外面“唤醒”它的上下文。可以将longjmp()用来终止异常，用setjmp()标记相应的异常处理程序。</p>
+
+
+
+<h2 id="信号signalh">信号（signal.h）</h2>
+
+<p>此头文件包含两个函数和一些宏定义。 <br>
+核心是两个函数：</p>
+
+<pre><code>void ( *signal( int signum, void (*handler)(int) ) )(int);
+或
+typedef void (*sig_t)(int);
+sig_t signal(int signum, sig_t handler);
+int raise(int signum);
+</code></pre>
+
+
+
+<h3 id="signal函数">signal函数</h3>
+
+<p>signal函数用来设置某一信号的对应动作。 <br>
+执行成功，返回旧handler的指针；否则，返回SIG_ERR。 <br>
+第一个参数signum指明了所要处理的信号类型，应使用后面说明的信号编号宏定义。 <br>
+第二个参数handler描述了与信号相关联的动作，它可以取以下三种值： <br>
+（1）一个无返回值的函数指针 <br>
+此函数必须在signal函数被调用前申明，handler为这个函数的名字。当接收到一个编号为signum的信号时，就执行handler所指定的函数。这个函数应有如下形式的定义：void func(int sig);。 <br>
+（2）SIG_IGN <br>
+这个符号表示忽略该信号。 <br>
+（3）SIG_DFL <br>
+这个符号表示恢复系统对该信号的默认处理。 <br>
+When signal handler is set to a function and a signal occurs, it is implementation defined whether signal(sig, SIG_DFL); will be executed immediately before the start of signal handler. Also, the implementation can prevent some implementation-defined set of signals from occurring while the signal handler runs.</p>
+
+<p>raise函数用来把信号signum送给正在执行的程序。 <br>
+执行成功，返回0；否则，返回非零。</p>
+
+<h3 id="还有一些宏定义">还有一些宏定义</h3>
+
+<pre><code>// signal return values
+#define SIG_DFL ((void(*)(int)) 0)
+#define SIG_IGN ((void(*)(int)) 1)
+#define SIG_ERR ((void(*)(int)) -1)
+
+// signal codes
+#define SIGINT      2 // Interactive attention
+#define SIGILL      4 // Illegal instruction
+#define SIGFPE      8 // Floating point error
+#define SIGSEGV     11 // Segmentation violation
+#define SIGTERM     15 // Termination request
+#define SIGABRT     22 // Abnormal termination (abort)
+</code></pre>
+
+<p>信号编号 <br>
+SIGINT，收到一个交互的提示信号，当用户按下Ctrl-C会产生一个SIGINT信号。 <br>
+SIGILL，检测到无效的函数映像，比如一条非法指令。 <br>
+SIGFPE，错误的算术操作，比如除零或者导致溢出的操作。 <br>
+SIGSEGV，对存储器的无效访问，向一个空指针写数据会产生一个SIGSEGV信号。 <br>
+SIGTERM，送到程序的终止请求。 <br>
+SIGABRT，异常终止，比如执行了abort函数。</p>
+
+
+
+<h3 id="注意">注意</h3>
+
+<p>并不一定非要调用raise函数才会释放相应的信号，比如当按下ctrl-c时，并没有调用raise，但系统会产生一个SIGINT信号。</p>
+
+<p>另外，此头文件还定义了sig_atomic_t这个类型，An integer type which can be accessed as an atomic entity even in the presence of asynchronous interrupts made by signals。</p>
+
+<h2 id="可变参数表列stdargh">可变参数表列（stdarg.h）</h2>
+
+<p>此头文件定义了三个宏和一个类型。 <br>
+这个类型是va_list，它可能被实现为char*的typedef。 <br>
+这三个宏都在拥有可变参数的函数定义里被调用，下面的ap是一个va_list类型的变量。</p>
+
+<h3 id="vastartapa">va_start(ap,A)</h3>
+
+<p>A是参数表列里…之前的最后一个参数，执行完此语句，ap会指向A之后的下一个参数（也就是可变参数中的第一个参数）；</p>
+
+
+
+<h3 id="avargapt">av_arg(ap,T)</h3>
+
+<p>T是对应参数的类型，执行完此语句，ap会指向下一个参数；</p>
+
+<h3 id="vaendap">va_end(ap)</h3>
+
+<p>释放ap，不过在一些实现里，被定义成void(0)。</p>
+
+<p>这个机制基于如下（但不仅限于）假设： <br>
+一个可变参数表在内存中占据了一个连续的字符数组； <br>
+后继的参数占据着字符数组更高位的后继元素； <br>
+2^N字节对齐； <br>
+参数表列里有一个指示参数数目的参数或有一个指示参数表列结束的标志。</p>
+
+
+
+<h2 id="标准定义stddefh">标准定义（stddef.h）</h2>
+
+<p>此头文件定义了3个类型和2个宏，其中一些在其他头文件中也有定义。</p>
+
+<p>这3个类型是： <br>
+ptrdiff_t：两个指针相减的结果的类型，有符号整型，一般来说是int或long的typedef。 <br>
+size_t：是sizeof操作符的结果的类型，无符号整型，一般来说定义成unsigned int或unsigned long，但应与ptrdiff_t相对应。 <br>
+wchar_t：是一个整型，标识一个宽字节字符，例如<code>L'x'</code>的类型就是wchar_t。</p>
+
+<p>这2个宏是： <br>
+NULL：空指针常量。 <br>
+offsetof(type, member-designator)：展开为一个size_t类型的整值常量表达式，它的值是从结构的起始位置到结构成员的偏移量，以字节为单位。</p>
+
+<p>本头文件一个可能的实现：</p>
+
+<pre><code>#ifndef _STDDEF
+#define _STDDEF
+
+typedef unsigned int size_t;
+typedef unsigned short wchar_t;
+typedef int ptrdiff_t;
+#define NULL (void *)0
+#define offsetof(T, member) ((size_t)&amp;((T *)0)-&gt;member)
+
+#endif // _STDDEF
+</code></pre>
+
+
+
+<h2 id="标准工具库stdlibh">标准工具库（stdlib.h）</h2>
+
+<p>此头文件定义了4种类型和几个宏。 <br>
+size_t和wchar_t在stddef.h里也有定义。 <br>
+div_t是一个结构类型，是函数div的返回值的类型，ldiv_t也是一个结构类型，是函数ldiv的返回值类型。</p>
+
+<p>定义的宏： <br>
+NULL。 <br>
+EXIT_FAILURE，EXIT_SUCCESS，它们展开为整值常量表达式，可作为exit函数的参数使用，分别返回给宿主环境不成功和成功终止的状态。 <br>
+RAND_MAX展开为整值常量表达式，其值是rand函数返回的最大值。 <br>
+MB_CUR_MAX展开为整值常量表达式，其值是当前区域设置指定的扩展字符集中多字节字符的最大字节数目。</p>
+
+<p>本文件还声明了诸多函数。分类如下： <br>
+   整型数学 <br>
+执行简单的整型算术：abs，div，labs，ldiv <br>
+   算法 <br>
+复杂而又被广泛使用、足以打包作为库函数的操作：bsearch，qsort，rand，srand <br>
+   文本转换 <br>
+确定文本表示的编码算术值：atof，atoi，atol，strtod，strtol，strtoul <br>
+   多字节转换 <br>
+多字节和宽字节字符编码之间的转换：mblen，mbstowcs，mbtowc，wcstombs，wctomb <br>
+   存储分配 <br>
+管理数据对象的堆：calloc，free，malloc，realloc <br>
+   环境接口 <br>
+程序和执行环境之间的接口：abort，atexit，exit，getenv，system</p>
+
+
+
+<h3 id="生成随机数">生成随机数</h3>
+
+<pre><code>int rand(void);
+</code></pre>
+
+<p>返回一个伪随机整数，范围在0到RAND_MAX之间（包括0和RAND_MAX）。</p>
+
+<pre><code>void srand(unsigned int seed);
+</code></pre>
+
+<p>以seed初始化随机数发生器，这个种子默认为1，也就是说如果在调用rand之前不调用srand，相当于调用了“srand(1);”。</p>
+
+
+
+<h3 id="绝对值和整数除法">绝对值和整数除法</h3>
+
+<pre><code>int abs(int j);
+long int labs(long int j);
+div_t div(int number, int denom);
+ldiv_t ldiv(long int number, long int denom);
+</code></pre>
+
+<p>div_t有两个成员，int quot和int rem，分别用来保存number除以denom的商和余数。 <br>
+相比div_t，ldiv_t的两个成员的类型只是都变成long int而已。</p>
+
+<h3 id="内存管理">内存管理</h3>
+
+<pre><code>void *malloc(size_t size);
+</code></pre>
+
+<p>为一个对象分配空间，该对象的大小是size。如果失败返回空指针。</p>
+
+<pre><code>void free(void *ptr);
+</code></pre>
+
+<p>ptr如果是空指针，不发生任何行为；其他不适当的参数会导致未定义的行为。</p>
+
+<pre><code>void *calloc(size_t nmemb, size_t size);
+</code></pre>
+
+<p>为拥有nmemb个元素的数组分配空间，每一个元素的大小是size，数组将被初始化为0。分配失败返回空指针。</p>
+
+<pre><code>void *realloc(void *ptr, size_t size);
+</code></pre>
+
+<p>将ptr指向的对象的大小改变为由size指定的大小。如果ptr是一个空指针，与malloc行为相同；如果size为0且ptr不是空指针，与free行为相同。</p>
+
+<h3 id="字符转换函数">字符转换函数</h3>
+
+<pre><code>int atoi(const char *nptr);
+</code></pre>
+
+<p>除了出错后的行为，它等价于(int)strtol(nptr, (char **)NULL, 10);</p>
+
+<pre><code>long int atol(const char *nptr);
+</code></pre>
+
+<p>除了出错后的行为，它等价于strtol(nptr, (char **)NULL, 10);</p>
+
+<pre><code>double atof(const char *nptr);
+</code></pre>
+
+<p>把nptr指向的字符串的初始部分转换为double类型的表示。除了出错后的行为，它等价于strtod(nptr, (char **)NULL);</p>
+
+<pre><code>long int strtol(const char *nptr, char **endptr, int base);
+</code></pre>
+
+<p>如果存在转换后的值，则返回这个值。如果没有执行转换，则返回0。如果正确的转换值在可表示的范围值外，则返回LONG_MAX或者LONG_MIN，并将宏ERANGE的值存储在errno中。</p>
+
+<pre><code>unsigned long int strtoul(const char *nptr, char **endptr, int base);
+</code></pre>
+
+<p>如果存在转换后的值，则返回这个值。如果没有执行转换，则返回0。如果正确的转换值在可表示的范围值外，则返回ULONG_MAX，并将宏ERANGE的值存储在errno中。</p>
+
+<pre><code>double strtod(const char *nptr, char **endptr);
+</code></pre>
+
+<p>它把输入串分解为3个部分：可能为空的初始序列，由一些空白字符组成（由isspace函数指定）；目标序列；一个或多个不能识别的字符组成的序列，包括输入串结尾的空字符。目标序列的期望形式是：-5.3e-3，起始字符可以是正负符号，可以是0-9，可以是小数点。 <br>
+如果存在转换后的值，则返回这个值。如果没有执行转换，则返回0。如果正确的转换值在可表示的范围值外，则返回正或者负的HUGE_VAL，并将宏ERANGE的值存储在errno中。如果正确的转换值会造成下溢，则返回0，并将宏ERANGE的值存储在errno中。 <br>
+如果endptr不为空，则指向最后串的指针存储在endptr指向的对象中。</p>
+
+<p>附函数strtol可能的实现代码：</p>
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-preprocessor">#include &lt;errno.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;limits.h&gt;</span>
+<span class="hljs-keyword">int</span> <span class="hljs-built_in">isspace</span>(<span class="hljs-keyword">int</span> c)
+{
+    <span class="hljs-keyword">if</span>(c &gt;=<span class="hljs-number">9</span> &amp;&amp; c &lt;= <span class="hljs-number">12</span> || c == <span class="hljs-number">32</span>) <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+<span class="hljs-keyword">int</span> <span class="hljs-built_in">tolower</span>(<span class="hljs-keyword">int</span> c)
+{
+    <span class="hljs-keyword">if</span>(c &gt;= <span class="hljs-number">65</span> &amp;&amp; c &lt;= <span class="hljs-number">90</span>) c += <span class="hljs-number">32</span>;
+    <span class="hljs-keyword">return</span> c;
+}
+
+<span class="hljs-preprocessor">#define BASE_MAX 36 <span class="hljs-comment">// 可接受的最大进制</span></span>
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> digits[] =
+{<span class="hljs-string">"0123456789abcdefghijklmnopqrstuvwxyz"</span>};
+
+<span class="hljs-keyword">long</span> strtol(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *s, <span class="hljs-keyword">char</span> **endptr, <span class="hljs-keyword">int</span> base)
+{
+    <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *sc = s;
+    <span class="hljs-keyword">long</span> y, x = <span class="hljs-number">0</span>; <span class="hljs-comment">// 临时变量</span>
+
+    <span class="hljs-keyword">while</span>(<span class="hljs-built_in">isspace</span>(*sc)) ++sc; <span class="hljs-comment">// 跳过空白</span>
+
+    <span class="hljs-keyword">char</span> sign = *sc == <span class="hljs-string">'-'</span> || *sc == <span class="hljs-string">'+'</span> ? *sc++ : <span class="hljs-string">'+'</span>; <span class="hljs-comment">// 记录符号</span>
+
+    <span class="hljs-keyword">if</span>(base &lt; <span class="hljs-number">2</span> || BASE_MAX &lt; base) <span class="hljs-comment">// 检查进制</span>
+    {
+        <span class="hljs-keyword">if</span>(endptr) *endptr = (<span class="hljs-keyword">char</span> *)s;
+        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+    }
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(*sc == <span class="hljs-string">'0'</span> &amp;&amp; (sc[<span class="hljs-number">1</span>] == <span class="hljs-string">'x'</span> || sc[<span class="hljs-number">1</span>] == <span class="hljs-string">'X'</span>)) <span class="hljs-comment">// 跳过16进制下开头的0x</span>
+    {
+        <span class="hljs-keyword">if</span>(base != <span class="hljs-number">16</span>)
+        {
+            <span class="hljs-keyword">if</span>(endptr) *endptr = (<span class="hljs-keyword">char</span> *)s;
+            <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+        }
+        sc += <span class="hljs-number">2</span>;
+    }
+
+    <span class="hljs-keyword">for</span>(; *sc == <span class="hljs-string">'0'</span>; ++sc); <span class="hljs-comment">// 跳过0</span>
+
+    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *sd; (sd = (<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *)<span class="hljs-built_in">memchr</span>(digits, <span class="hljs-built_in">tolower</span>(*sc), base)) != NULL; ++sc)
+    {
+        y = x; <span class="hljs-comment">// 记录本次x</span>
+        x = x * base + (sd - digits);
+    }
+
+    ptrdiff_t rem = (<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *)<span class="hljs-built_in">memchr</span>(digits, <span class="hljs-built_in">tolower</span>(*(sc-<span class="hljs-number">1</span>)), base) - digits;
+    <span class="hljs-keyword">if</span>((x - rem) / base != y) <span class="hljs-comment">// 测试是否溢出</span>
+    {
+        errno = ERANGE;
+        <span class="hljs-keyword">if</span>(sign == <span class="hljs-string">'+'</span>) x = LONG_MAX;
+        <span class="hljs-keyword">else</span> x = LONG_MIN, sign = <span class="hljs-string">'+'</span>;
+    }
+
+    <span class="hljs-keyword">if</span>(sign == <span class="hljs-string">'-'</span>) x = -x;
+    <span class="hljs-keyword">if</span>(endptr) *endptr = (<span class="hljs-keyword">char</span> *)sc;
+
+    <span class="hljs-keyword">return</span> x;
+}</code></pre>
+
+
+
+<h3 id="查找和排序">查找和排序</h3>
+
+<pre><code>void qsort(void *base, size_t nmemb, size_t size, int (*compare)(const void *, const void *));
+</code></pre>
+
+<p>根据compare所指向的比较函数将数组内容排列成升序。如果第一个元素小于、等于或大于第二个元素，compare分别返回小于0，等于0和大于0的整数。 <br>
+数组的大小为nmemb，每个元素的大小为size，base指向第一个元素。</p>
+
+<pre><code>void *bsearch(const void *key, const void *base, size_t nmemb, size_t size, int (*compare)(const void *, const void *));
+</code></pre>
+
+<p>搜索一个拥有nmemb个元素的数组，来查找与key指向的对象匹配的元素，base指向这个数组的第一个元素。数组中的每个元素的大小由size指定。 <br>
+如果有多个元素命中，可能返回指向任一个的指针。 <br>
+compare的第一个参数指向key数据，第二个参数指向一个数组元素。 <br>
+要保证数组必须是非降序排列的。</p>
+
+
+
+<h3 id="环境通信函数">环境通信函数</h3>
+
+<pre><code>int atexit(void (*func)(void));
+</code></pre>
+
+<p>注册func指向的函数，该函数在程序正常终止的时候被调用。成功返回0，否则返回非0。实现应该至少支持32个函数的注册，一个函数可以注册多次。</p>
+
+<pre><code>void exit(int status);
+</code></pre>
+
+<p>使程序正常终止。 <br>
+首先，调用所有atexit注册的函数，按照他们注册时的反顺序调用。 <br>
+然后，清空所有打开的具有未写缓冲数据的流，关闭所有打开的流，并删除tmpfile函数创建的所有文件。 <br>
+最后，控制权返回给宿主环境。</p>
+
+<pre><code>void abort(void);
+</code></pre>
+
+<p>使程序异常终止，除非捕获了信号SIGABRT且信号处理程序没有返回。可能会实现为调用exit函数并释放SIGABRT信号。</p>
+
+<pre><code>char *getenv(const char *name);
+</code></pre>
+
+<p>搜索宿主环境提供的环境表，来查找一个能和name指向的串匹配的串。如果不能找到，则返回空指针。也就是windows下的环境变量。</p>
+
+<pre><code>int system(const char *string);
+</code></pre>
+
+<p>把sring指向的串传递给宿主环境，然后命令处理程序按照实现定义的方式执行它，可以使用空指针作为参数查询命令处理程序是否存在。如果参数是空指针，只有当命令处理程序可用的时候返回非0。如果参数不是空指针，返回一个实现定义的值。</p>
+
+
+
+<h3 id="多字节字符和多字节串函数">多字节字符和多字节串函数</h3>
+
+<p>这些函数的行为受当前区域设置类别LC_CTYPE的影响，在此仅列出：</p>
+
+<pre><code>int mblen(const char *s, size_t n);
+int mbtowc(wchar_t *pwc, const char *s, size_t n);
+int wctomb(char *s, wchar_t wchar);
+size_t mbstowcs(wchar_t *pwcs, const char *s, size_t n);
+size_t wcstombs(char *s, const wchar_t *pwcs, size_t n);
+</code></pre></div></body>
+</html>

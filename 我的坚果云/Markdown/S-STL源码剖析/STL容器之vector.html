@@ -1,0 +1,340 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STL容器之vector</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><pre><code>template &lt; typename T, typename Alloc = allocator&lt;T&gt; &gt;
+class vector;
+</code></pre>
+<p>《源码剖析》上vector部分倒也不复杂，可源码也不是太简单，我大体浏览了一遍，发现如真要详细看看，也需要不少时间。所以就理解了个大概，空间重新配置的代码就不再赘述。</p>
+<p>vector部分源码（摘录于stl_vector.h，有改动）：</p>
+<pre><code class="prism language-cpp"><span class="token keyword">template</span> <span class="token operator">&lt;</span> <span class="token keyword">typename</span> T<span class="token punctuation">,</span> <span class="token keyword">typename</span> Alloc <span class="token operator">=</span> allocator<span class="token operator">&lt;</span>T<span class="token operator">&gt;</span> <span class="token operator">&gt;</span>
+<span class="token keyword">class</span> <span class="token class-name">vector</span>
+<span class="token punctuation">{</span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">typedef</span> T value_type<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> value_type<span class="token operator">*</span> iterator<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> <span class="token keyword">const</span> value_type<span class="token operator">*</span> const_iterator<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> value_type<span class="token operator">*</span> pointer<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> <span class="token keyword">const</span> value_type<span class="token operator">*</span> const_pointer<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> value_type<span class="token operator">&amp;</span> reference<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> <span class="token keyword">const</span> value_type<span class="token operator">&amp;</span> const_reference<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> size_t size_type<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> ptrdiff_t difference_type<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> Alloc allocator_type<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> reverse_iterator<span class="token operator">&lt;</span>const_iterator<span class="token operator">&gt;</span> const_reverse_iterator<span class="token punctuation">;</span>
+	<span class="token keyword">typedef</span> reverse_iterator<span class="token operator">&lt;</span>iterator<span class="token operator">&gt;</span> reverse_iterator<span class="token punctuation">;</span>
+
+<span class="token keyword">protected</span><span class="token operator">:</span>
+	iterator start<span class="token punctuation">;</span>
+	iterator finish<span class="token punctuation">;</span>
+	iterator end_of_storage<span class="token punctuation">;</span>
+
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token comment">// 构造函数</span>
+	<span class="token keyword">explicit</span> <span class="token function">vector</span><span class="token punctuation">(</span><span class="token keyword">const</span> allocator_type<span class="token operator">&amp;</span> a <span class="token operator">=</span> <span class="token function">allocator_type</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">explicit</span> <span class="token function">vector</span><span class="token punctuation">(</span>size_type n<span class="token punctuation">,</span> <span class="token keyword">const</span> T<span class="token operator">&amp;</span> value <span class="token operator">=</span> <span class="token function">value_type</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+					<span class="token keyword">const</span> allocator_type<span class="token operator">&amp;</span> a <span class="token operator">=</span> <span class="token function">allocator_type</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">vector</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&amp;</span> x<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">InputIterator</span><span class="token operator">&gt;</span>
+	<span class="token function">vector</span><span class="token punctuation">(</span>InputIterator first<span class="token punctuation">,</span> InputIterator last<span class="token punctuation">,</span>
+		   <span class="token keyword">const</span> allocator_type<span class="token operator">&amp;</span> a <span class="token operator">=</span> <span class="token function">allocator_type</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token comment">// 析构函数, 将所有元素析构</span>
+	<span class="token operator">~</span><span class="token function">vector</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token function">destroy</span><span class="token punctuation">(</span>start<span class="token punctuation">,</span> finish<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token comment">// 赋值运算符</span>
+	vector<span class="token operator">&amp;</span> <span class="token keyword">operator</span><span class="token operator">=</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&amp;</span> x<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token comment">// 获得空间配置器</span>
+	allocator_type <span class="token function">get_allocator</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span><span class="token punctuation">;</span>
+
+<span class="token comment">///////////////////////////////////////////////////////</span>
+	<span class="token comment">// 迭代器</span>
+	iterator <span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">iterator</span><span class="token punctuation">(</span>start<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	const_iterator <span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">const_iterator</span><span class="token punctuation">(</span>start<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	iterator <span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">iterator</span><span class="token punctuation">(</span>finish<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	const_iterator <span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">const_iterator</span><span class="token punctuation">(</span>finish<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	reverse_iterator <span class="token function">rbegin</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">reverse_iterator</span><span class="token punctuation">(</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	const_reverse_iterator <span class="token function">rbegin</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">const_reverse_iterator</span><span class="token punctuation">(</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	reverse_iterator <span class="token function">rend</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">reverse_iterator</span><span class="token punctuation">(</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	const_reverse_iterator <span class="token function">rend</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">const_reverse_iterator</span><span class="token punctuation">(</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+
+<span class="token comment">///////////////////////////////////////////////////////</span>
+	<span class="token comment">// 容量</span>
+	size_type <span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">size_type</span><span class="token punctuation">(</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	size_type <span class="token function">max_size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">size_type</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>T<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	size_type <span class="token function">capacity</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">size_type</span><span class="token punctuation">(</span><span class="token function">iterator</span><span class="token punctuation">(</span>end_of_storage<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token keyword">bool</span> <span class="token function">empty</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token comment">// 请求vector可容纳n个元素, 如容量不足, 扩展至n</span>
+	<span class="token keyword">void</span> <span class="token function">reserve</span><span class="token punctuation">(</span>size_type n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token comment">// resize使vector可容纳new_size个元素,</span>
+	<span class="token comment">// 如new_size不大于size(), 将new_size后面的元素析构,</span>
+	<span class="token comment">// 如new_size大于size(), 将元素个数扩展至new_size个, 可能会进行空间的扩展</span>
+	<span class="token keyword">void</span> <span class="token function">resize</span><span class="token punctuation">(</span>size_type new_size<span class="token punctuation">,</span> <span class="token keyword">const</span> T<span class="token operator">&amp;</span> x <span class="token operator">=</span> <span class="token function">T</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">///////////////////////////////////////////////////////</span>
+	<span class="token comment">// 元素访问</span>
+	reference <span class="token keyword">operator</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>size_type n<span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	const_reference <span class="token keyword">operator</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">(</span>size_type n<span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	reference <span class="token function">at</span><span class="token punctuation">(</span>size_type n<span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>n <span class="token operator">&gt;=</span> <span class="token keyword">this</span><span class="token operator">-</span><span class="token operator">&gt;</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+			<span class="token function">__throw_out_of_range</span><span class="token punctuation">(</span><span class="token string">"vector"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token operator">*</span><span class="token keyword">this</span><span class="token punctuation">)</span><span class="token punctuation">[</span>n<span class="token punctuation">]</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	const_reference <span class="token function">at</span><span class="token punctuation">(</span>size_type n<span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>n <span class="token operator">&gt;=</span> <span class="token keyword">this</span><span class="token operator">-</span><span class="token operator">&gt;</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+			<span class="token function">__throw_out_of_range</span><span class="token punctuation">(</span><span class="token string">"vector"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token operator">*</span><span class="token keyword">this</span><span class="token punctuation">)</span><span class="token punctuation">[</span>n<span class="token punctuation">]</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	reference <span class="token function">front</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token operator">*</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	const_reference <span class="token function">front</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token operator">*</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	reference <span class="token function">back</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	const_reference <span class="token function">back</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">const</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">return</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+
+<span class="token comment">///////////////////////////////////////////////////////</span>
+	<span class="token comment">// Modifiers</span>
+	<span class="token comment">// 赋值操作, 可能会进行空间的扩展</span>
+	<span class="token keyword">void</span> <span class="token function">assign</span><span class="token punctuation">(</span>size_type n<span class="token punctuation">,</span> <span class="token keyword">const</span> T<span class="token operator">&amp;</span> __val<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">InputIterator</span><span class="token operator">&gt;</span>
+	<span class="token keyword">void</span> <span class="token function">assign</span><span class="token punctuation">(</span>InputIterator first<span class="token punctuation">,</span> InputIterator last<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">void</span> <span class="token function">push_back</span><span class="token punctuation">(</span><span class="token keyword">const</span> T<span class="token operator">&amp;</span> x<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">void</span> <span class="token function">pop_back</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token operator">--</span>finish<span class="token punctuation">;</span>
+		<span class="token function">destroy</span><span class="token punctuation">(</span>finish<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">InputIterator</span><span class="token operator">&gt;</span>
+	<span class="token keyword">void</span> <span class="token function">insert</span><span class="token punctuation">(</span>iterator pos<span class="token punctuation">,</span> InputIterator first<span class="token punctuation">,</span> InputIterator last<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">void</span> insert <span class="token punctuation">(</span>iterator pos<span class="token punctuation">,</span> size_type n<span class="token punctuation">,</span> <span class="token keyword">const</span> T<span class="token operator">&amp;</span> x<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token comment">// 擦除, 会调用析构</span>
+	iterator <span class="token function">erase</span><span class="token punctuation">(</span>iterator position<span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>position <span class="token operator">+</span> <span class="token number">1</span> <span class="token operator">!=</span> <span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+			<span class="token function">copy</span><span class="token punctuation">(</span>position <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> position<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token operator">--</span>finish<span class="token punctuation">;</span>
+		<span class="token function">_Destroy</span><span class="token punctuation">(</span>finish<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">return</span> position<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	iterator <span class="token function">erase</span><span class="token punctuation">(</span>iterator first<span class="token punctuation">,</span> iterator last<span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		iterator <span class="token function">i</span><span class="token punctuation">(</span><span class="token function">copy</span><span class="token punctuation">(</span>last<span class="token punctuation">,</span> <span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> first<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token function">_Destroy</span><span class="token punctuation">(</span>i<span class="token punctuation">,</span> <span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		finish <span class="token operator">=</span> finish <span class="token operator">-</span> <span class="token punctuation">(</span>last <span class="token operator">-</span> first<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">return</span> first<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token comment">// 擦除所有元素</span>
+	<span class="token keyword">void</span> <span class="token function">clear</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		<span class="token function">erase</span><span class="token punctuation">(</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token keyword">void</span> <span class="token function">swap</span><span class="token punctuation">(</span>vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> x<span class="token punctuation">)</span>
+	<span class="token punctuation">{</span>
+		std<span class="token operator">::</span><span class="token function">swap</span><span class="token punctuation">(</span>start<span class="token punctuation">,</span> x<span class="token punctuation">.</span>start<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		std<span class="token operator">::</span><span class="token function">swap</span><span class="token punctuation">(</span>finish<span class="token punctuation">,</span> x<span class="token punctuation">.</span>finish<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		std<span class="token operator">::</span><span class="token function">swap</span><span class="token punctuation">(</span>end_of_storage<span class="token punctuation">,</span> x<span class="token punctuation">.</span>end_of_storage<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+* 比较运算符和swap函数
+* equal, STL泛型算法函数, 用于按元素比较两个序列
+* lexicographical_compare, STL泛型算法函数, 用于按字典序比较两个序列
+*/</span>
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">T</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Alloc</span><span class="token operator">&gt;</span>
+<span class="token keyword">inline</span> <span class="token keyword">bool</span>
+<span class="token keyword">operator</span><span class="token operator">==</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> x<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> y<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	<span class="token keyword">return</span> x<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> y<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> <span class="token function">equal</span><span class="token punctuation">(</span>x<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> x<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> y<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">T</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Alloc</span><span class="token operator">&gt;</span>
+<span class="token keyword">inline</span> <span class="token keyword">bool</span>
+<span class="token keyword">operator</span><span class="token operator">&lt;</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> x<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> y<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	<span class="token keyword">return</span> <span class="token function">lexicographical_compare</span><span class="token punctuation">(</span>x<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> x<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> y<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> y<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">T</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Alloc</span><span class="token operator">&gt;</span>
+<span class="token keyword">inline</span> <span class="token keyword">void</span> <span class="token function">swap</span><span class="token punctuation">(</span>vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> x<span class="token punctuation">,</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> y<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	x<span class="token punctuation">.</span><span class="token function">swap</span><span class="token punctuation">(</span>y<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">T</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Alloc</span><span class="token operator">&gt;</span>
+<span class="token keyword">inline</span> <span class="token keyword">bool</span>
+<span class="token keyword">operator</span><span class="token operator">!=</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> x<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> y<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	<span class="token keyword">return</span> <span class="token operator">!</span><span class="token punctuation">(</span>x <span class="token operator">==</span> y<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">T</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Alloc</span><span class="token operator">&gt;</span>
+<span class="token keyword">inline</span> <span class="token keyword">bool</span>
+<span class="token keyword">operator</span><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> x<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> y<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	<span class="token keyword">return</span> y <span class="token operator">&lt;</span> x<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">T</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Alloc</span><span class="token operator">&gt;</span>
+<span class="token keyword">inline</span> <span class="token keyword">bool</span>
+<span class="token keyword">operator</span><span class="token operator">&lt;=</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> x<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> y<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	<span class="token keyword">return</span> <span class="token operator">!</span><span class="token punctuation">(</span>y <span class="token operator">&lt;</span> x<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">T</span><span class="token punctuation">,</span> <span class="token keyword">class</span> <span class="token class-name">Alloc</span><span class="token operator">&gt;</span>
+<span class="token keyword">inline</span> <span class="token keyword">bool</span>
+<span class="token keyword">operator</span><span class="token operator">&gt;=</span><span class="token punctuation">(</span><span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> x<span class="token punctuation">,</span> <span class="token keyword">const</span> vector<span class="token operator">&lt;</span>T<span class="token punctuation">,</span> Alloc<span class="token operator">&gt;</span><span class="token operator">&amp;</span> y<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+	<span class="token keyword">return</span> <span class="token operator">!</span><span class="token punctuation">(</span>x <span class="token operator">&lt;</span> y<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>##精要<br>
+vector的内部数据结构就是一段连续的内存，也就是一个数组，和string极像。有3个数据成员指示这段内存的状态，start，finish，end_of_storage。它们都是vector::iterator类型的，这个实现里vector::iterator就是T*类型，vector的迭代器就是普通指针，其他库的实现可能并不是这样。这三个数据成员可以完全标识一个vector的状态：start表示目前使用空间的头，finish表示目前使用空间的尾，end_of_storage表示目前可用空间的尾。</p>
+<p>构造函数有一个参数是空间配置器对象，所以vector内部应有一个地方存这个对象，并用它进行内存配置操作。get_allocator()返回的也应是此对象。</p>
+<p>增大空间包括3个步骤：配置新空间，数据 移动，释还旧空间。成本较高，所以配置的内存空间只增不减，即使用resize()来操作。<br>
+执行push操作时，空间增长策略是，如果当前空间为0，则增长为1，否则，增长一倍。<br>
+assign，reserve引起的空间增长，直接增大至请求的大小。<br>
+resize，insert引起的空间增长，假设需要增大n，空间增至end() - begin() + n和2*(end() - begin())中较大者。<br>
+<font color="red"><strong>一旦引起空间重新配置，指向原vector的所有迭代器都将失效。</strong></font></p>
+<p>正因为重新配置空间成本较高，所以在创建vector时就确定其大小会提升效率，恰当时候使用reserve()也会提高效率。<br>
+##erase时的析构问题<br>
+注意到两个erase操作会调用_Destroy函数，_Destroy在<a href="http://blog.csdn.net/liuyuan185442111/article/details/45851157">STL之处理uninitialized memory</a>中有介绍。</p>
+<pre><code>iterator erase(iterator position)
+{
+	if (position + 1 != end())
+		copy(position + 1, end(), position);
+	--finish;
+	_Destroy(finish);
+	return position;
+}
+iterator erase(iterator first, iterator last)
+{
+	iterator i(copy(last, end(), first));
+	_Destroy(i, end());
+	finish = finish - (last - first);
+	return first;
+}
+</code></pre>
+<p>问题在于，调用析构的元素并不是擦除掉的元素，而是末尾的元素！<br>
+特意写了一个例子验证：</p>
+<pre><code class="prism language-cpp"><span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">&lt;vector&gt;</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">&lt;iostream&gt;</span></span>
+<span class="token keyword">using</span> <span class="token keyword">namespace</span> std<span class="token punctuation">;</span>
+
+<span class="token keyword">struct</span> element
+<span class="token punctuation">{</span>
+        <span class="token keyword">int</span> value<span class="token punctuation">;</span>
+        <span class="token function">element</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token punctuation">)</span><span class="token operator">:</span><span class="token function">value</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">{</span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"construct "</span> <span class="token operator">&lt;&lt;</span> i <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+        <span class="token function">element</span><span class="token punctuation">(</span><span class="token keyword">const</span> element <span class="token operator">&amp;</span>val<span class="token punctuation">)</span>
+        <span class="token punctuation">{</span>
+                cout <span class="token operator">&lt;&lt;</span> <span class="token string">"copy "</span> <span class="token operator">&lt;&lt;</span> val<span class="token punctuation">.</span>value <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+                value <span class="token operator">=</span> val<span class="token punctuation">.</span>value<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token operator">~</span><span class="token function">element</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"destruct "</span> <span class="token operator">&lt;&lt;</span> value <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+        vector<span class="token operator">&lt;</span>element<span class="token operator">&gt;</span> v<span class="token punctuation">;</span>
+        v<span class="token punctuation">.</span><span class="token function">reserve</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token string">"push_back:\n"</span><span class="token punctuation">;</span>
+        v<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        v<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        v<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        v<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token string">"\nerase:\n"</span><span class="token punctuation">;</span>
+        v<span class="token punctuation">.</span><span class="token function">erase</span><span class="token punctuation">(</span>v<span class="token punctuation">.</span><span class="token function">begin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token string">"\nend:\n"</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Windows和Linux下的gcc输出结果都是：<br>
+push_back:<br>
+construct 1<br>
+copy 1<br>
+destruct 1<br>
+construct 2<br>
+copy 2<br>
+destruct 2<br>
+construct 3<br>
+copy 3<br>
+destruct 3<br>
+construct 4<br>
+copy 4<br>
+destruct 4</p>
+<p>erase:<br>
+destruct 4</p>
+<p>end:<br>
+destruct 1<br>
+destruct 3<br>
+destruct 4<br>
+erase擦除的是第2个元素，被析构的却是最后一个元素。<br>
+<strong>真是令人诧异</strong><br>
+根据<a href="http://www.voidcn.com/article/p-kejrmdzo-um.html">《stl:vector erase 时的元素析构问题》</a>，这是一个已知的bug，并且是符合c++标准的。目瞪口呆.jpg</p>
+</div>
+</body>
+
+</html>

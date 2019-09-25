@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MySQL的数据类型</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>MySQL的数据主要分成三类：数字类型、字符串类型、日期和时间类型。</p>
+
+
+
+<h2 id="整形数据类型">整形数据类型</h2>
+
+<table>
+<thead>
+<tr>
+  <th>数据类型</th>
+  <th>取值范围</th>
+  <th>大小（字节）</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>TINYINT</td>
+  <td>-127~127/0~255</td>
+  <td>1</td>
+</tr>
+<tr>
+  <td>BIT</td>
+  <td>-127~127/0~255</td>
+  <td>1</td>
+</tr>
+<tr>
+  <td>BOOL</td>
+  <td>-127~127/0~255</td>
+  <td>1</td>
+</tr>
+<tr>
+  <td>SMALLINT</td>
+  <td>-32768~32767/0~65535</td>
+  <td>2</td>
+</tr>
+<tr>
+  <td>MEDIUMINT</td>
+  <td>-8388608~8388607/0~16777215</td>
+  <td>3</td>
+</tr>
+<tr>
+  <td>INT</td>
+  <td>太大不写了</td>
+  <td>4</td>
+</tr>
+<tr>
+  <td>BIGINT</td>
+  <td>太大不写了</td>
+  <td>8</td>
+</tr>
+</tbody></table>
+
+
+<p>关键字INT是INTEGER的同义词。 <br>
+关于TINYINT、BIT、BOOL为什么同时存在，和int(11)的意义，参见<a href="http://blog.sina.com.cn/s/blog_610997850100wjrm.html">《mysql int(3)与int(11)的区别》</a>。</p>
+
+
+
+<h2 id="浮点型数据类型">浮点型数据类型</h2>
+
+<p>FLOAT占4字节，DOUBLE占8字节。 <br>
+还有DECIMAL类型。 <br>
+对于DECIMAL(M,D)，如果M&gt;D，占M+2个字节，否则占D+2个字节。例如salary DECIMAL(5,2)，5代表十进制数字的数目，2代表在小数点后的数字位数，这里，salary列可以存储的值范围是从-999.99到999.99(似乎还有另外的地方来存符号？)。如果溢出，截短为最大值或最小值。关键字DEC是DECIMAL的同义词。</p>
+
+
+
+<h2 id="常规字符串类型">常规字符串类型</h2>
+
+<p>包括char(M)和varchar(M)，参见<a href="http://blog.csdn.net/imzoer/article/details/8435540">《MySql中varchar(10)和varchar(100)的区别==&gt;&gt;以及char的利弊》</a>。 <br>
+char等价于char(1)。 </p>
+
+
+
+<h2 id="enum和set类型">ENUM和SET类型</h2>
+
+<table>
+<thead>
+<tr>
+  <th>类型</th>
+  <th>最大值</th>
+  <th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>ENUM(“value1”,…)</td>
+  <td>65535</td>
+  <td>该类型的列只可以容纳所列值之一或者为NULL</td>
+</tr>
+<tr>
+  <td>SET(“value1”,…)</td>
+  <td>2^个数-1</td>
+  <td>该类型的列可以容纳一组值或者为NULL</td>
+</tr>
+</tbody></table>
+
+
+<p>例如：</p>
+
+<pre><code>CREATE TABLE t(c set('a','b','c'));
+</code></pre>
+
+<p>a,b,c的权值分别为1,2,4，<code>'a,b'</code>就是3，该列取值范围为[0,7]，0就是NULL，其他不合理的值都自动变为NULL。<code>INSERT INTO t VALUES('a,b');</code>等价于<code>INSERT INTO t VALUES(3);</code>。</p>
+
+<pre><code>CREATE TABLE t(c enum('a','b','c'));
+</code></pre>
+
+<p>a,b,c的权值分别为1,2,3，该列取值范围为[0,3]，0就是NULL，其他不合理的值自动变为NULL。<code>INSERT INTO t VALUES('b');</code>等价于<code>INSERT INTO t VALUES(2);</code>。</p>
+
+
+
+<h2 id="日期和时间类型">日期和时间类型</h2>
+
+<p>如果赋予类型一个不合法的值，将会被0代替。</p>
+
+<table>
+<thead>
+<tr>
+  <th>类型</th>
+  <th>取值范围</th>
+  <th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>DATE</td>
+  <td>1000-01-01~9999-12-31</td>
+  <td>YYYY-MM-DD</td>
+</tr>
+<tr>
+  <td>TIME</td>
+  <td>-838:58:59~835:59:59</td>
+  <td>HH:MM:SS</td>
+</tr>
+<tr>
+  <td>DATETIME</td>
+  <td>1000-01-01 00:00:00——9999-12-31 23:59:59</td>
+  <td>YYYY-MM-DD HH:MM:SS</td>
+</tr>
+<tr>
+  <td>TIMESTAMP</td>
+  <td>1970-01-01 00:00:00——2037年的某个时间</td>
+  <td>专有的自动更新特性，格式同DATETIME类型</td>
+</tr>
+<tr>
+  <td>YEAR(M)</td>
+  <td>1901~2155</td>
+  <td>可指定两位数字和四位数字的格式</td>
+</tr>
+</tbody></table></div></body>
+</html>

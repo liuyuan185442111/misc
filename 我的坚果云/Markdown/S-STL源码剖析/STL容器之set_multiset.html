@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STL容器之set/multiset</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>set/multiset会根据待定的排序准则，自动将元素排序。两者不同在于前者不允许元素重复，而后者允许。</p>
+
+
+
+<h2 id="关于set">关于set</h2>
+
+<p>对于set，元素的值标识这个元素。每个元素必须是唯一的，且一旦存入set就不可修改(the elements are always const)，但是可以进行插入和删除操作。</p>
+
+<p>访问单个元素，set通常比unordered_set慢，但是set允许按顺序直接插入。 <br>
+set通常用二叉搜索树实现（sgi用红黑树实现）。</p>
+
+<p><strong>关于Compare</strong> <br>
+Compare可以是一个函数指针或函数对象，Compare(a,b) shall return true if a is considered to go before b in the strict weak ordering。</p>
+
+<p><strong>关于strict weak ordering</strong> <br>
+The STL algorithms for stable_sort( ) and sort( ) require the binary predicate to be strict weak ordering. <br>
+For example: <br>
+· Strict: <code>pred (X, X) is always false</code>. <br>
+· Weak: <code>If !pred(X,Y) &amp;&amp; !pred(Y,X), then X==Y</code>. <br>
+· Ordering:<code>If pred(X,Y) &amp;&amp; pred(Y,Z), then pred(X,Z)</code>.</p>
+
+<p>set的迭代器是双向迭代器。</p>
+
+<p>set的接口如下，基本是转调了红黑树的接口而已：</p>
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-keyword">template</span> &lt; <span class="hljs-keyword">typename</span> T, <span class="hljs-keyword">typename</span> Compare = less&lt;T&gt;,
+         <span class="hljs-keyword">typename</span> Alloc = allocator&lt;T&gt; &gt;
+<span class="hljs-keyword">class</span> <span class="hljs-built_in">set</span>
+{
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-keyword">typedef</span> T       key_type;
+    <span class="hljs-keyword">typedef</span> T       value_type;
+    <span class="hljs-keyword">typedef</span> Compare key_compare;
+    <span class="hljs-keyword">typedef</span> Compare value_compare;
+    <span class="hljs-keyword">typedef</span> Alloc   allocator_type;
+
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> allocator_type::pointer             pointer;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> allocator_type::const_pointer       const_pointer;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> allocator_type::reference           reference;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> allocator_type::const_reference     const_reference;
+
+<span class="hljs-keyword">private</span>:
+    <span class="hljs-comment">// 红黑树</span>
+    <span class="hljs-keyword">typedef</span> _Rb_tree&lt;key_type, value_type, _Identity&lt;key_type&gt;, key_compare, allocator_type&gt; _Rep_type;
+
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::const_iterator            iterator;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::const_iterator            const_iterator;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::const_reverse_iterator    reverse_iterator;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::const_reverse_iterator const_reverse_iterator;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::size_type                 size_type;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::difference_type           difference_type;
+
+    <span class="hljs-comment">// 构造</span>
+    <span class="hljs-keyword">explicit</span> <span class="hljs-built_in">set</span>(<span class="hljs-keyword">const</span> key_compare&amp; comp = key_compare(),
+                 <span class="hljs-keyword">const</span> allocator_type&amp; alloc = allocator_type());
+
+    <span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">typename</span> InputIterator&gt;
+    <span class="hljs-built_in">set</span>(InputIterator first, InputIterator last,
+        <span class="hljs-keyword">const</span> key_compare&amp; comp = key_compare(),
+        <span class="hljs-keyword">const</span> allocator_type&amp; alloc = allocator_type());
+
+    <span class="hljs-built_in">set</span> (<span class="hljs-keyword">const</span> <span class="hljs-built_in">set</span>&amp; x);
+
+    <span class="hljs-comment">// 析构</span>
+    ~<span class="hljs-built_in">set</span>();
+
+    <span class="hljs-comment">// 赋值</span>
+    <span class="hljs-built_in">set</span>&amp; <span class="hljs-keyword">operator</span>=(<span class="hljs-keyword">const</span> <span class="hljs-built_in">set</span>&amp; x);
+
+    <span class="hljs-comment">// 迭代器</span>
+    iterator begin();
+    const_iterator begin() <span class="hljs-keyword">const</span>;
+
+    iterator end();
+    const_iterator end() <span class="hljs-keyword">const</span>;
+
+    reverse_iterator rbegin();
+    const_reverse_iterator rbegin() <span class="hljs-keyword">const</span>;
+
+    reverse_iterator rend();
+    const_reverse_iterator rend() <span class="hljs-keyword">const</span>;
+
+    <span class="hljs-comment">// Capacity</span>
+    <span class="hljs-keyword">bool</span> empty() <span class="hljs-keyword">const</span>;
+    size_type size() <span class="hljs-keyword">const</span>;
+    size_type max_size() <span class="hljs-keyword">const</span>;
+
+    <span class="hljs-comment">// Modifiers</span>
+    <span class="hljs-comment">/**
+    由于set的元素是唯一的, 如果val已存在于set中, 插入操作则会失败;
+    插入操作的状态存入返回值的第二个元素里,
+    如果插入失败, 返回pair的第一个元素存储的是指向此元素的迭代器,
+    如果插入成功, 其存储的是指向新插入元素的迭代器.
+    */</span>
+    pair&lt;iterator,<span class="hljs-keyword">bool</span>&gt; insert(<span class="hljs-keyword">const</span> value_type&amp; val);
+
+    <span class="hljs-comment">/**
+    此函数不关心插入是否成功, 返回值和上个函数返回pair的第一个元素相同.
+    第一个参数仅是一个hint, 它可能会提高插入的效率.
+    A bad hint would cause no gains in efficiency.
+    Insertion requires logarithmic time (if the hint is not taken).
+    */</span>
+    iterator insert(iterator position, <span class="hljs-keyword">const</span> value_type&amp; val);
+
+    <span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">typename</span> InputIterator&gt;
+    <span class="hljs-keyword">void</span> insert(InputIterator first, InputIterator last);
+
+    <span class="hljs-keyword">void</span> erase(iterator position);
+    size_type erase(<span class="hljs-keyword">const</span> value_type&amp; val);
+    <span class="hljs-keyword">void</span> erase(iterator first, iterator last);
+
+    <span class="hljs-keyword">void</span> swap (<span class="hljs-built_in">set</span>&amp; x);
+    <span class="hljs-keyword">void</span> clear();
+
+    <span class="hljs-comment">// get操作</span>
+    key_compare key_comp() <span class="hljs-keyword">const</span>;
+    value_compare value_comp() <span class="hljs-keyword">const</span>;
+    allocator_type get_allocator() <span class="hljs-keyword">const</span>;
+
+    <span class="hljs-comment">// Operations</span>
+    <span class="hljs-comment">// 没有找到将返回end()</span>
+    iterator find(<span class="hljs-keyword">const</span> value_type&amp; val) <span class="hljs-keyword">const</span>;
+    <span class="hljs-comment">// 返回0或1</span>
+    size_type count(<span class="hljs-keyword">const</span> value_type&amp; val) <span class="hljs-keyword">const</span>;
+
+    <span class="hljs-comment">/**
+    Return iterator to lower bound
+    返回指向第一个满足not considered to go before val的元素的迭代器
+    即key_compare(element,val)返回false, 也就是element&gt;=val
+    */</span>
+    iterator lower_bound(<span class="hljs-keyword">const</span> value_type&amp; val) <span class="hljs-keyword">const</span>;
+
+    <span class="hljs-comment">// 返回指向第一个满足considered to go after val的元素的迭代器</span>
+    <span class="hljs-comment">// 当set包含一个等于val的元素时, lower_bound(val)返回指向这个元素的迭代器,</span>
+    <span class="hljs-comment">// 而upper_bound(val)返回指向下个元素的迭代器</span>
+    iterator upper_bound(<span class="hljs-keyword">const</span> value_type&amp; val) <span class="hljs-keyword">const</span>;
+
+    <span class="hljs-comment">/**
+    返回与val相等的所有元素的边界
+    因为set里所有元素都是唯一的, 所以此序列最多包含一个元素
+    如果没有符合的值, 两个迭代器都指向val的下一个元素, 此元素被认为go after val
+    如果找到, 第一个迭代器指向val, 第二个迭代器指向下一个元素
+    */</span>
+    pair&lt;iterator,iterator&gt; equal_range(<span class="hljs-keyword">const</span> value_type&amp; val) <span class="hljs-keyword">const</span>;
+}</code></pre>
+
+<h2 id="关于multiset">关于multiset</h2>
+
+<p>multiset的特性以及用法和set完全相同，唯一的差别在于它允许键值重复。另外还要注意以下几点： <br>
+multiset::find()仅返回第一个查找到的元素，如要获得所有元素序列，可使用multiset::equal_range()。 <br>
+size_type multiset::erase (const value_type&amp; val);会erase掉所有与val相等的元素。 <br>
+对于插入操作，不能保证相等元素的相对顺序。</p>
+
+<h2 id="例子1">例子1</h2>
+
+<p>cplusplus.com上自定义Comparator的例子：</p>
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">// http://www.cplusplus.com/reference/set/set/set/</span>
+<span class="hljs-comment">// 其实是关于构造函数的例子</span>
+<span class="hljs-comment">// constructing sets</span>
+<span class="hljs-preprocessor">#include &lt;iostream&gt;</span>
+<span class="hljs-preprocessor">#include &lt;set&gt;</span>
+
+<span class="hljs-keyword">bool</span> fncomp(<span class="hljs-keyword">int</span> lhs, <span class="hljs-keyword">int</span> rhs) {<span class="hljs-keyword">return</span> lhs&lt;rhs;}
+
+<span class="hljs-keyword">struct</span> classcomp {
+  <span class="hljs-keyword">bool</span> <span class="hljs-keyword">operator</span>() (<span class="hljs-keyword">const</span> <span class="hljs-keyword">int</span>&amp; lhs, <span class="hljs-keyword">const</span> <span class="hljs-keyword">int</span>&amp; rhs) <span class="hljs-keyword">const</span>
+  {<span class="hljs-keyword">return</span> lhs&lt;rhs;}
+};
+
+<span class="hljs-keyword">int</span> main()
+{
+  <span class="hljs-built_in">std</span>::<span class="hljs-stl_container"><span class="hljs-built_in">set</span>&lt;<span class="hljs-keyword">int</span>&gt;</span> first;                           <span class="hljs-comment">// empty set of ints</span>
+
+  <span class="hljs-keyword">int</span> myints[] = {<span class="hljs-number">10</span>,<span class="hljs-number">20</span>,<span class="hljs-number">30</span>,<span class="hljs-number">40</span>,<span class="hljs-number">50</span>};
+  <span class="hljs-built_in">std</span>::<span class="hljs-stl_container"><span class="hljs-built_in">set</span>&lt;<span class="hljs-keyword">int</span>&gt;</span> second(myints,myints+<span class="hljs-number">5</span>);        <span class="hljs-comment">// range</span>
+
+  <span class="hljs-built_in">std</span>::<span class="hljs-stl_container"><span class="hljs-built_in">set</span>&lt;<span class="hljs-keyword">int</span>&gt;</span> third(second);                  <span class="hljs-comment">// a copy of second</span>
+
+  <span class="hljs-built_in">std</span>::<span class="hljs-stl_container"><span class="hljs-built_in">set</span>&lt;<span class="hljs-keyword">int</span>&gt;</span> fourth(second.begin(), second.end());  <span class="hljs-comment">// iterator ctor.</span>
+
+  <span class="hljs-built_in">std</span>::<span class="hljs-stl_container"><span class="hljs-built_in">set</span>&lt;<span class="hljs-keyword">int</span>,classcomp&gt;</span> fifth;                 <span class="hljs-comment">// class as Compare</span>
+
+  <span class="hljs-keyword">bool</span> (*fn_pt)(<span class="hljs-keyword">int</span>,<span class="hljs-keyword">int</span>) = fncomp;
+  <span class="hljs-built_in">std</span>::<span class="hljs-stl_container"><span class="hljs-built_in">set</span>&lt;<span class="hljs-keyword">int</span>,<span class="hljs-keyword">bool</span>(*)(<span class="hljs-keyword">int</span>,<span class="hljs-keyword">int</span>)&gt;</span> sixth(fn_pt);  <span class="hljs-comment">// function pointer as Compare</span>
+
+  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+<p>本来我是不准备展示这个例子的，但是在思考下一个例子的时候，发现还是有必要对class和function pointer作为Comparator的不同做些说明。 <br>
+可以看到，当用class作为Comparator时，构造函数并不需要参数，因为有默认参数key_compare()，这样OK；但是当用function pointer作为Comparator的时候就不OK了，虽然编译不会出错，但运行起来肯定会出错！</p>
+
+<p>那为什么会编译通过？ <br>
+考虑到</p>
+
+<pre><code>int m = int();
+cout &lt;&lt; m &lt;&lt; endl;
+</code></pre>
+
+<p>会输出0，似乎c++对基本数据类型进行了“类”化，int()相当于用0初始化m，bool(*)(int,int)()就是用0初始化这个函数指针类型。</p>
+
+<p>所以，当使用函数指针类型来做为Comparator时一定要用实际的函数指针来初始化。</p>
+
+<h2 id="例子2">例子2</h2>
+
+<p>当set用int作为参数时，key就是int类型，insert一个元素就是拷贝一个int，也没啥开销。但当元素类型是一个类时，insert一个元素就会调用拷贝构造函数，这开销就可能很大了。 <br>
+<strong>可以用指向类的指针作为set的参数！只要自定义Comparator就好了。</strong> <br>
+下面就是一个例子：</p>
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-preprocessor">#include &lt;iostream&gt;</span>
+<span class="hljs-preprocessor">#include &lt;set&gt;</span>
+<span class="hljs-preprocessor">#include &lt;cstdlib&gt;</span>
+<span class="hljs-keyword">using</span> <span class="hljs-keyword">namespace</span> <span class="hljs-built_in">std</span>;
+
+<span class="hljs-keyword">struct</span> Cont
+{
+    Cont(<span class="hljs-keyword">int</span> m=<span class="hljs-number">0</span>,<span class="hljs-keyword">int</span> n=<span class="hljs-number">0</span>):a(m),b(n) {}
+    <span class="hljs-keyword">int</span> a,b;
+    <span class="hljs-keyword">void</span> show() { <span class="hljs-built_in">cout</span> &lt;&lt; a+b &lt;&lt; endl; }
+};
+
+<span class="hljs-keyword">bool</span> com(Cont *a, Cont *b)
+{
+    <span class="hljs-keyword">return</span> a-&gt;a+a-&gt;b &lt; b-&gt;a+b-&gt;b;
+}
+
+<span class="hljs-keyword">int</span> main ()
+{
+    <span class="hljs-stl_container"><span class="hljs-built_in">set</span>&lt;Cont*,<span class="hljs-keyword">bool</span> (*)(Cont*,Cont*)&gt;</span> myset(com);
+    Cont *p = NULL;
+    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> i=<span class="hljs-number">0</span>; i&lt;<span class="hljs-number">5</span>; ++i)
+    {
+        p = <span class="hljs-keyword">new</span> Cont(rand(),rand());
+        myset.insert(p);
+    }
+
+    <span class="hljs-stl_container"><span class="hljs-built_in">set</span>&lt;Cont*,<span class="hljs-keyword">bool</span> (*)(Cont*,Cont*)&gt;</span>::iterator ite;
+    <span class="hljs-keyword">for</span>(ite=myset.begin(); ite!=myset.end(); ++ite)
+    {
+        (*ite)-&gt;show();
+        <span class="hljs-keyword">delete</span> *ite;
+    }
+
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+<p>当然这里我们要负责处理这些指针，比如new和delete。 <br>
+既然可以用指针，那么可以用引用吗？答案是不行。 <br>
+set用到的很多类里都有类似这样的定义：typedef  T* pointer;，然而定义一个指向引用的指针是非法的：typedef int&amp;*pointer;（错误！）。</p>
+
+<h2 id="参考">参考</h2>
+
+<p><a href="http://www.cplusplus.com/reference/set/" target="_blank">http://www.cplusplus.com/reference/set/</a> <br>
+STL源码剖析</p></div></body>
+</html>

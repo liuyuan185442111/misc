@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STL之queue与priority_queue</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>头文件queue里定义了queue和priority_queue，它们和stack一样，都是适配器。</p>
+
+
+
+<h2 id="queue">queue</h2>
+
+<p>queue和stack的实现方式几乎相同，主要实现代码（stl_queue.h）：</p>
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-keyword">bool</span> empty() <span class="hljs-keyword">const</span> { <span class="hljs-keyword">return</span> c.empty(); }
+size_type size() <span class="hljs-keyword">const</span> { <span class="hljs-keyword">return</span> c.size(); }
+reference front() { <span class="hljs-keyword">return</span> c.front(); }
+const_reference front() <span class="hljs-keyword">const</span> { <span class="hljs-keyword">return</span> c.front(); }
+reference back() { <span class="hljs-keyword">return</span> c.back(); }
+const_reference back() <span class="hljs-keyword">const</span> { <span class="hljs-keyword">return</span> c.back(); }
+<span class="hljs-keyword">void</span> push(<span class="hljs-keyword">const</span> value_type&amp; __x) { c.push_back(__x); }
+<span class="hljs-keyword">void</span> pop() { c.pop_front(); }</code></pre>
+
+<p>由上面代码得知，内部容器需要有下面的方法：</p>
+
+<pre><code>empty()、size()、front()、back()、push_back()、pop_front()
+</code></pre>
+
+<p>deque和list都满足这些要求，默认使用的是deque。</p>
+
+
+
+<h2 id="priorityqueue">priority_queue</h2>
+
+<p>优先队列是一个拥有权值观念的queue，由于这是一个queue，所以只允许在底端加入元素，并从顶端取出元素。 <br>
+priority_queue带有权值观念，其内的元素并非依照被推入的次序排列，而是自动依照元素的权值排列（通常权值以实值表示）。权值最高者，排在最前面。</p>
+
+<p>缺省情况下priority_queue用一个max-heap完成，后者是一个以vector表现的完全二叉树。 <br>
+priority_queue本身的实现不难，重点在于heap的构建，我将另写一篇文章来介绍heap。</p>
+
+<p>下面是priority_queue的源码（stl_queue.h）：</p>
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">typename</span> _Tp, <span class="hljs-keyword">typename</span> _Sequence = <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;_Tp&gt;</span>,
+         <span class="hljs-keyword">typename</span> _Compare = less&lt;<span class="hljs-keyword">typename</span> _Sequence::value_type&gt; &gt;
+<span class="hljs-keyword">class</span> priority_queue
+{
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Sequence::value_type      value_type;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Sequence::size_type       size_type;
+    <span class="hljs-keyword">typedef</span>          _Sequence                  container_type;
+
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Sequence::reference       reference;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Sequence::const_reference const_reference;
+
+<span class="hljs-keyword">protected</span>:
+    _Sequence c;
+    _Compare comp; <span class="hljs-comment">// 元素大小比较标准</span>
+
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-keyword">explicit</span> priority_queue(<span class="hljs-keyword">const</span> _Compare&amp; __x = _Compare(),
+                            <span class="hljs-keyword">const</span> _Sequence&amp; __s = _Sequence())
+        : c(__s), comp(__x)
+    {
+        make_heap(c.begin(), c.end(), comp);
+    }
+
+    <span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> _InputIterator&gt;
+    priority_queue(_InputIterator __first, _InputIterator __last,
+                   <span class="hljs-keyword">const</span> _Compare&amp; __x = _Compare(),
+                   <span class="hljs-keyword">const</span> _Sequence&amp; __s = _Sequence())
+        : c(__s), comp(__x)
+    {
+        c.insert(c.end(), __first, __last);
+        make_heap(c.begin(), c.end(), comp);
+    }
+
+    <span class="hljs-keyword">bool</span> empty() <span class="hljs-keyword">const</span> { <span class="hljs-keyword">return</span> c.empty(); }
+    size_type size() <span class="hljs-keyword">const</span> { <span class="hljs-keyword">return</span> c.size(); }
+    const_reference top() <span class="hljs-keyword">const</span> { <span class="hljs-keyword">return</span> c.front(); }
+    <span class="hljs-keyword">void</span> push(<span class="hljs-keyword">const</span> value_type&amp; __x)
+    {
+        <span class="hljs-keyword">try</span>
+        {
+            c.push_back(__x);
+            push_heap(c.begin(), c.end(), comp);
+        }
+        <span class="hljs-keyword">catch</span>(...) 
+        {
+            c.clear();
+            <span class="hljs-keyword">throw</span>;
+        }
+    }
+    <span class="hljs-keyword">void</span> pop()
+    {
+        <span class="hljs-keyword">try</span>
+        {
+            pop_heap(c.begin(), c.end(), comp);
+            c.pop_back();
+        }
+        <span class="hljs-keyword">catch</span>(...)
+        {
+            c.clear();
+            <span class="hljs-keyword">throw</span>;
+        }
+    }
+};</code></pre>
+
+<p>然后看一个简单的例子：</p>
+
+
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-comment">// priority_queue::push/pop</span>
+<span class="hljs-preprocessor">#include &lt;iostream&gt;       <span class="hljs-comment">// std::cout</span></span>
+<span class="hljs-preprocessor">#include &lt;queue&gt;          <span class="hljs-comment">// std::priority_queue</span></span>
+
+<span class="hljs-keyword">int</span> main ()
+{
+  <span class="hljs-built_in">std</span>::priority_queue&lt;<span class="hljs-keyword">int</span>&gt; mypq;
+
+  mypq.push(<span class="hljs-number">30</span>);
+  mypq.push(<span class="hljs-number">100</span>);
+  mypq.push(<span class="hljs-number">25</span>);
+  mypq.push(<span class="hljs-number">40</span>);
+
+  <span class="hljs-built_in">std</span>::<span class="hljs-built_in">cout</span> &lt;&lt; <span class="hljs-string">"Popping out elements..."</span>;
+  <span class="hljs-keyword">while</span> (!mypq.empty())
+  {
+     <span class="hljs-built_in">std</span>::<span class="hljs-built_in">cout</span> &lt;&lt; <span class="hljs-string">' '</span> &lt;&lt; mypq.top();
+     mypq.pop();
+  }
+  <span class="hljs-built_in">std</span>::<span class="hljs-built_in">cout</span> &lt;&lt; <span class="hljs-string">'\n'</span>;
+
+  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+<p>输出结果是：</p>
+
+<pre><code>Popping out elements... 100 40 30 25
+</code></pre></div></body>
+</html>

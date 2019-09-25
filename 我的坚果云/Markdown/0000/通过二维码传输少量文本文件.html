@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>通过二维码传输少量文本文件</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>有时候想通过图片传递一些信息，比如公司电脑上一些自己的文档，拍照的话还得自己重新整理出来，要是能将文档转成二维码，用手机扫出来，多方便，本文对此进行一些尝试。</p>
+
+
+
+<h2 id="一">一</h2>
+
+<p>二维码能传输的信息量是很少的，直接将文档内容转成二维码很不现实，<strong>先对文档进行压缩</strong>再传输比较可行，先用WinRAR对原文件进行压缩。 <br>
+然后需要将rar转换成可打印字符，一个汉字的二维码比两个ascii字符的二维码复杂，这里考虑将rar转成可打印的ascii字符。标准ascii里有95个可打印字符，那就选64个，可表示6个比特位。</p>
+
+<table>
+<thead>
+<tr>
+  <th>rar文件</th>
+  <th>可打印字符</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>6个比特位</td>
+  <td>一个字符</td>
+</tr>
+<tr>
+  <td>24个比特位/3个字节</td>
+  <td>4个字符</td>
+</tr>
+</tbody></table>
+
+
+<p>所以，rar文件的字节数和可打印字符的字节数之比是3:4。</p>
+
+
+
+<h2 id="二">二</h2>
+
+<p>将rar文件转换为可打印字符的代码：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-comment">// encode.c</span>
+<span class="hljs-comment">//input: src.rar output: dest.txt</span>
+<span class="hljs-preprocessor">#include &lt;stdio.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;string.h&gt;</span>
+
+<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> table[]=
+{
+    <span class="hljs-string">'0'</span>,<span class="hljs-string">'1'</span>,<span class="hljs-string">'2'</span>,<span class="hljs-string">'3'</span>,<span class="hljs-string">'4'</span>,<span class="hljs-string">'5'</span>,<span class="hljs-string">'6'</span>,<span class="hljs-string">'7'</span>,<span class="hljs-string">'8'</span>,<span class="hljs-string">'9'</span>,<span class="hljs-string">'&lt;'</span>,<span class="hljs-string">'&gt;'</span>,
+    <span class="hljs-string">'A'</span>,<span class="hljs-string">'B'</span>,<span class="hljs-string">'C'</span>,<span class="hljs-string">'D'</span>,<span class="hljs-string">'E'</span>,<span class="hljs-string">'F'</span>,<span class="hljs-string">'G'</span>,<span class="hljs-string">'H'</span>,<span class="hljs-string">'I'</span>,<span class="hljs-string">'J'</span>,<span class="hljs-string">'K'</span>,<span class="hljs-string">'L'</span>,<span class="hljs-string">'M'</span>,
+    <span class="hljs-string">'N'</span>,<span class="hljs-string">'O'</span>,<span class="hljs-string">'P'</span>,<span class="hljs-string">'Q'</span>,<span class="hljs-string">'R'</span>,<span class="hljs-string">'S'</span>,<span class="hljs-string">'T'</span>,<span class="hljs-string">'U'</span>,<span class="hljs-string">'V'</span>,<span class="hljs-string">'W'</span>,<span class="hljs-string">'X'</span>,<span class="hljs-string">'Y'</span>,<span class="hljs-string">'Z'</span>,
+    <span class="hljs-string">'a'</span>,<span class="hljs-string">'b'</span>,<span class="hljs-string">'c'</span>,<span class="hljs-string">'d'</span>,<span class="hljs-string">'e'</span>,<span class="hljs-string">'f'</span>,<span class="hljs-string">'g'</span>,<span class="hljs-string">'h'</span>,<span class="hljs-string">'i'</span>,<span class="hljs-string">'j'</span>,<span class="hljs-string">'k'</span>,<span class="hljs-string">'l'</span>,<span class="hljs-string">'m'</span>,
+    <span class="hljs-string">'n'</span>,<span class="hljs-string">'o'</span>,<span class="hljs-string">'p'</span>,<span class="hljs-string">'q'</span>,<span class="hljs-string">'r'</span>,<span class="hljs-string">'s'</span>,<span class="hljs-string">'t'</span>,<span class="hljs-string">'u'</span>,<span class="hljs-string">'v'</span>,<span class="hljs-string">'w'</span>,<span class="hljs-string">'x'</span>,<span class="hljs-string">'y'</span>,<span class="hljs-string">'z'</span>
+};
+
+<span class="hljs-comment">// 当到达文件尾不足3个字符时, 末尾补0, 最多会有2个空字符, 对rar文件无影响</span>
+<span class="hljs-keyword">int</span> read3chars(FILE *fin, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *re)
+{
+    <span class="hljs-keyword">int</span> t;
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> buf[<span class="hljs-number">3</span>];
+    <span class="hljs-built_in">memset</span>(buf, <span class="hljs-number">0</span>, <span class="hljs-number">3</span>*<span class="hljs-keyword">sizeof</span>(<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span>));
+
+    t = fgetc(fin);
+    <span class="hljs-keyword">if</span>(t == EOF) <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;
+    buf[<span class="hljs-number">0</span>] = t;
+    t = fgetc(fin);
+    <span class="hljs-keyword">if</span>(t == EOF) <span class="hljs-keyword">goto</span> last;
+    buf[<span class="hljs-number">1</span>] = t;
+    t = fgetc(fin);
+    <span class="hljs-keyword">if</span>(t == EOF) <span class="hljs-keyword">goto</span> last;
+    buf[<span class="hljs-number">2</span>] = t;
+
+last:
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> a = (buf[<span class="hljs-number">0</span>]&amp;<span class="hljs-number">0xFC</span>)&gt;&gt;<span class="hljs-number">2</span>;
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> b = (buf[<span class="hljs-number">0</span>]&amp;<span class="hljs-number">0x03</span>)&lt;&lt;<span class="hljs-number">4</span> | (buf[<span class="hljs-number">1</span>]&amp;<span class="hljs-number">0xF0</span>)&gt;&gt;<span class="hljs-number">4</span>;
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> c = (buf[<span class="hljs-number">1</span>]&amp;<span class="hljs-number">0x0F</span>)&lt;&lt;<span class="hljs-number">2</span> | buf[<span class="hljs-number">2</span>]&gt;&gt;<span class="hljs-number">6</span>;
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> d = buf[<span class="hljs-number">2</span>]&amp;<span class="hljs-number">0x3F</span>;
+    re[<span class="hljs-number">0</span>] = table[a];
+    re[<span class="hljs-number">1</span>] = table[b];
+    re[<span class="hljs-number">2</span>] = table[c];
+    re[<span class="hljs-number">3</span>] = table[d];
+
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+
+<span class="hljs-keyword">int</span> main()
+{
+    FILE *fin = fopen(<span class="hljs-string">"src.rar"</span>, <span class="hljs-string">"rb"</span>);
+    <span class="hljs-keyword">if</span>(fin == NULL)
+    {
+        <span class="hljs-built_in">puts</span>(<span class="hljs-string">"cann't open src.rar!"</span>);
+        getchar();
+        <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+    }
+    FILE *fout = fopen(<span class="hljs-string">"dest.txt"</span>, <span class="hljs-string">"w"</span>);
+    <span class="hljs-keyword">for</span>(;;)
+    {
+        <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> buf[<span class="hljs-number">4</span>];
+        <span class="hljs-keyword">int</span> ret = read3chars(fin, buf);
+        <span class="hljs-keyword">if</span>(ret == <span class="hljs-number">1</span>) <span class="hljs-keyword">break</span>;
+        fputc(buf[<span class="hljs-number">0</span>], fout);
+        fputc(buf[<span class="hljs-number">1</span>], fout);
+        fputc(buf[<span class="hljs-number">2</span>], fout);
+        fputc(buf[<span class="hljs-number">3</span>], fout);
+    }
+    fclose(fin);
+    fclose(fout);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+
+
+<h2 id="三">三</h2>
+
+<p>将生成的字符分批次通过二维码扫描工具传输。 <br>
+也可以直接改上面的main函数：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs mel"><span class="hljs-keyword">int</span> main()
+{
+    FILE <span class="hljs-variable">*fin</span> = <span class="hljs-keyword">fopen</span>(<span class="hljs-string">"src.rar"</span>, <span class="hljs-string">"rb"</span>);
+    <span class="hljs-keyword">if</span>(fin == NULL)
+    {
+        puts(<span class="hljs-string">"cann't open src.rar!"</span>);
+        getchar();
+        <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+    }
+    char dest[] = <span class="hljs-string">"A.txt"</span>;
+    FILE <span class="hljs-variable">*fout</span> = <span class="hljs-keyword">fopen</span>(dest, <span class="hljs-string">"w"</span>);
+    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> i=<span class="hljs-number">1</span>;;++i)
+    {
+        unsigned char buf[<span class="hljs-number">4</span>];
+        <span class="hljs-keyword">int</span> ret = read3chars(fin, buf);
+        <span class="hljs-keyword">if</span>(ret == <span class="hljs-number">1</span>) <span class="hljs-keyword">break</span>;
+        fputc(buf[<span class="hljs-number">0</span>], fout);
+        fputc(buf[<span class="hljs-number">1</span>], fout);
+        fputc(buf[<span class="hljs-number">2</span>], fout);
+        fputc(buf[<span class="hljs-number">3</span>], fout);
+        <span class="hljs-keyword">if</span>(i == <span class="hljs-number">256</span>)
+        {
+            i = <span class="hljs-number">0</span>;
+            <span class="hljs-keyword">fclose</span>(fout);
+            ++dest[<span class="hljs-number">0</span>];
+            fout = <span class="hljs-keyword">fopen</span>(dest, <span class="hljs-string">"w"</span>);
+        }
+    }
+    <span class="hljs-keyword">fclose</span>(fin);
+    <span class="hljs-keyword">fclose</span>(fout);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+
+
+<h2 id="四">四</h2>
+
+<p>将扫码得到的字符组合在一起，放到txt文件里，然后执行以下的程序。这里并没有对BOM字符进行处理，仅仅是和上面的程序一起进行测试。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-comment">// decode.cpp</span>
+<span class="hljs-comment">// input: dest.txt output: dest.rar</span>
+<span class="hljs-preprocessor">#include &lt;cstdio&gt;</span>
+<span class="hljs-preprocessor">#include &lt;hash_map&gt;</span>
+
+<span class="hljs-keyword">char</span> table[]=
+{
+    <span class="hljs-string">'0'</span>,<span class="hljs-string">'1'</span>,<span class="hljs-string">'2'</span>,<span class="hljs-string">'3'</span>,<span class="hljs-string">'4'</span>,<span class="hljs-string">'5'</span>,<span class="hljs-string">'6'</span>,<span class="hljs-string">'7'</span>,<span class="hljs-string">'8'</span>,<span class="hljs-string">'9'</span>,<span class="hljs-string">'&lt;'</span>,<span class="hljs-string">'&gt;'</span>,
+    <span class="hljs-string">'A'</span>,<span class="hljs-string">'B'</span>,<span class="hljs-string">'C'</span>,<span class="hljs-string">'D'</span>,<span class="hljs-string">'E'</span>,<span class="hljs-string">'F'</span>,<span class="hljs-string">'G'</span>,<span class="hljs-string">'H'</span>,<span class="hljs-string">'I'</span>,<span class="hljs-string">'J'</span>,<span class="hljs-string">'K'</span>,<span class="hljs-string">'L'</span>,<span class="hljs-string">'M'</span>,
+    <span class="hljs-string">'N'</span>,<span class="hljs-string">'O'</span>,<span class="hljs-string">'P'</span>,<span class="hljs-string">'Q'</span>,<span class="hljs-string">'R'</span>,<span class="hljs-string">'S'</span>,<span class="hljs-string">'T'</span>,<span class="hljs-string">'U'</span>,<span class="hljs-string">'V'</span>,<span class="hljs-string">'W'</span>,<span class="hljs-string">'X'</span>,<span class="hljs-string">'Y'</span>,<span class="hljs-string">'Z'</span>,
+    <span class="hljs-string">'a'</span>,<span class="hljs-string">'b'</span>,<span class="hljs-string">'c'</span>,<span class="hljs-string">'d'</span>,<span class="hljs-string">'e'</span>,<span class="hljs-string">'f'</span>,<span class="hljs-string">'g'</span>,<span class="hljs-string">'h'</span>,<span class="hljs-string">'i'</span>,<span class="hljs-string">'j'</span>,<span class="hljs-string">'k'</span>,<span class="hljs-string">'l'</span>,<span class="hljs-string">'m'</span>,
+    <span class="hljs-string">'n'</span>,<span class="hljs-string">'o'</span>,<span class="hljs-string">'p'</span>,<span class="hljs-string">'q'</span>,<span class="hljs-string">'r'</span>,<span class="hljs-string">'s'</span>,<span class="hljs-string">'t'</span>,<span class="hljs-string">'u'</span>,<span class="hljs-string">'v'</span>,<span class="hljs-string">'w'</span>,<span class="hljs-string">'x'</span>,<span class="hljs-string">'y'</span>,<span class="hljs-string">'z'</span>
+};
+__gnu_cxx::hash_map&lt;<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span>, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span>&gt; retable;
+
+<span class="hljs-comment">// 一定是4字节的整数倍</span>
+<span class="hljs-keyword">int</span> read4chars(FILE *fin, <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> *ret)
+{
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> buf[<span class="hljs-number">4</span>];
+    <span class="hljs-keyword">int</span> t = fgetc(fin);
+    <span class="hljs-keyword">if</span>(t == EOF) <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+    buf[<span class="hljs-number">0</span>] = t;
+    buf[<span class="hljs-number">1</span>] = fgetc(fin);
+    buf[<span class="hljs-number">2</span>] = fgetc(fin);
+    buf[<span class="hljs-number">3</span>] = fgetc(fin);
+
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> a = retable[buf[<span class="hljs-number">0</span>]];
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> b = retable[buf[<span class="hljs-number">1</span>]];
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> c = retable[buf[<span class="hljs-number">2</span>]];
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> d = retable[buf[<span class="hljs-number">3</span>]];
+    ret[<span class="hljs-number">0</span>] = a&lt;&lt;<span class="hljs-number">2</span> | b&gt;&gt;<span class="hljs-number">4</span>;
+    ret[<span class="hljs-number">1</span>] = b&lt;&lt;<span class="hljs-number">4</span> | c&gt;&gt;<span class="hljs-number">2</span>;
+    ret[<span class="hljs-number">2</span>] = c&lt;&lt;<span class="hljs-number">6</span> | d;
+
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+
+<span class="hljs-keyword">int</span> main()
+{
+    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> i=<span class="hljs-number">0</span>; i&lt;<span class="hljs-number">64</span>; ++i)
+        retable.insert(<span class="hljs-built_in">std</span>::make_pair(table[i], i));
+
+    FILE *fin = fopen(<span class="hljs-string">"dest.txt"</span>, <span class="hljs-string">"r"</span>);
+    <span class="hljs-keyword">if</span>(fin == NULL)
+    {
+        <span class="hljs-built_in">puts</span>(<span class="hljs-string">"cann't open dest.txt!"</span>);
+        getchar();
+        <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+    }
+    FILE *fout = fopen(<span class="hljs-string">"dest.rar"</span>, <span class="hljs-string">"wb"</span>);
+    <span class="hljs-keyword">for</span>(;;)
+    {
+        <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">char</span> buf[<span class="hljs-number">3</span>];
+        <span class="hljs-keyword">int</span> res = read4chars(fin, buf);
+        <span class="hljs-keyword">if</span>(res == -<span class="hljs-number">1</span>) <span class="hljs-keyword">break</span>;
+        fputc(buf[<span class="hljs-number">0</span>], fout);
+        fputc(buf[<span class="hljs-number">1</span>], fout);
+        fputc(buf[<span class="hljs-number">2</span>], fout);
+    }
+
+    fclose(fin);
+    fclose(fout);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+
+
+<h2 id="五">五</h2>
+
+<p>这和Base64编码的原理是一样的。</p></div></body>
+</html>

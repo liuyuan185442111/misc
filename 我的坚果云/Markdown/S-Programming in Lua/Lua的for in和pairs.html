@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lua的for in和pairs</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>Lua中的for in迭代语法格式如下：</p>
+
+<pre><code>for k,v in pairs(t) do
+    print(k,v)
+end
+</code></pre>
+
+<p>查看以下实例：</p>
+
+<pre class="prettyprint"><code class=" hljs ocaml"><span class="hljs-built_in">array</span> = {<span class="hljs-string">"Lua"</span>, <span class="hljs-string">"Tutorial"</span>}
+<span class="hljs-keyword">for</span> key,<span class="hljs-keyword">value</span> <span class="hljs-keyword">in</span> pairs(<span class="hljs-built_in">array</span>) <span class="hljs-keyword">do</span>
+    print(key, <span class="hljs-keyword">value</span>)
+<span class="hljs-keyword">end</span></code></pre>
+
+<p>输出结果为：</p>
+
+<pre><code>1  Lua
+2  Tutorial
+</code></pre>
+
+<h2 id="pairs和ipairs">pairs和ipairs</h2>
+
+<p>上面的例子中，将pairs换成ipairs结果是一样的。然而它们的实现却有些不同，官方手册的描述：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs sql">ipairs (t)
+Returns three values: an iterator function, the table t, and 0, so that the construction
+    for i,v in ipairs(t) <span class="hljs-operator"><span class="hljs-keyword">do</span> body <span class="hljs-keyword">end</span>
+will iterate over the pairs (<span class="hljs-number">1</span>,t[<span class="hljs-number">1</span>]), (<span class="hljs-number">2</span>,t[<span class="hljs-number">2</span>]), ···, up <span class="hljs-keyword">to</span> the <span class="hljs-keyword">first</span> <span class="hljs-keyword">integer</span> <span class="hljs-keyword">key</span> absent <span class="hljs-keyword">from</span> the <span class="hljs-keyword">table</span>.
+
+pairs (t)
+Returns three <span class="hljs-keyword">values</span>: the <span class="hljs-keyword">next</span> function, the <span class="hljs-keyword">table</span> t, <span class="hljs-keyword">and</span> nil.
+
+<span class="hljs-keyword">next</span> (<span class="hljs-keyword">table</span> [,index])
+Allows a program <span class="hljs-keyword">to</span> traverse <span class="hljs-keyword">all</span> fields <span class="hljs-keyword">of</span> a <span class="hljs-keyword">table</span>. Its <span class="hljs-keyword">first</span> argument <span class="hljs-keyword">is</span> a <span class="hljs-keyword">table</span> <span class="hljs-keyword">and</span> 
+its <span class="hljs-keyword">second</span> argument <span class="hljs-keyword">is</span> an index <span class="hljs-keyword">in</span> this <span class="hljs-keyword">table</span>. <span class="hljs-keyword">next</span> returns the <span class="hljs-keyword">next</span> index <span class="hljs-keyword">of</span> the <span class="hljs-keyword">table</span>
+<span class="hljs-keyword">and</span> its associated <span class="hljs-keyword">value</span>. <span class="hljs-keyword">When</span> called <span class="hljs-keyword">with</span> nil <span class="hljs-keyword">as</span> its <span class="hljs-keyword">second</span> argument, <span class="hljs-keyword">next</span> returns
+an initial index <span class="hljs-keyword">and</span> its associated <span class="hljs-keyword">value</span>. <span class="hljs-keyword">When</span> called <span class="hljs-keyword">with</span> the <span class="hljs-keyword">last</span> index, <span class="hljs-keyword">or</span> <span class="hljs-keyword">with</span> nil
+<span class="hljs-keyword">in</span> an empty <span class="hljs-keyword">table</span>, <span class="hljs-keyword">next</span> returns nil. <span class="hljs-keyword">If</span> the <span class="hljs-keyword">second</span> argument <span class="hljs-keyword">is</span> absent, <span class="hljs-keyword">then</span> it <span class="hljs-keyword">is</span>
+interpreted <span class="hljs-keyword">as</span> nil. <span class="hljs-keyword">In</span> particular, you can use <span class="hljs-keyword">next</span>(t) <span class="hljs-keyword">to</span> <span class="hljs-keyword">check</span> whether a <span class="hljs-keyword">table</span> <span class="hljs-keyword">is</span> empty.</span></code></pre>
+
+<p>ipairs适用于数组（i估计是integer的意思），pairs适用于对象，因为数组也是对象，所以pairs用于数组也没问题。 <br>
+<code>next(t)</code>或<code>next(t,nil)</code>得到t的第一个key,value，将取出的key作为next的第二个参数又可以得到t的 <br>
+第二个key,value，直到t的末尾。</p>
+
+<h2 id="for-in">for in</h2>
+
+<pre><code>for k,v in pairs(t) do
+    print(k,v)
+end
+</code></pre>
+
+<p>实际上是</p>
+
+<pre><code>for k,v in next,t,nil do
+    print(k,v)
+end
+</code></pre>
+
+<p>for in在自己内部保存三个值：迭代函数、状态常量、控制变量。更通用的for in语法应该是：</p>
+
+<pre><code>for k,v in iter,tab,variable do
+    body
+end
+</code></pre>
+
+<p>我认为for in是一种语法糖，等价的代码是：</p>
+
+<pre><code>k,v = iter(tab,variable)
+if(k) then
+    repeat
+        body
+        k,v = iter(tab,k)
+    until(not k)
+end
+</code></pre>
+
+<p>《Programming in Lua》给出的代码是：</p>
+
+<pre><code>do
+    local _f,_s,_var = iter,tab,var
+    while true do
+        local _var,value = _f(_s, _var)
+        if not _var then break end
+        body
+    end
+end
+</code></pre>
+
+<h2 id="ipairs">ipairs</h2>
+
+<p>在手册里，pairs的返回值能明确看到，但ipairs里的an iterator function却没有说明。ipairs可以这样实现：</p>
+
+<pre><code>function iter(t,k)
+    k = k+1
+    if(t[k])then
+        return k,t[k]
+    end
+end
+
+function ipairs(a)
+    return iter,a,0
+end
+</code></pre>
+
+
+
+<h2 id="for-in-1">for in</h2>
+
+<p>for in在内部保存了迭代函数、状态常量、控制变量，后两者是可以封装到迭代函数内部的，例如：</p>
+
+<pre class="prettyprint"><code class=" hljs livecodeserver">array = {<span class="hljs-string">"Lua"</span>, <span class="hljs-string">"Tutorial"</span>}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">elementIterator</span>(<span class="hljs-title">collection</span>)</span>
+    <span class="hljs-built_in">local</span> index = <span class="hljs-number">0</span>
+    <span class="hljs-built_in">local</span> count = <span class="hljs-comment">#collection</span>
+    <span class="hljs-constant">return</span> <span class="hljs-function"><span class="hljs-keyword">function</span>()</span>
+        index = index + <span class="hljs-number">1</span>
+        <span class="hljs-keyword">if</span> index &lt;= count <span class="hljs-keyword">then</span>
+            <span class="hljs-constant">return</span> collection[index]
+        <span class="hljs-function"><span class="hljs-keyword">end</span></span>
+    <span class="hljs-function"><span class="hljs-keyword">end</span></span>
+<span class="hljs-function"><span class="hljs-keyword">end</span></span>
+
+<span class="hljs-keyword">for</span> <span class="hljs-keyword">element</span> <span class="hljs-operator">in</span> elementIterator(array) <span class="hljs-built_in">do</span>
+   print(<span class="hljs-keyword">element</span>)
+<span class="hljs-function"><span class="hljs-keyword">end</span></span></code></pre>
+
+<p>elementIterator(array)返回一个匿名函数作为迭代函数，该迭代函数会忽略掉传给它的参数，array和控制变量已被保存在迭代函数中。 <br>
+将for in展开来看会更明显：</p>
+
+<pre class="prettyprint"><code class=" hljs livecodeserver">iterator = elementIterator(array)
+<span class="hljs-keyword">element</span>,<span class="hljs-built_in">value</span> = iterator(nil,nil)<span class="hljs-comment">--忽略参数,value置为nil</span>
+<span class="hljs-keyword">if</span>(<span class="hljs-keyword">element</span>) <span class="hljs-keyword">then</span>
+    <span class="hljs-keyword">repeat</span>
+        print(<span class="hljs-keyword">element</span>)
+        <span class="hljs-keyword">element</span>,<span class="hljs-built_in">value</span> = iterator(nil,<span class="hljs-keyword">element</span>)<span class="hljs-comment">--忽略参数</span>
+    <span class="hljs-keyword">until</span>(<span class="hljs-operator">not</span> <span class="hljs-keyword">element</span>)
+<span class="hljs-function"><span class="hljs-keyword">end</span></span></code></pre>
+
+<h2 id="参考">参考</h2>
+
+<p>Lua 迭代器 <br>
+<a href="http://www.runoob.com/lua/lua-iterators.html">http://www.runoob.com/lua/lua-iterators.html</a> <br>
+Lua 5.1 Reference Manual <br>
+<a href="http://www.lua.org/manual/5.1/manual.html">http://www.lua.org/manual/5.1/manual.html</a></p></div></body>
+</html>

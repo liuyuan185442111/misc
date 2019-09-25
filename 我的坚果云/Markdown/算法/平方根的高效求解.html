@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>平方根的高效求解</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>这是一个牛顿法求解平方根的算法：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-keyword">float</span> InvSqrt(<span class="hljs-keyword">float</span> x)
+{
+    <span class="hljs-keyword">float</span> xhalf = <span class="hljs-number">0.5f</span>*x;
+    <span class="hljs-keyword">int</span> i = *(<span class="hljs-keyword">int</span>*)&amp;x; <span class="hljs-comment">// get bits for floating VALUE</span>
+    i = <span class="hljs-number">0x5f375a86</span>- (i&gt;&gt;<span class="hljs-number">1</span>); <span class="hljs-comment">// gives initial guess y0</span>
+    x = *(<span class="hljs-keyword">float</span>*)&amp;i; <span class="hljs-comment">// convert bits BACK to float</span>
+    x = x*(<span class="hljs-number">1.5f</span>-xhalf*x*x); <span class="hljs-comment">// Newton step, repeating increases accuracy</span>
+    x = x*(<span class="hljs-number">1.5f</span>-xhalf*x*x);
+    x = x*(<span class="hljs-number">1.5f</span>-xhalf*x*x);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>/x;
+}</code></pre>
+
+<p>这个算法不是最精确的，但却相当高效。 <br>
+两次迭代就能达到小于0.01的误差，三次迭代能达到小于0.001的误差，迭代次数再多效果就很不明显了。 <br>
+此算法的效率是库函数sqrt的4倍。</p>
+
+<p>鼎鼎大名的John Carmack将此用于Quake-III Arena的代码中，当时硬件条件有限，而求平方根倒数的运算在游戏里又十分频繁，这么高效的算法很有意义。</p>
+
+<p>也不知道这位天才是怎么找到的初始化值，两次迭代就能达到相当高的精度。</p>
+
+<p>详情见于<a href="http://www.nowamagic.net/algorithm/algorithm_EfficacyOfFunctionSqrt.php" target="_blank">《求平方根sqrt()函数的底层算法效率问题》</a>。</p></div></body>
+</html>

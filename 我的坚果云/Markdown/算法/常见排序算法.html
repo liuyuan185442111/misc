@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>常见排序算法</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>排序方法有多种分类方式：例如，根据在排序过程中待排序的所有记录是否全部被放置在内存中，可以将排序方法分为内排序和外排序两大类；根据排序方法是否建立在关键字比较的基础上，可以将排序方法分为基于比较的排序和不基于比较的排序，等等。</p>
+
+
+
+<h2 id="外部归并排序">外部归并排序</h2>
+
+<p>外排序（External sorting）能够处理极大量数据，通常来说，外排序处理的数据不能一次装入内存，只能放在读写较慢的外存储器（通常是硬盘）上。外排序通常采用的是一种“排序-归并”的策略。在排序阶段，先读入能放在内存中的数据量，将其排序输出到一个临时文件，依此进行，将待排序数据组织为多个有序的临时文件。尔后在归并阶段将这些临时文件组合为一个大的有序文件，也即排序结果。</p>
+
+<p>step1. 把原始数据分成M段，每段都排好序，分别存入M个文件中。 <br>
+step2. 从M个临时文件读出头条记录，进行M路归并排序，最小的放到输出文件，同时删除对应的临时文件中的记录。 <br>
+这个过程不就是MapReduce吗，step1就是Map过程，step2是Reduce过程，大量数据排序用MapReduce来做正好啊！</p>
+
+
+
+<h2 id="内部排序">内部排序</h2>
+
+<p>排序稳定：如果两个数相同，对他们进行排序后，他们的相对顺序不变。 <br>
+原地排序：不占用额外内存或占用常数的内存，就是在原来的数据中比较和交换的排序。</p>
+
+
+
+<h2 id="非基于比较的排序">非基于比较的排序</h2>
+
+<p>基于比较的排序算法是不能突破O(NlogN)的。简单证明如下： <br>
+N个数有N!个可能的排列情况，也就是说基于比较的排序算法的判定树有N!个叶子结点，比较次数至少为log(N!)=O(NlogN)(斯特林公式)。 <br>
+而非基于比较的排序，如计数排序，桶排序，和在此基础上的基数排序，则可以突破O(NlogN)时间下限。但要注意的是，非基于比较的排序算法的使用都是有条件限制的，例如元素的大小限制，相反，基于比较的排序则没有这种限制(在一定范围内)。但并非因为有条件限制就会使非基于比较的排序算法变得无用，对于特定场合有着特殊的性质数据，非基于比较的排序算法则能够非常巧妙地解决。</p>
+
+
+
+<h3 id="1-计数排序">1 计数排序</h3>
+
+<p>特性：stable sort、out-place sort <br>
+最坏情况运行时间：O(n+k) <br>
+最好情况运行时间：O(n+k)</p>
+
+<p>计数排序的基本思想是对每一个输入元素x，确定出不大于x的元素个数，有了这一信息，就可以把x直接放在它最终的位置上，例如，如果有17个元素不大于x，则x就应放在第18个输出位置上。 <br>
+当输入的元素是n个0到k-1之间的整数时，计数排序的运行时间是O(n+k)。由于用来计数的数组c的长度取决于待排序数组中数据的范围，这使得计数排序对于数据范围很大的数组，需要大量内存，而且 n &lt;&lt; k 时，也很不划算。例如，计数排序是用来排序0到100之间的数字的非常好的算法，但是它不适合按字母顺序排序人名。但是，计数排序可以用在基数排序中的算法来排序数据范围很大的数组。</p>
+
+<p>算法的步骤如下： <br>
+1.找出待排序的数组中最大和最小的元素 <br>
+2.统计待排序数组中每个值为i的元素出现的次数，存入数组c的第i项 <br>
+3.对所有的计数累加，获得不大于元素i的元素的个数（从c中的第一个元素开始，每一项和前一项相加） <br>
+4.反向填充目标数组，将每个元素i放在新数组的第c(i)项，每放一个元素就将c(i)减去1</p>
+
+<p>当k不是很大时，这是一个很有效的线性排序算法。更重要的是，它是一种稳定排序算法，这是计数排序很重要的一个性质，就是根据这个性质，我们才能把它应用到基数排序。</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-preprocessor">#include &lt;iostream&gt;</span>
+<span class="hljs-preprocessor">#include &lt;cstring&gt;</span>
+<span class="hljs-preprocessor">#include &lt;cstdlib&gt;</span>
+<span class="hljs-keyword">using</span> <span class="hljs-keyword">namespace</span> <span class="hljs-built_in">std</span>;
+
+<span class="hljs-comment">/** input为输入数组, n表示input的大小,
+    output为输出数组, k表示有所输入数字都介于[0,k-1]之间
+*/</span>
+<span class="hljs-keyword">void</span> counting_sort(<span class="hljs-keyword">int</span> *input, <span class="hljs-keyword">int</span> n, <span class="hljs-keyword">int</span> *output, <span class="hljs-keyword">int</span> k)
+{
+    <span class="hljs-keyword">int</span> *c = <span class="hljs-keyword">new</span> <span class="hljs-keyword">int</span>[k];<span class="hljs-comment">//临时存储区</span>
+    <span class="hljs-built_in">memset</span>(c, <span class="hljs-number">0</span>, k*<span class="hljs-keyword">sizeof</span>(<span class="hljs-keyword">int</span>));<span class="hljs-comment">//置0</span>
+    <span class="hljs-comment">// 下面的操作完成后, c[i]中存放了input中值为i的元素的个数</span>
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i=<span class="hljs-number">0</span>; i&lt;n; ++i) ++c[input[i]];
+    <span class="hljs-comment">// 下面的操作完成后, c[i]中存放了input中值不大于i的元素的个数</span>
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i=<span class="hljs-number">1</span>; i&lt;k; ++i) c[i]+=c[i-<span class="hljs-number">1</span>];
+    <span class="hljs-comment">// 把input中的元素放在output中适当的位置上</span>
+    <span class="hljs-comment">// 逻辑是: 如果不大于m的元素个数有5个, 那m就应该被放在第5的位置上</span>
+    <span class="hljs-comment">// 从后往前遍历input, 以保证排序稳定</span>
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i=n-<span class="hljs-number">1</span>; i&gt;=<span class="hljs-number">0</span>; --i)
+    {
+        output[c[input[i]]-<span class="hljs-number">1</span>] = input[i];
+        <span class="hljs-comment">//下面的操作使得input中下一个值为input[i]的元素被放置在output中input[i]的前一个位置, 保证排序稳定</span>
+        --c[input[i]];
+    }
+    <span class="hljs-keyword">delete</span>[] c;
+}
+
+<span class="hljs-keyword">int</span> main(<span class="hljs-keyword">int</span> argc, <span class="hljs-keyword">char</span> *argv[])
+{
+    <span class="hljs-keyword">const</span> <span class="hljs-keyword">int</span> LEN = <span class="hljs-number">120</span>;
+    <span class="hljs-keyword">const</span> <span class="hljs-keyword">int</span> MAX = <span class="hljs-number">90</span>;
+    <span class="hljs-keyword">const</span> <span class="hljs-keyword">int</span> TMAX = MAX + <span class="hljs-number">1</span>;
+
+    <span class="hljs-keyword">int</span> a[LEN];
+    <span class="hljs-keyword">int</span> b[LEN];
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i=<span class="hljs-number">0</span>; i&lt;LEN; ++i) a[i] = rand() % TMAX;
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i=<span class="hljs-number">0</span>; i&lt;LEN; ++i) <span class="hljs-built_in">cout</span> &lt;&lt; a[i] &lt;&lt; <span class="hljs-string">" "</span>;
+    counting_sort(a, LEN, b, TMAX);
+    <span class="hljs-built_in">cout</span> &lt;&lt; endl;
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i=<span class="hljs-number">0</span>; i&lt;LEN; ++i) <span class="hljs-built_in">cout</span> &lt;&lt; b[i] &lt;&lt; <span class="hljs-string">" "</span>;
+
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+
+
+<h3 id="2-基数排序">2 基数排序</h3>
+
+<p>假定每位的排序是计数排序。 <br>
+特性：stable sort、Out-place sort <br>
+最坏情况运行时间：O((n+k)d) <br>
+最好情况运行时间：O((n+k)d) <br>
+当d为常数、k=O(n)时，效率为O(n)</p>
+
+<p>基本思想：将所有待比较数值（正整数）统一为同样的数位长度，数位较短的数前面补零。然后，从最低位开始，依次进行一次排序。这样从最低位排序一直到最高位排序完成以后,数列就变成一个有序序列。</p>
+
+<p>我们也不一定要一位一位排序，我们可以多位多位排序，比如一共10位，我们可以先对低5位排序，再对高5位排序。</p>
+
+<p>基数排序的例子： <br>
+<img src="http://img.my.csdn.net/uploads/201301/03/1357220964_6225.png" alt="基数排序" title=""> <br>
+先低位后高位的原理在于：如果高位相等，低位的顺序就是整体的顺序，如果高位不等，高位的排序会修正低位的错序。</p>
+
+
+
+<h3 id="3-桶排序">3 桶排序</h3>
+
+<p><a href="http://hxraid.iteye.com/blog/647759" target="_blank">这篇关于桶排序的文章</a>讲的不错。 <br>
+我理解桶排序其实是分治的思想，将数据分散到若干个桶里，所有桶的数据范围不相交，对每个桶分别进行排序，最后组合在一起。 <br>
+它和归并排序的区别在于，每个桶的范围不交叉，最后组合数据的时候，归并排序需要用败者树或堆来进行归并，而桶排序直接合并即可。</p>
+
+
+
+<h2 id="基于比较的排序算法">基于比较的排序算法</h2>
+
+<p>根据排序过程中依据的原则，基于比较的内排序大致可以分为插入类排序、交换类排序、选择类排序、分配类排序和归并排序等。</p>
+
+<ul>
+<li>插入类排序：直接插入排序、折半插入排序、二路插入排序、希尔排序</li>
+<li>交换类排序：冒泡排序、快速排序</li>
+<li>选择类排序：简单选择排序、树形选择排序、堆排序</li>
+<li>分配类排序</li>
+<li>归并排序</li>
+</ul>
+
+
+
+<h3 id="1-直接插入排序">1 直接插入排序</h3>
+
+<p>每次从无序表中取出第一个元素，把它插入到有序表中的合适位置，使有序表仍然有序。 <br>
+适合于记录基本有序且记录数不是很多的情形。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cs"><span class="hljs-comment">//直接插入排序, n为数组a的元素个数</span>
+<span class="hljs-keyword">void</span> insert_sort(<span class="hljs-keyword">int</span> *a, <span class="hljs-keyword">int</span> n)
+{
+    <span class="hljs-keyword">int</span> picket;
+    <span class="hljs-keyword">int</span> i,j;
+    <span class="hljs-keyword">for</span> (i=<span class="hljs-number">1</span>; i&lt;n; ++i)
+    {
+        picket = a[i]; <span class="hljs-comment">//将待排序记录暂存入监视哨</span>
+        <span class="hljs-keyword">for</span> (j=i-<span class="hljs-number">1</span>; j&gt;=<span class="hljs-number">0</span>&amp;&amp;a[j]&gt;picket; --j)
+            a[j+<span class="hljs-number">1</span>] = a[j]; <span class="hljs-comment">//比待排序记录大的记录后移</span>
+        a[j+<span class="hljs-number">1</span>] = picket; <span class="hljs-comment">//将待排序记录插入到正确位置</span>
+    }
+}</code></pre>
+
+
+
+<h3 id="2-折半插入排序">2 折半插入排序</h3>
+
+<p>直接插入排序在查找待排序记录正确位置时使用的是顺序查找。折半查找的性能要比顺序查找好得多，所以在有序序列中查找待插入记录的位置时可以使用折半查找法。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cs"><span class="hljs-comment">//折半插入排序</span>
+<span class="hljs-keyword">void</span> half_sort(<span class="hljs-keyword">int</span> *a, <span class="hljs-keyword">int</span> n)
+{
+    <span class="hljs-keyword">int</span> picket;
+    <span class="hljs-keyword">int</span> i,j,low,high,m;
+    <span class="hljs-keyword">for</span> (i=<span class="hljs-number">1</span>; i&lt;n; ++i)
+    {
+        picket = a[i]; <span class="hljs-comment">//将待排序记录暂存入监视哨</span>
+        low = <span class="hljs-number">0</span>;
+        high = i-<span class="hljs-number">1</span>;
+        <span class="hljs-keyword">while</span> (low &lt;= high) <span class="hljs-comment">//折半查找插入位置</span>
+        {
+            m = (low+high) / <span class="hljs-number">2</span>;
+            <span class="hljs-keyword">if</span> (picket&lt;a[m]) high = m-<span class="hljs-number">1</span>; <span class="hljs-comment">//插入点在低半区</span>
+            <span class="hljs-keyword">else</span> low = m+<span class="hljs-number">1</span>; <span class="hljs-comment">//插入点在高半区</span>
+        }
+        <span class="hljs-keyword">for</span> (j=i-<span class="hljs-number">1</span>; j&gt;high; --j)
+            a[j+<span class="hljs-number">1</span>] = a[j]; <span class="hljs-comment">//插入点及其后的记录顺序后移</span>
+        a[j+<span class="hljs-number">1</span>] = picket; <span class="hljs-comment">//待排序的记录存入插入点</span>
+    }
+}</code></pre>
+
+
+
+<h3 id="3-冒泡排序">3 冒泡排序</h3>
+
+<p>重复地走访要排序的数列，一次比较两个元素，如果它们的顺序错误就把它们交换过来，每走访一次，较大的元素就浮到数列的顶端。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cs"><span class="hljs-comment">//简单冒泡排序</span>
+<span class="hljs-keyword">void</span> bubble(<span class="hljs-keyword">int</span> *a, <span class="hljs-keyword">int</span> n)
+{
+    <span class="hljs-keyword">int</span> i,j,t;
+    <span class="hljs-keyword">for</span> (i=<span class="hljs-number">0</span>; i&lt;n-<span class="hljs-number">1</span>; ++i) <span class="hljs-comment">//比较的趟数</span>
+    {
+        <span class="hljs-keyword">for</span> (j=<span class="hljs-number">1</span>; j&lt;n-i; ++j) <span class="hljs-comment">//每趟比较的次数</span>
+            <span class="hljs-keyword">if</span> (a[j-<span class="hljs-number">1</span>] &gt; a[j]) <span class="hljs-comment">//相邻记录进行比较</span>
+            {
+                t = a[j-<span class="hljs-number">1</span>];
+                a[j-<span class="hljs-number">1</span>] = a[j];
+                a[j] = t;
+            }
+    }
+}</code></pre>
+
+
+
+<pre class="prettyprint"><code class=" hljs cs"><span class="hljs-comment">//若初始序列已有序,则没有必要进行剩下的n-1趟扫描</span>
+<span class="hljs-keyword">void</span> bubble2(<span class="hljs-keyword">int</span> *a, <span class="hljs-keyword">int</span> n)
+{
+    <span class="hljs-keyword">int</span> i,j,t;
+    <span class="hljs-keyword">int</span> flag=<span class="hljs-number">1</span>; <span class="hljs-comment">//flag为数组是否正序的标志</span>
+    <span class="hljs-comment">//flag=0时意味着未排序区已经有序,提前结束循环</span>
+    <span class="hljs-keyword">for</span> (i=<span class="hljs-number">0</span>; flag&amp;&amp;i&lt;n-<span class="hljs-number">1</span>; ++i)
+    {
+        <span class="hljs-keyword">for</span> (flag=<span class="hljs-number">0</span>,j=<span class="hljs-number">1</span>; j&lt;n-i; ++j)
+            <span class="hljs-keyword">if</span> (a[j-<span class="hljs-number">1</span>] &gt; a[j])
+            {
+                t = a[j-<span class="hljs-number">1</span>];
+                a[j-<span class="hljs-number">1</span>] = a[j];
+                a[j] = t;
+                flag = <span class="hljs-number">1</span>;<span class="hljs-comment">//有交换意味着未排序区无序,需要进行下趟排序</span>
+            }
+    }
+}</code></pre>
+
+
+
+<h3 id="4-快速排序">4 快速排序</h3>
+
+<p>快速排序是对冒泡排序的改进，是英国牛津大学计算机科学家查尔斯•霍尔于1962年提出的一种划分交换排序，因此又称霍尔排序。 <br>
+快速排序是一种不稳定的排序方法，适用于待排序记录个数很大且原始记录随机排列的情况，其平均性能是迄今为止所有内排序算法中最好的一种。快速排序应用广泛，典型的应用是C标准库函数qsort函数。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl">// 数组a的区间[low,high]
+void <span class="hljs-string">q(int <span class="hljs-variable">*a</span>, int low, int high)</span>
+{
+    <span class="hljs-keyword">int</span> i = low;
+    <span class="hljs-keyword">int</span> j = high;
+    <span class="hljs-keyword">int</span> t = a[i];
+    <span class="hljs-keyword">if</span>(i&gt;=j) <span class="hljs-keyword">return</span>;
+    <span class="hljs-keyword">while</span>(i&lt;j)
+    {
+        <span class="hljs-keyword">while</span>(i&lt;j &amp;&amp; a[j]&gt;=t) --j;
+        a[i] = a[j];
+        <span class="hljs-keyword">while</span>(i&lt;j &amp;&amp; a[i]&lt;=t) ++i;
+        a[j] = a[i];
+    }
+    a[i] = t;
+    <span class="hljs-string">q(a, low, i-1)</span>;
+    <span class="hljs-string">q(a, i+1, high)</span>;
+}</code></pre>
+
+<p>或</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl">void <span class="hljs-string">q(int <span class="hljs-variable">*nums</span>, int n)</span>
+{
+    <span class="hljs-keyword">if</span>(n&lt;=<span class="hljs-number">1</span>) <span class="hljs-keyword">return</span>;
+    <span class="hljs-keyword">int</span> i=<span class="hljs-number">0</span>,j=n-<span class="hljs-number">1</span>,t=<span class="hljs-variable">*nums</span>;
+    <span class="hljs-keyword">while</span>(i&lt;j)
+    {
+        <span class="hljs-keyword">while</span>(i&lt;j &amp;&amp; nums[j]&gt;=t) --j;
+        nums[i]=nums[j];
+        <span class="hljs-keyword">while</span>(i&lt;j &amp;&amp; nums[i]&lt;=t) ++i;
+        nums[j]=nums[i];
+    }
+    nums[i]=t;
+    <span class="hljs-string">q(nums, i)</span>;
+    <span class="hljs-string">q(nums+i+1, n-i-1)</span>;
+}</code></pre>
+
+<p><a href="http://blog.csdn.net/morewindows/article/details/6684558" target="_blank">快速排序 快速搞定</a></p>
+
+
+
+<h3 id="5-简单选择排序">5 简单选择排序</h3>
+
+<p>重复地走访要排序的数列，每走访一次，获得一个较小的数字放在数列首。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cs"><span class="hljs-comment">//简单选择排序</span>
+<span class="hljs-keyword">void</span> <span class="hljs-keyword">select</span>(<span class="hljs-keyword">int</span> *a, <span class="hljs-keyword">int</span> n)
+{
+    <span class="hljs-keyword">int</span> i,j;
+    <span class="hljs-keyword">int</span> t;
+    <span class="hljs-keyword">for</span> (i=<span class="hljs-number">0</span>; i&lt;n-<span class="hljs-number">1</span>; ++i) <span class="hljs-comment">//比较的趟数</span>
+        <span class="hljs-keyword">for</span> (j=i+<span class="hljs-number">1</span>; j&lt;n; ++j) <span class="hljs-comment">//每趟比较的次数</span>
+            <span class="hljs-keyword">if</span> (a[i] &gt; a[j])
+            {
+                t = a[j];
+                a[j] = a[i];
+                a[i] = t;
+            }
+}</code></pre>
+
+<p>为避免过多的交换记录, 可以设一指针指示最小值, 再将该记录交换到指定位置, 改进如下：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cs"><span class="hljs-keyword">void</span> <span class="hljs-keyword">select</span>(<span class="hljs-keyword">int</span> *a, <span class="hljs-keyword">int</span> n)
+{
+    <span class="hljs-keyword">int</span> i,j,t;
+    <span class="hljs-keyword">int</span> k; <span class="hljs-comment">//标记最小值</span>
+    <span class="hljs-keyword">for</span> (i=<span class="hljs-number">0</span>; i&lt;n-<span class="hljs-number">1</span>; ++i)
+    {
+        k = i; 
+        <span class="hljs-keyword">for</span> (j=i+<span class="hljs-number">1</span>; j&lt;n; ++j)
+            <span class="hljs-keyword">if</span> (a[k] &gt; a[j])
+                k = j;
+        t = a[i];
+        a[i] = a[k];
+        a[k] = t;
+    }
+}</code></pre>
+
+
+
+<h3 id="6-堆排序">6 堆排序</h3>
+
+<p><a href="http://blog.csdn.net/morewindows/article/details/6709644/" target="_blank">堆与堆排序</a></p>
+
+
+
+<h3 id="7-归并排序">7 归并排序</h3>
+
+<p>归并排序是建立在归并操作上的一种有效的排序算法，该算法是采用分治法的一个非常典型的应用。将已有序的子序列合并，得到完全有序的序列；即先使每个子序列有序，再使子序列段间有序。若将两个有序表合并成一个有序表，称为二路归并。 <br>
+在看二路归并排序算法之前，先看一个归并函数：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl">//将有序序列a,b合并为有序序列c
+void merge(<span class="hljs-keyword">int</span> <span class="hljs-variable">*a</span>, <span class="hljs-keyword">int</span> <span class="hljs-keyword">m</span>, <span class="hljs-keyword">int</span> <span class="hljs-variable">*b</span>, <span class="hljs-keyword">int</span> n, <span class="hljs-keyword">int</span> <span class="hljs-variable">*c</span>)
+{
+    <span class="hljs-keyword">int</span> i=<span class="hljs-number">0</span>,j=<span class="hljs-number">0</span>,k=<span class="hljs-number">0</span>;
+    <span class="hljs-keyword">while</span> (i&lt;<span class="hljs-keyword">m</span> &amp;&amp; j&lt;n)
+        <span class="hljs-keyword">if</span> (a[i] &lt; b[j]) c[k++] = a[i++];
+        <span class="hljs-keyword">else</span> c[k++] = b[j++];
+    <span class="hljs-keyword">while</span> (i&lt;<span class="hljs-keyword">m</span>) c[k++] = a[i++];
+    <span class="hljs-keyword">while</span> (j&lt;n) c[k++] = b[j++];
+}</code></pre>
+
+<p>这个函数将有序序列a，b归并为c，很明显，序列c不能与a或b发生重叠，否则可能会发生错误。二路归并排序算法要求对同一序列的两部分进行归并，而且结果还是存储到原序列中。二路归并排序算法如下。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-keyword">void</span> merge(<span class="hljs-keyword">int</span>* a, <span class="hljs-keyword">int</span> m, <span class="hljs-keyword">int</span>* b, <span class="hljs-keyword">int</span> n, <span class="hljs-keyword">int</span>* c)
+{
+    <span class="hljs-keyword">int</span> i=<span class="hljs-number">0</span>,j=<span class="hljs-number">0</span>,k=<span class="hljs-number">0</span>;
+    <span class="hljs-keyword">while</span> (i&lt;m &amp;&amp; j&lt;n)
+        <span class="hljs-keyword">if</span> (a[i] &lt; b[j]) c[k++] = a[i++];
+        <span class="hljs-keyword">else</span> c[k++] = b[j++];
+    <span class="hljs-keyword">while</span> (i&lt;m) c[k++] = a[i++];
+    <span class="hljs-keyword">while</span> (j&lt;n) c[k++] = b[j++];
+}
+
+<span class="hljs-comment">//将序列a的有序区间[low,m]和[m+1,high]归并到区间[low,high]</span>
+<span class="hljs-keyword">void</span> merge1(<span class="hljs-keyword">int</span> *a, <span class="hljs-keyword">int</span> low, <span class="hljs-keyword">int</span> m, <span class="hljs-keyword">int</span> high)
+{
+    <span class="hljs-keyword">int</span> *t = (<span class="hljs-keyword">int</span>*)<span class="hljs-built_in">malloc</span>((high-low+<span class="hljs-number">1</span>)*<span class="hljs-keyword">sizeof</span>(<span class="hljs-keyword">int</span>));
+    merge(a+low, m-low+<span class="hljs-number">1</span>, a+m+<span class="hljs-number">1</span>, high-m, t);
+    <span class="hljs-built_in">memcpy</span>(a+low, t, (high-low+<span class="hljs-number">1</span>)*<span class="hljs-keyword">sizeof</span>(<span class="hljs-keyword">int</span>));
+    <span class="hljs-built_in">free</span>(t);
+}
+<span class="hljs-keyword">void</span> msort(<span class="hljs-keyword">int</span> *a, <span class="hljs-keyword">int</span> low, <span class="hljs-keyword">int</span> high)
+{
+    <span class="hljs-comment">//low&lt;high时继续二分,low等于high时直接返回</span>
+    <span class="hljs-keyword">if</span>(low &lt; high)
+    {
+        <span class="hljs-keyword">int</span> m = (low+high) / <span class="hljs-number">2</span>;
+        msort(a, low, m);
+        msort(a, m+<span class="hljs-number">1</span>, high);
+        merge1(a, low, m, high);
+    }
+}
+<span class="hljs-comment">//二路归并排序</span>
+<span class="hljs-keyword">void</span> merge_sort(<span class="hljs-keyword">int</span> *a, <span class="hljs-keyword">int</span> n)
+{
+    msort(a, <span class="hljs-number">0</span>, n-<span class="hljs-number">1</span>);
+}</code></pre>
+
+
+
+<h2 id="几种排序方法的性能">几种排序方法的性能</h2>
+
+<p><img src="http://img.blog.csdn.net/20150510202858192" alt="性能" title=""></p></div></body>
+</html>

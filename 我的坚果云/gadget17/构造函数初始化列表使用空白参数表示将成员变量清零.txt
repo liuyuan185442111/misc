@@ -1,0 +1,8 @@
+构造函数初始化列表使用空白参数表示将成员变量清零：
+struct element
+{
+    int value[8];
+    int index;
+    element():value(),index() { }
+};
+数组value和整型index全都初始化为0

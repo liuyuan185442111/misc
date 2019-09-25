@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Web入门之EL、JSTL、自定义标签要点</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>Expression Language</p>
+
+<h2 id="基础">基础</h2>
+
+<p>目的：为了使JSP写起来更加简单。 <br>
+语法结构：<code>${expression}</code> <br>
+启用/禁用：通过<code>&lt;%@ page isELIgnored="true|false" %&gt;</code>来设置jsp页面是否支持EL，默认是支持EL。 <br>
+翻译过程：</p>
+
+<pre><code>${expression}
+</code></pre>
+
+<p>↓</p>
+
+<pre class="prettyprint"><code class="language-java hljs ">out.write(
+    (java.lang.String) org.apache.jasper.runtime.PageContextImpl.proprietaryEvaluate(
+        <span class="hljs-string">"${expression}"</span>, java.lang.String.class, (javax.servlet.jsp.PageContext)_jspx_page_context, <span class="hljs-keyword">null</span>, <span class="hljs-keyword">false</span>
+    )
+);</code></pre>
+
+<p>_jspx_page_context就是jsp里的隐含对象pageContext。 <br>
+也就是说将expression和pageContext传入EL引擎，然后翻译出String类型的结果。</p>
+
+
+
+<h2 id="与-运算符">.与[ ]运算符</h2>
+
+<p>EL提供“.”和“[ ]”两种运算符来读取数据。 <br>
+当要读取的属性名称中包含一些特殊字符，如 . 或 - 等并非字母或数字的符号，就一定要使用“[ ]”。例如：<code>${user.My-Name}</code>应当改为<code>${user["My-Name"]}</code>。 <br>
+当访问数组的元素，此时属性名称就是数字，所以不能用“.”来读取数据，只能用“[ ]”。 <br>
+在EL中，字符串既可以使用<code>"abc"</code>，也可以使用<code>'abc'</code>，所以下面三者是等价的（如果都合理）：</p>
+
+<pre class="prettyprint"><code class="language-jsp hljs ruby"><span class="hljs-variable">${</span>user.username}
+<span class="hljs-variable">${</span>user[<span class="hljs-string">"username"</span>]}
+<span class="hljs-variable">${</span>user[<span class="hljs-string">'username'</span>]}</code></pre>
+
+<h2 id="作用域">作用域</h2>
+
+<p>使用EL时，默认会以一定的顺序搜索4个作用域，并显示最先找到的属性值。例如，对于<code>${username}</code>，会按照如下作用域顺序依次查找： <br>
+pageContext.getAttribute(“username”) → request.getAttribute(“username”) → session.getAttribute(“username”) → application.getAttribute(“username”) <br>
+如果找不到，则返回一个空字符串。 <br>
+也可以在EL里显式指明作用域，下面是EL使用到的变量作用域的名称：</p>
+
+<ul>
+<li>page范围：pageScope</li>
+<li>request范围：requestScope</li>
+<li>session范围：sessionScope</li>
+<li>application范围：applicationScope</li>
+</ul>
+
+<p>简单例子</p>
+
+<pre class="prettyprint"><code class="language-jsp hljs xml"><span class="vbscript">&lt;%<span class="hljs-built_in">request</span>.setAttribute(<span class="hljs-string">"name"</span>, <span class="hljs-string">"lily"</span>);%&gt;</span>
+${requestScope.name}</code></pre>
+
+<p>输出lily。</p>
+
+<h2 id="javabean">JavaBean</h2>
+
+<p>用<code>&lt;jsp:useBean id="user" class="Advance.Customer"/&gt;</code>建立了JavaBean对象，${user.username}相当于user.getUsername()。 <br>
+通过&lt;% %&gt;和&lt;%! %&gt;定义的对象是无法使用EL的。</p>
+
+<h2 id="隐式对象">隐式对象</h2>
+
+<p>EL表达式含有11个隐式对象。</p>
+
+<table>
+<thead>
+<tr>
+  <th>EL隐式对象</th>
+  <th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>pageContext</td>
+  <td>JSP页面的上下文对象，它可以用于访问JSP隐式对象。</td>
+</tr>
+<tr>
+  <td>pageScope</td>
+  <td></td>
+</tr>
+<tr>
+  <td>requestScope</td>
+  <td></td>
+</tr>
+<tr>
+  <td>sessionScope</td>
+  <td></td>
+</tr>
+<tr>
+  <td>applicationScope</td>
+  <td></td>
+</tr>
+<tr>
+  <td>param</td>
+  <td>获取request对象参数的单个值，对应于request.getParameter()。表达式${param.loginname}相当于request.getParameter(loginname)</td>
+</tr>
+<tr>
+  <td>paramValues</td>
+  <td>获取request对象参数的一个数值数组而不是单个值，对应于request.getParameterValues()。</td>
+</tr>
+<tr>
+  <td>header</td>
+  <td>将请求头名称映射到单个字符串头值，对应于request.getHeader()</td>
+</tr>
+<tr>
+  <td>headerValues</td>
+  <td>将请求头名称映射到一个数值数组，对应于request.getHeaderValues()</td>
+</tr>
+<tr>
+  <td>cookie</td>
+  <td>将cookie名称映射到单个cookie对象，对应于request.getCookies()</td>
+</tr>
+<tr>
+  <td>initParam</td>
+  <td>将上下文初始化参数名称映射到单个值，对应于ServletContext.getInitParamter()</td>
+</tr>
+</tbody></table>
+
+
+<p>pageScope，requestScope，sessionScope，applicationScope都是Map型变量。 <br>
+initParam用于获取web.xml中初始的参数值。</p>
+
+
+
+<h2 id="jsp-standard-tag-library">JSP Standard Tag Library</h2>
+
+<p>JSP标准标签库，将许多JSP应用程序通用的核心功能封装为简单的标记。 <br>
+如要使用JSTL，需要几个jar包，可以从<a href="http://tomcat.apache.org/download-taglibs.cgi" target="_blank">http://tomcat.apache.org/download-taglibs.cgi</a>下载。 <br>
+在JSP页面中使用JSTL标签之前，必须用taglib指令将标签库导入JSP页面，指令如下： <br>
+<code>&lt;% @taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %&gt;</code> <br>
+prefix是自定义前缀，可以改成别的。 <br>
+JSTL提供了5个主要的标签库：核心标签库、国际化与格式化标签库、XML标签库、SQL标签库、函数标签库。 <br>
+一个使用核心标签库的简单例子，用来判断成绩的等级</p>
+
+<pre class="prettyprint"><code class="language-jsp hljs xml"><span class="vbscript">&lt;%@ page language=<span class="hljs-string">"java"</span> pageEncoding=<span class="hljs-string">"utf-8"</span> %&gt;</span>
+<span class="vbscript">&lt;%@ taglib uri=<span class="hljs-string">"http://java.sun.com/jsp/jstl/core"</span> prefix=<span class="hljs-string">"c"</span> %&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">html</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">head</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">title</span>&gt;</span>score<span class="hljs-tag">&lt;/<span class="hljs-title">title</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">head</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">body</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">c:set</span> <span class="hljs-attribute">var</span>=<span class="hljs-value">"x"</span> <span class="hljs-attribute">value</span>=<span class="hljs-value">"${param.score}"</span> /&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">c:if</span> <span class="hljs-attribute">test</span>=<span class="hljs-value">"${x&lt;0.0}"</span>&gt;</span>成绩不能为负<span class="hljs-tag">&lt;/<span class="hljs-title">c:if</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">c:if</span> <span class="hljs-attribute">test</span>=<span class="hljs-value">"${!(x&lt;0.0)}"</span>&gt;</span>
+       <span class="hljs-tag">&lt;<span class="hljs-title">c:if</span> <span class="hljs-attribute">test</span>=<span class="hljs-value">"${! empty x}"</span>&gt;</span>你输入的成绩为${x}, 等级为:
+          <span class="hljs-tag">&lt;<span class="hljs-title">c:choose</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-title">c:when</span> <span class="hljs-attribute">test</span>=<span class="hljs-value">"${x&gt;=90.0}"</span>&gt;</span>优秀<span class="hljs-tag">&lt;/<span class="hljs-title">c:when</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-title">c:when</span> <span class="hljs-attribute">test</span>=<span class="hljs-value">"${x&gt;=80.0}"</span>&gt;</span>良好<span class="hljs-tag">&lt;/<span class="hljs-title">c:when</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-title">c:when</span> <span class="hljs-attribute">test</span>=<span class="hljs-value">"${x&gt;=70.0}"</span>&gt;</span>中等<span class="hljs-tag">&lt;/<span class="hljs-title">c:when</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-title">c:when</span> <span class="hljs-attribute">test</span>=<span class="hljs-value">"${x&gt;=60.0}"</span>&gt;</span>及格<span class="hljs-tag">&lt;/<span class="hljs-title">c:when</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-title">c:otherwise</span>&gt;</span>不及格<span class="hljs-tag">&lt;/<span class="hljs-title">c:otherwise</span>&gt;</span>
+           <span class="hljs-tag">&lt;/<span class="hljs-title">c:choose</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-title">c:if</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-title">c:if</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">form</span> <span class="hljs-attribute">action</span>=<span class="hljs-value">""</span>&gt;</span>
+        input score:<span class="hljs-tag">&lt;<span class="hljs-title">input</span> <span class="hljs-attribute">type</span>=<span class="hljs-value">"text"</span> <span class="hljs-attribute">name</span>=<span class="hljs-value">"score"</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-title">br</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-title">input</span> <span class="hljs-attribute">type</span>=<span class="hljs-value">"submit"</span> <span class="hljs-attribute">value</span>=<span class="hljs-value">"submit"</span>/&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-title">form</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">html</span>&gt;</span></code></pre>
+
+<p>这几个标签无非是封装了定义语句和判断语句，似乎JSTL的作用是使JSP看起来更像一门独立的编程语言。</p>
+
+
+
+<h2 id="jsp自定义标签">JSP自定义标签</h2>
+
+<p>JSP技术提供了一种封装其他动态类型的机制——自定义标签，取代了JSP中的java程序，方便不熟悉java编程的网页设计人员。JSP自定义标签与JSTL技术实现并无不同之处。 <br>
+开发自定义JSP标签的基本步骤如下： <br>
+1. 开发标签处理程序类 <br>
+2. 创建标签库的描述文件（tld文件）：记录标签处理程序类的属性和位置，JSP容器通过这个文件来得知自定义标签处理程序的信息。 <br>
+3. 在web.xml文件配置元素：定义了web应用中用得到的自定义标签，以及标签库描述文件的位置。 <br>
+或者省略第三步，在jsp中直接申明tld文件的路径。 <br>
+自定义标签需要JavaBean组件的支持。JSTL似乎是对一些java语句的封装，自定义标签似乎是对JavaBean的封装。</p>
+
+<p>一个生成随机数的自定义标签 <br>
+TagRandom.java</p>
+
+<pre class="prettyprint"><code class="language-java hljs "><span class="hljs-keyword">package</span> advance;
+<span class="hljs-keyword">import</span> java.util.Random;
+<span class="hljs-keyword">import</span> java.io.IOException;
+<span class="hljs-keyword">import</span> javax.servlet.jsp.JspException;
+<span class="hljs-keyword">import</span> javax.servlet.jsp.tagext.TagSupport;
+
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TagRandom</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">TagSupport</span>
+{</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">int</span> <span class="hljs-title">doStartTag</span>() <span class="hljs-keyword">throws</span> JspException
+    {
+        Random r = <span class="hljs-keyword">new</span> Random();
+        <span class="hljs-keyword">int</span> n = r.nextInt(<span class="hljs-number">1000</span>);
+        <span class="hljs-keyword">try</span>
+        {
+            pageContext.getOut().print(n);
+        } <span class="hljs-keyword">catch</span>(IOException e)
+        {
+            e.printStackTrace();
+        }
+        <span class="hljs-keyword">return</span> EVAL_BODY_INCLUDE;
+    }
+}</code></pre>
+
+<p>/WEB-INF/tagrandom.tld</p>
+
+
+
+<pre class="prettyprint"><code class="language-xml hljs "><span class="hljs-tag">&lt;<span class="hljs-title">taglib</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">tlib-version</span>&gt;</span>1.0<span class="hljs-tag">&lt;/<span class="hljs-title">tlib-version</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">jsp-version</span>&gt;</span>2.0<span class="hljs-tag">&lt;/<span class="hljs-title">jsp-version</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">tag</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">name</span>&gt;</span>tagrandom<span class="hljs-tag">&lt;/<span class="hljs-title">name</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">tag-class</span>&gt;</span>advance.TagRandom<span class="hljs-tag">&lt;/<span class="hljs-title">tag-class</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">body-content</span>&gt;</span>empty<span class="hljs-tag">&lt;/<span class="hljs-title">body-content</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">tag</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">taglib</span>&gt;</span></code></pre>
+
+<p>jsp页面</p>
+
+
+
+<pre class="prettyprint"><code class="language-jsp hljs xml"><span class="vbscript">&lt;%@ page language=<span class="hljs-string">"java"</span> pageEncoding=<span class="hljs-string">"utf-8"</span> %&gt;</span>
+<span class="vbscript">&lt;%@ taglib uri=<span class="hljs-string">"/WEB-INF/tagrandom.tld"</span> prefix=<span class="hljs-string">"trd"</span> %&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">html</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">head</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">title</span>&gt;</span>score<span class="hljs-tag">&lt;/<span class="hljs-title">title</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">head</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">body</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-title">trd:tagrandom</span>/&gt;</span><span class="hljs-tag">&lt;<span class="hljs-title">br</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">html</span>&gt;</span></code></pre></div></body>
+</html>

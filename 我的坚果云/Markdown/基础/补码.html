@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>补码</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h2 id="编码方法">编码方法</h2>
+
+<p>X≥0时，[X]补码=X；X≤0，[X]补码=2^n-|X|。n是表示x的位数，如果用一个字节来表示x，n就是8。 <br>
+0按两种方式计算的补码都是一样的，不过后者需要忽略溢出。 <br>
+X&lt;0时，补码计算也可以这样描述：其绝对值的最高位填1，其余位按位取反，然后再加1。</p>
+
+<table>
+<thead>
+<tr>
+  <th>x</th>
+  <th>补码</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>127</td>
+  <td>0111 1111</td>
+</tr>
+<tr>
+  <td>…</td>
+  <td>…</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>0000 0010</td>
+</tr>
+<tr>
+  <td>1</td>
+  <td>0000 0001</td>
+</tr>
+<tr>
+  <td>0</td>
+  <td>0000 0000</td>
+</tr>
+<tr>
+  <td>-1</td>
+  <td>1111 1111</td>
+</tr>
+<tr>
+  <td>-2</td>
+  <td>1111 1110</td>
+</tr>
+<tr>
+  <td>-3</td>
+  <td>1111 1101</td>
+</tr>
+<tr>
+  <td>…</td>
+  <td>…</td>
+</tr>
+<tr>
+  <td>-128</td>
+  <td>1000 0000</td>
+</tr>
+</tbody></table>
+
+
+
+
+<h2 id="扩展">扩展</h2>
+
+<p>补码数要扩展时，正数是在符号的前面补0，负数是在符号的前面补1。也就是说，补码数扩展实际上是符号位的扩展。</p>
+
+
+
+<h2 id="范围">范围</h2>
+
+<p>对n位整数来说： <br>
+无符号数，0≤N≤2^n-1 <br>
+有符号数，-2^(n-1)≤N≤2^(n-1)-1</p>
+
+
+
+<h2 id="运算">运算</h2>
+
+<p>法则1：两个数的补码之和等于该两数和的补码。即 [ X ]补码 + [ Y ]补码 = [ X + Y ]补码 <br>
+X= 00000101 <br>
+Y= 00000011 <br>
+[X]补码= 00000101 <br>
+[Y]补码= 00000011 <br>
+[X]补码+ [Y]补码= 00001000 <br>
+X+Y = 00000101 +00000011 = 00001000 <br>
+[X+Y] 补码= [00001000]补码 = 00001000</p>
+
+<p>法则2：一个数的相反数的补码等于该数补码各位按位取反（包括符号位），末位加1。即 [-X] 补码 = [X]补码按位取反后加1 <br>
+X= 0000101（十进制 +5） <br>
+[ X] 补码= 00000101（根据补码定义） <br>
+[-X] 补码= 11111011（根据补码定义） <br>
+[-X] 补码= 11111010+1= 11111011</p>
+
+<p>法则3：补码运算的结果也是补码。</p>
+
+
+
+<h2 id="结论">结论</h2>
+
+<p>减法可用加法来实现。因为乘法是加法的简便运算，除法是减法的简便运算，因此，乘、除法也可以用加法实现。从而，计算机只要有了做加法的能力，就可以完成四则算术运算了。</p></div></body>
+</html>

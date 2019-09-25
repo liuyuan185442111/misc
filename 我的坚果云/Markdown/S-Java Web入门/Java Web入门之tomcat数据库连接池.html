@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Web入门之tomcat数据库连接池</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>为数据库连接建立一个存储池，它是一个储存了多个数据库连接对象的容器，当程序需要连接数据库时，可直接从连接池中获取一个连接，使用结束时将连接还给连接池。 <br>
+连接数据库的这个事情交给tomcat来做，需要连接数据库时，就通过调用getConnection()获取一个connection，使用结束close这个connection即可。</p>
+
+<p>配置： <br>
+将jdbc驱动包mysql-connector-java-5.1.18-bin.jar放到lib文件夹里 <br>
+conf\context.xml</p>
+
+<pre class="prettyprint"><code class="language-xml hljs "><span class="hljs-tag">&lt;<span class="hljs-title">Resource</span> <span class="hljs-attribute">name</span>=<span class="hljs-value">"jdbc/user"</span> <span class="hljs-attribute">auth</span>=<span class="hljs-value">"Container"</span> <span class="hljs-attribute">type</span>=<span class="hljs-value">"javax.sql.DataSource"</span>
+<span class="hljs-attribute">maxIdle</span>=<span class="hljs-value">"10"</span> <span class="hljs-attribute">maxWait</span>=<span class="hljs-value">"1000"</span> <span class="hljs-attribute">maxActive</span>=<span class="hljs-value">"10"</span> <span class="hljs-attribute">username</span>=<span class="hljs-value">"root"</span> <span class="hljs-attribute">password</span>=<span class="hljs-value">"root"</span>
+<span class="hljs-attribute">driverClassName</span>=<span class="hljs-value">"com.mysql.jdbc.Driver"</span> <span class="hljs-attribute">url</span>=<span class="hljs-value">"jdbc:MySQL://10.108.27.48:3306/thunder"</span> /&gt;</span></code></pre>
+
+<p>web.xml</p>
+
+<pre class="prettyprint"><code class="language-xml hljs "><span class="hljs-tag">&lt;<span class="hljs-title">resource-ref</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-title">description</span>&gt;</span>db pool<span class="hljs-tag">&lt;/<span class="hljs-title">description</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-title">res-ref-name</span>&gt;</span>jdbc/user<span class="hljs-tag">&lt;/<span class="hljs-title">res-ref-name</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-title">res-auth</span>&gt;</span>Container<span class="hljs-tag">&lt;/<span class="hljs-title">res-auth</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-title">res-type</span>&gt;</span>javax.sql.DataSource<span class="hljs-tag">&lt;/<span class="hljs-title">res-type</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">resource-ref</span>&gt;</span></code></pre>
+
+<table>
+<thead>
+<tr>
+  <th>context.xml</th>
+  <th>web.xml</th>
+  <th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>name</td>
+  <td>res-ref-name</td>
+  <td>指定资源相对于java:comp/env上下文的JNDI名（可按需修改）</td>
+</tr>
+<tr>
+  <td>auth</td>
+  <td>res-auth</td>
+  <td>指定资源的管理者（默认Container即可）</td>
+</tr>
+<tr>
+  <td>type</td>
+  <td>res-type</td>
+  <td>指定资源所属的java类的完整限定名（默认即可）</td>
+</tr>
+<tr>
+  <td>maxIdle</td>
+  <td></td>
+  <td>指定连接池中保留的空闲数据库连接的最大数目（可按需修改）</td>
+</tr>
+<tr>
+  <td>maxWait</td>
+  <td></td>
+  <td>指定等待一个数据库连接成为可用状态的最大时间，单位毫秒（可按需修改）</td>
+</tr>
+</tbody></table>
+
+
+<p><br>
+使用：</p>
+
+<pre class="prettyprint"><code class="language-jsp hljs xml"><span class="vbscript">&lt;%@page import=<span class="hljs-string">"javax.naming.InitialContext"</span>%&gt;</span>
+<span class="vbscript">&lt;%@page import=<span class="hljs-string">"javax.sql.DataSource"</span>%&gt;</span>
+<span class="vbscript">&lt;%@page import=<span class="hljs-string">"java.sql.*"</span>%&gt;</span>
+<span class="vbscript">&lt;%@page pageEncoding=<span class="hljs-string">"utf-8"</span>%&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">html</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-title">body</span>&gt;</span>
+    <span class="vbscript">&lt;%
+       InitialContext ctx = <span class="hljs-keyword">new</span> InitialContext();
+       //在ctx里根据name查找数据库连接池
+       DataSource ds = (DataSource)ctx.lookup(<span class="hljs-string">"java:comp/env/jdbc/user"</span>);
+       Connection conn = ds.getConnection();
+
+       <span class="hljs-built_in">String</span> sql = <span class="hljs-string">"select * from user"</span>;
+       PreparedStatement pstmt = conn.prepareStatement(sql);
+       ResultSet rs = pstmt.executeQuery();
+       out.println(<span class="hljs-string">"查询到的数据为:&lt;br&gt;"</span>);
+       <span class="hljs-keyword">while</span>(rs.<span class="hljs-keyword">next</span>()) {
+       %&gt;</span>
+        <span class="vbscript">&lt;%=rs.getString(<span class="hljs-number">1</span>)%&gt;</span><span class="hljs-tag">&lt;<span class="hljs-title">br</span>&gt;</span>
+        <span class="vbscript">&lt;%=rs.getString(<span class="hljs-number">2</span>)%&gt;</span><span class="hljs-tag">&lt;<span class="hljs-title">br</span>&gt;</span>
+        <span class="vbscript">&lt;%=rs.getString(<span class="hljs-number">3</span>)%&gt;</span><span class="hljs-tag">&lt;<span class="hljs-title">br</span>&gt;</span>
+       <span class="vbscript">&lt;%
+       }
+       conn.close();//将连接还给连接池
+       conn = <span class="hljs-literal">null</span>;
+       %&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-title">html</span>&gt;</span></code></pre></div></body>
+</html>

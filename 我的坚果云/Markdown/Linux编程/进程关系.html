@@ -1,0 +1,163 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>进程关系</title>
+<link rel="stylesheet" href="https://csdn.net/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({ TeX: { equationNumbers: {autoNumber: "all"},extensions: ["AMSmath.js","AMSsymbols.js","noErrors.js","noUndefined.js"] } });
+</script>
+</head>
+<body><div class="container"><h3 id="进程组">进程组</h3>
+
+<p>进程组是一个或多个进程的集合，通常与作业相关联，每个进程组有一个唯一的进程组ID。 <br>
+每个进程组都可以有一个组长进程，组长的pid等于进程组ID。组长进程可以提前终止，进程组中最后一个进程终止或转移到另一个进程组时，该进程组消失。 <br>
+进程可以通过调用getpgrp或getpgid获得该进程的进程组ID。 <br>
+进程可以通过调用setpgid加入一个现有的组或创建一个新进程组。 <br>
+一个进程只能为它自己或它的子进程设置进程组ID，而且在它的子进程调用了exec函数之一后，它就不能再改变该子进程的进程组ID了。</p>
+
+
+
+<h3 id="会话">会话</h3>
+
+<p>会话是一个或多个进程组的集合。 <br>
+进程调用setsid函数建立一个新会话。如果该进程已经是一个进程组的组长，此函数返回出错。如果该进程不是一个进程组的组长，此函数会创建一个新会话，该进程变成会话首进程，该进程成为一个新进程组的组长。该进程没有控制终端，如果在调用setsid之前该进程有一个控制终端，这种联系也会被切断（后面的例子也说明了这种情况，没有控制终端的进程无法打开/dev/tty）。 <br>
+用户登录系统时会创建一个会话，通常将自动建立控制终端，shell进程是该会话的会话首进程。 <br>
+如果一个会话有一个控制终端，则它有一个前台进程组，另外的是后台进程组。终端的中断信号SIGINT（Ctrl+C）、挂起信号SIGTSTP（Ctrl+Z）发送给前台进程组。</p>
+
+<h3 id="函数说明">函数说明</h3>
+
+
+
+<pre class="prettyprint"><code class=" hljs cs"><span class="hljs-preprocessor">#include &lt;unistd.h&gt;</span>
+pid_t getpgrp(<span class="hljs-keyword">void</span>);
+返回调用进程的进程组ID
+pid_t getpgid(pid_t pid);
+若成功则返回进程组ID，若出错则返回-<span class="hljs-number">1</span>
+若pid为<span class="hljs-number">0</span>，则返回调用进程的进程组ID
+<span class="hljs-keyword">int</span> setpgid(pid_t pid, pid_t gpid);
+将pid进程的进程组ID设置为gpid
+若成功则返回<span class="hljs-number">0</span>，若出错则返回-<span class="hljs-number">1</span>
+If setpgid() <span class="hljs-keyword">is</span> used move a process <span class="hljs-keyword">from</span> one process <span class="hljs-keyword">group</span> to another,
+both process groups must be part of the same session.
+如果这两个参数相等，则由pid指定的进程变成进程组组长
+如果pid是<span class="hljs-number">0</span>，则使用调用者的进程ID
+如果pgid是<span class="hljs-number">0</span>，则由pid指定的进程ID将用作进程组ID
+pid_t setsid(<span class="hljs-keyword">void</span>);
+若成功则返回进程组ID，若出错则返回-<span class="hljs-number">1</span>
+pid_t getsid(pid_t pid);
+若成功则返回会话首进程的进程组ID（也就是首进程的pid），若出错则返回-<span class="hljs-number">1</span>
+若pid是<span class="hljs-number">0</span>，返回调用进程的会话首进程的进程组ID
+pid_t tcgetpgrp(<span class="hljs-keyword">int</span> fd);
+<span class="hljs-keyword">int</span> tcsetpgrp(<span class="hljs-keyword">int</span> fd, pid_t pgrp);
+<span class="hljs-keyword">get</span> and <span class="hljs-keyword">set</span> terminal foreground process <span class="hljs-keyword">group</span>
+tcsetpgrp将pgrp指定的进程组成为与fd相关联的终端的前台进程组
+这两个函数通常由shell调用</code></pre>
+
+<p>进程创建子进程后，二者归属于同一进程组，子进程可以调用setpgid()设置子进程的进程组ID。比如在shell中执行命令时，shell先fork，然后在父子进程中分别调用setpgid()使子进程创建一个新的进程组。</p>
+
+
+
+<h3 id="孤儿进程组">孤儿进程组</h3>
+
+<p>如果一个进程组中的每个成员的父进程都不属于会话的其他进程组，那么该组中的进程一旦停止，因为父进程不在同会话中，就没办法被同会话中的进程重新启动了。 <br>
+在父进程终止后，进程组成为孤儿进程组。父进程转移进程组不会使进程组成为孤儿进程组，因为不能跨会话转移进程组。 <br>
+新的孤儿进程组中处于停止状态（Ctrl+Z）的每一个进程会收到挂断信号SIGHUP，接着会收到继续信号SIGCONT。对挂断信号系统默认动作是终止该进程。</p>
+
+
+
+<h3 id="终端关闭">终端关闭</h3>
+
+<p>如果终端接口检测到一个连接断开，则将SIGHUP信号发送给与该终端相关的控制进程（会话首进程）。接到此信号的会话首进程可能在后台。如果会话首进程终止，也会产生SIGHUP信号，此信号将被放送给前台进程组中的每一个进程。（摘自APUE 10.2节对SIGHUP的描述） <br>
+百度百科上SIGHUP词条的描述明显与之不符，应是百度百科错误。 <br>
+我来整理一下思路： <br>
+连接断开时，会话首进程会收到SIGHUP，如果会话首进程终止，前台进程组也会收到SIGHUP，后台进程组则不会收到SIGHUP。所以用&amp;符号提交的作业在终端关闭时可以继续运行，但由于其父进程，也就是会话首进程终止，它们被过继给init进程。 <br>
+而通过Ctrl+Z被停止的后台进程组，由于父进程，也就是会话首进程的终止，变成了孤儿进程组，依照上文所说，它们也会收到SIGHUP。 <br>
+设想这样一种情况：用&amp;符号提交的作业，创建了一个子进程，并且给子进程发送了一个SIGSTP信号，然后关闭终端会发生什么？根据上面的分析，后台运行中的进程会被过继给init继续运行，其子进程所在进程组就不会变成孤儿进程组，也不会终止。下面是该情况的代码实现：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl"><span class="hljs-comment">#include &lt;unistd.h&gt;</span>
+<span class="hljs-comment">#include &lt;signal.h&gt;</span>
+
+<span class="hljs-keyword">int</span> main()
+{
+    pid_t pid = <span class="hljs-keyword">fork</span>();
+    <span class="hljs-keyword">if</span>(pid &lt; <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+    <span class="hljs-keyword">if</span>(pid == <span class="hljs-number">0</span>)
+    {
+        setpgid(<span class="hljs-number">0</span>,<span class="hljs-number">0</span>);
+        <span class="hljs-keyword">sleep</span>(<span class="hljs-number">600</span>);
+        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+    }
+    <span class="hljs-keyword">sleep</span>(<span class="hljs-number">5</span>);
+    <span class="hljs-keyword">kill</span>(pid, SIGSTOP);
+    <span class="hljs-keyword">sleep</span>(<span class="hljs-number">600</span>);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+<p>[root@centos ~]# ps -o pid,ppid,pgid,sid,comm <br>
+  PID  PPID  PGID   SID COMMAND <br>
+23440 23436 23440 23440 bash <br>
+23519 23440 23519 23440 a.out <br>
+23520 23519 23520 23440 a.out <br>
+23537 23440 23537 23440 ps <br>
+[root@centos ~]# ps -e -o pid,ppid,pgid,sid,comm | grep a.out <br>
+23519     1 23519 23440 a.out <br>
+23520 23519 23520 23440 a.out <br>
+结果和分析的一样，而且终端关了，会话首进程没了，但是会话还在！会话首进程终止时，第一个a.out的进程组成了孤儿进程组，但是人家在运行状态，所以不会收到SIGHUP，第二个a.out的父进程还在，所以不是孤儿进程组，也不会收到SIGHUP。</p>
+
+<h3 id="如何让进程脱离终端在后台运行">如何让进程脱离终端在后台运行？</h3>
+
+<p>1 使进程忽略SIGHUP信号 <br>
+nohup命令让提交的命令忽略SIGHUP信号，因为子进程的信号屏蔽字和父进程是一样的，nohup被执行后先屏蔽SIGHUP信号，然后exec成提交的命令。 <br>
+2 使进程创建一个新session <br>
+setsid命令可以run a program in a new session。 <br>
+<code>setsid ping 127.0.0.1</code>后<code>ps –utest o pid,ppid,pgid,sid,tpgid,comm</code>发现ping命令的ppid变成了1，而后面的例子中当前终端没有关闭/父进程没有返回/Ctrl+C的时候，子进程的ppid并不是1，所以setsid命令的操作可能是：setsid命令先fork一个子进程，然后在子进程中调用setssid()，再exec成最终要执行的命令，这样父进程终止的时候，子进程就被过继给了init。 <br>
+3 (cmd&amp;) <br>
+括号中的命令将会新开一个子shell顺序执行，括号中多个命令之间用分号隔开，最后一个命令可以没有分号，各命令和括号之间不必有空格。 <br>
+子shell在命令扔后台之后终止，命令被过继给init。</p>
+
+
+
+<h3 id="一个例子-习题92">一个例子 习题9.2</h3>
+
+<pre class="prettyprint"><code class=" hljs perl"><span class="hljs-comment">#include &lt;unistd.h&gt;</span>
+<span class="hljs-comment">#include &lt;sys/types.h&gt;</span>
+<span class="hljs-comment">#include &lt;sys/stat.h&gt;</span>
+<span class="hljs-comment">#include &lt;fcntl.h&gt;</span>
+<span class="hljs-comment">#include &lt;stdio.h&gt;</span>
+
+<span class="hljs-keyword">int</span> main()
+{
+    pid_t pid;
+    <span class="hljs-keyword">if</span>((pid=<span class="hljs-keyword">fork</span>())&lt;<span class="hljs-number">0</span>)
+    {
+        puts(<span class="hljs-string">"error"</span>);
+        <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+    }
+    <span class="hljs-keyword">if</span>(pid&gt;<span class="hljs-number">0</span>)
+    {
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"parent pid=<span class="hljs-variable">%d</span> pgid=<span class="hljs-variable">%d</span>\n"</span>,getpid(),getpgid(<span class="hljs-number">0</span>));
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"parent open tty=<span class="hljs-variable">%d</span>\n"</span>,<span class="hljs-keyword">open</span>(<span class="hljs-string">"/dev/tty"</span>, O_RDONLY));
+        <span class="hljs-keyword">sleep</span>(<span class="hljs-number">300</span>);
+    }
+    <span class="hljs-keyword">else</span>
+    {
+        setsid();
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"child pid=<span class="hljs-variable">%d</span> pgid=<span class="hljs-variable">%d</span>\n"</span>,getpid(),getpgid(<span class="hljs-number">0</span>));
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"child open tty=<span class="hljs-variable">%d</span>\n"</span>,<span class="hljs-keyword">open</span>(<span class="hljs-string">"/dev/tty"</span>, O_RDONLY));
+        <span class="hljs-keyword">sleep</span>(<span class="hljs-number">600</span>);
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+<h3 id="参考">参考</h3>
+
+<p>APUE 第9章 进程关系 <br>
+<a href="https://blog.csdn.net/iw1210/article/details/58709889">让Linux进程脱离终端在后台运行</a> <br>
+man文档 <br>
+APUE 10.2 信号概念</p></div></body>
+</html>

@@ -1,0 +1,14 @@
+编码
+1 编译decode.cpp成decode.exe
+2 将要传输的文件压缩成src.rar，然后执行genqr.bat，在当前目录会生成很多图片，每个图片都是一个二维码
+传输
+依次扫描图片中的二维码，将所得信息写入mid.txt中
+解码
+1 编译transform.cpp成transform.exe
+2 执行transform.exe，会生成dest.txt
+3 编译decode.cpp成decode.exe
+4 执行decode.exe，会生成dest.rar，解压即得到原文件
+其他用法
+将文件重命名为dest.txt，运行decode.exe
+参考
+http://blog.csdn.net/liuyuan185442111/article/details/51511195

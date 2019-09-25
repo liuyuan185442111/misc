@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>怎样在一定范围内获得比较理想的随机数</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><pre class="prettyprint"><code class=" hljs perl"><span class="hljs-comment">#include &lt;stdio.h&gt;</span>
+<span class="hljs-comment">#include &lt;stdlib.h&gt;</span>
+<span class="hljs-comment">#include &lt;time.h&gt;</span>
+
+<span class="hljs-comment">#define N 3256  //获取0~N-1之间的随机数</span>
+
+<span class="hljs-keyword">int</span> main()
+{
+   <span class="hljs-keyword">int</span> t;
+   <span class="hljs-keyword">printf</span>(<span class="hljs-string">"RAND_MAX = <span class="hljs-variable">%d</span>\n"</span>, RAND_MAX);
+   getchar();
+
+   <span class="hljs-keyword">srand</span>((unsigned <span class="hljs-keyword">int</span>)<span class="hljs-keyword">time</span>((time_t <span class="hljs-variable">*)</span>NULL));  <span class="hljs-regexp">//</span>用系统当前时间初始化随机数发生器的种子
+   <span class="hljs-keyword">do</span>
+   {
+      t = <span class="hljs-keyword">rand</span>();
+      <span class="hljs-keyword">printf</span>(<span class="hljs-string">"<span class="hljs-variable">%d</span> "</span>, t<span class="hljs-variable">%N</span>);
+      <span class="hljs-keyword">printf</span>(<span class="hljs-string">"<span class="hljs-variable">%d</span> "</span>, (<span class="hljs-keyword">int</span>)( (double)t / ((double)RAND_MAX + <span class="hljs-number">1</span>) * N ) );
+      <span class="hljs-keyword">printf</span>(<span class="hljs-string">"<span class="hljs-variable">%d</span>"</span>, t / (RAND_MAX/N + <span class="hljs-number">1</span>) );
+   }
+   <span class="hljs-keyword">while</span>(getchar());
+   <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+<p>最直接的方法是：</p>
+
+<pre><code>rand() % N
+</code></pre>
+
+<p>但这个方法不好，因为许多随机数发生器的低位比特并不随机。一个较好的方法是：</p>
+
+<pre><code>(int)((double)rand() / ((double)RAND_MAX + 1) * N)
+</code></pre>
+
+<p>如果不希望使用浮点，另一个方法是：</p>
+
+<pre><code>rand() / (RAND_MAX / N + 1)
+</code></pre>
+
+<p>两种方法都需要知道RAND_MAX，而且假设N要远远小于RAND_MAX。</p></div></body>
+</html>

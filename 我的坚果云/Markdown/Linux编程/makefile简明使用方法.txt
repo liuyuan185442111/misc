@@ -1,0 +1,148 @@
+## 零碎
+命令前面加一个减号的意思是，该命令如果出错也不停止
+命令前面加@的意思是，这个命令将不显示出来
+
+makefile中的变量其实就是C语言中的宏
+
+:=定义的变量不能使用后面定义的变量
+=定义的变量可以使用后面的变量
++=是追加
+例如，
+
+	a=5$(b)
+	c:=5$(b)
+	b=M
+b是5M，c是5
+
+VPATH变量
+make会在当前目录找不到依赖文件和目标文件的情况下，到VPATH指定的目录中取寻找文件。
+
+变量的替换
+```
+$(var:a=b)
+把变量var中所有以a字串结尾的单词的结尾的a字串替换成b字串
+
+foo := a.o b.o c.o
+bar := $(foo:.o=.c)
+bar的值为a.c b.c c.c
+
+还可以进行更精确的控制：
+foo := a.o b.o c.o
+bar := $(foo:%.o=%.c)
+```
+## if和define
+有若干关键字实现条件控制：ifeq、ifneq、else、endif、ifdef、ifndef
+define用来实现多行变量，以endef结尾
+## 静态模式
+```
+<targets> : <target-pattern> : <prereq-patterns>
+	<commands>
+```
+看一个例子：
+```
+objects = foo.o bar.o
+all: $(objects)
+$(objects): %.o: %.c
+	$(CC) -c $(CFLAGS) $< -o $@
+```
+## 模式规则
+模式规则中，目标的定义需要有%字符，%表示一个或多个任意字符：
+
+	%.o : %.c 
+		<command>
+其指出了怎么从所有的 [.c] 文件生成相应的 [.o] 文件的规则。如果要生成的目标是“a.o b.o”，那么“%c”就是“a.c b.c”。
+## 自动化变量
+```
+$@: 表示规则中的目标文件集。如果有多个目标，那么“$@”就是匹配于目标中模式定义的集合。
+$<: 依赖目标中的第一个目标名字。如果依赖目标是以模式（即“%”）定义的，那么“$<”将是符合模式的一系列的文件集。注意，其是一个一个取出来的。 
+$^: 所有的依赖目标的集合。以空格分隔。如果在依赖目标中有多个重复的，这个变量会去除重复的依赖目标，只保留一份。
+$+: 这个变量很像“$^”，也是所有依赖目标的集合。只是它不去除重复的依赖目标。
+
+$@、$<在扩展时只会有一个文件，$^、$+的值是一个文件列表。
+```
+## 常用函数
+```
+让通配符在变量中展开：
+objects := $(wildcard *.o)
+
+$(shell <command>)
+新生成一个shell进程来执行命令
+
+$(call <expression>,<param1>,<param2>...)
+举个例子,
+foo = $(2) $(1)
+bar = $(call foo,a,b)
+那bar的值就是b a
+
+$(if <condition>,<then-part>)
+$(if <condition>,<then-part>,<else-part>)
+
+$(foreach <var>,<list>,<text>)
+把参数<list>中的单词逐一取出放到参数<var>所指定的变量 中，然后再执行<text>所包含的表达式。每一次会返回一个字符串，循环过程中，每次所返回的每个字符串会以空格分隔，最后当整个循环结束时，最后返回整个字符串（以空格分隔）。
+例如，
+names := a b c
+files := $(foreach n,$(names),$(n).o)
+files的值是a.o b.o c.o
+```
+字符串处理函数
+以下`<text>`表示的是一组单词
+```
+$(subst <from>,<to>,<text>)
+字符串替换
+$(subst ee,EE,feet on the street)
+
+$(patsubst <pattern>,<replacement>,<text>)
+模式字符串替换,查找<text>中单词是否符合模式<pattern>,如果匹配的话,则以<replacement>替换
+$(patsubst %.c,%.o,x.c.c bar.c)
+
+$(strip <string>)
+取出开头和结尾的空字符
+
+$(findstring <find>,<in>)
+在字串<in>中查找<find>字串,如果找到返回<find>,否则返回空
+
+$(filter <pattern>,<text>)
+以<pattern>模式过滤<text>字串中的单词
+
+$(filter-out <pattern>,<text>)
+与filter相反
+
+$(sort <text>)
+排序并去重
+
+$(word <n>,<text>)
+取字串<text>中的第<n>个单词(从1开始)
+
+$(wordlist <b>,<e>,<text>)
+取字串<text>中的第<b>到第<e>个单词(前后都是闭区间)
+
+$(words <text>)
+统计单词个数
+
+$(firstword <text>)
+取第一个单词
+```
+文件名操作函数
+以下`<names>`表示的是一组文件名
+```
+$(dir <names>)
+取目录
+$(dir src/foo.c hacks) 返回值是 "src/ ./"
+
+$(notdir <names>)
+取文件函数
+
+$(suffix <names>)
+取后缀函数(文件后缀名)
+
+$(basename <names>)
+取basename
+
+$(addsuffix <suffix>,<names>)
+添加后缀
+
+$(addprefix <prefix>,<names>)
+添加前缀
+```
+## 参考
+跟我一起写 Makefile (陈皓)

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STL之complex</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p><strong>note：本文相关源代码在std_complex.h中</strong></p>
+
+<p>complex是一个类模板，实现了复数：</p>
+
+<pre><code>template &lt;class _Tp&gt; class complex;
+</code></pre>
+
+<p>它有两个private成员变量，一个实部，一个虚部，它们的类型都是_Tp。 <br>
+complex类中还包括或涉及这些部分：</p>
+
+<ul>
+<li>typedef _Tp value_type</li>
+<li>构造函数</li>
+<li>real函数返回实部，imag函数返回虚部</li>
+<li>重载了一些数学函数，如abs，log，sqrt等</li>
+<li>重载了一些运算符，包括<code>=，+=，-=，*=， /=，+，-，*，/，==，!=，&lt;&lt;，&gt;&gt;</code></li>
+</ul>
+
+<p>complex类对float，double，long double做了specialization。将_Tp实例化为除float, double，long double之外的类型的行为是未定义的。</p>
+
+<h2 id="insertion-operator的重载">Insertion operator的重载</h2>
+
+
+
+<pre class="prettyprint"><code class=" hljs avrasm">template &lt;typename _Tp, typename _CharT, class _Traits&gt;
+basic_ostream&lt;_CharT, _Traits&gt;&amp;
+operator&lt;&lt;(basic_ostream&lt;_CharT, _Traits&gt;&amp; __os, const complex&lt;_Tp&gt;&amp; __x)
+{
+    basic_ostringstream&lt;_CharT, _Traits&gt; __s<span class="hljs-comment">;</span>
+    __s<span class="hljs-preprocessor">.flags</span>(__os<span class="hljs-preprocessor">.flags</span>())<span class="hljs-comment">;</span>
+    __s<span class="hljs-preprocessor">.imbue</span>(__os<span class="hljs-preprocessor">.getloc</span>())<span class="hljs-comment">;</span>
+    __s<span class="hljs-preprocessor">.precision</span>(__os<span class="hljs-preprocessor">.precision</span>())<span class="hljs-comment">;</span>
+    __s &lt;&lt; <span class="hljs-string">'('</span> &lt;&lt; __x<span class="hljs-preprocessor">.real</span>() &lt;&lt; <span class="hljs-string">","</span> &lt;&lt; __x<span class="hljs-preprocessor">.imag</span>() &lt;&lt; <span class="hljs-string">')'</span><span class="hljs-comment">;</span>
+    return __os &lt;&lt; __s<span class="hljs-preprocessor">.str</span>()<span class="hljs-comment">;</span>
+}</code></pre>
+
+<p>当我们这样写的时候：</p>
+
+<pre><code>complex&lt;float&gt; t(1,2);
+cout &lt;&lt; t;
+</code></pre>
+
+<p>就可以输出(1,2)了。</p>
+
+<p>cout与这些语句有关：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-comment">//iostream文件</span>
+<span class="hljs-keyword">extern</span> ostream <span class="hljs-built_in">cout</span>;        <span class="hljs-comment">/// Linked to standard output</span>
+<span class="hljs-comment">//iosfwd文件</span>
+<span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">typename</span> _CharT, <span class="hljs-keyword">typename</span> _Traits = char_traits&lt;_CharT&gt; &gt; <span class="hljs-keyword">class</span> basic_ostream;
+<span class="hljs-keyword">typedef</span> basic_ostream&lt;<span class="hljs-keyword">char</span>&gt;         ostream;
+<span class="hljs-comment">//ostream文件</span>
+<span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">typename</span> _CharT, <span class="hljs-keyword">typename</span> _Traits&gt;
+<span class="hljs-keyword">class</span> basic_ostream : <span class="hljs-keyword">virtual</span> <span class="hljs-keyword">public</span> basic_ios&lt;_CharT, _Traits&gt;…</code></pre>
+
+<p>cout就是<code>basic_ostream&lt;char,char_traits&lt;char&gt; &gt;</code>类型的对象。如此，operator&lt;&lt;函数的三个模板参数都可以推断出来了。 <br>
+函数体部分，先通过basic_ostringstream这个模板类将输出放到一个缓冲区里，然后再用__os一起输出。</p>
+
+
+
+<h2 id="extraction-operator的重载">Extraction operator的重载</h2>
+
+<p>和Insertion operator的重载类似：</p>
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">typename</span> _Tp, <span class="hljs-keyword">typename</span> _CharT, <span class="hljs-keyword">class</span> _Traits&gt;
+basic_istream&lt;_CharT, _Traits&gt;&amp;
+<span class="hljs-keyword">operator</span>&gt;&gt;(basic_istream&lt;_CharT, _Traits&gt;&amp; __is, <span class="hljs-keyword">complex</span>&lt;_Tp&gt;&amp; __x)
+{
+    _Tp __re_x, __im_x;
+    _CharT __ch;
+    __is &gt;&gt; __ch;
+    <span class="hljs-keyword">if</span> (__ch == <span class="hljs-string">'('</span>)
+    {
+        __is &gt;&gt; __re_x &gt;&gt; __ch;
+        <span class="hljs-keyword">if</span> (__ch == <span class="hljs-string">','</span>)
+        {
+            __is &gt;&gt; __im_x &gt;&gt; __ch;
+            <span class="hljs-keyword">if</span> (__ch == <span class="hljs-string">')'</span>)
+                __x = <span class="hljs-keyword">complex</span>&lt;_Tp&gt;(__re_x, __im_x);
+            <span class="hljs-keyword">else</span>
+                __is.setstate(ios_base::failbit);
+        }
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (__ch == <span class="hljs-string">')'</span>)
+            __x = <span class="hljs-keyword">complex</span>&lt;_Tp&gt;(__re_x, _Tp(<span class="hljs-number">0</span>));
+        <span class="hljs-keyword">else</span>
+            __is.setstate(ios_base::failbit);
+    }
+    <span class="hljs-keyword">else</span>
+    {
+        __is.putback(__ch);
+        __is &gt;&gt; __re_x;
+        __x = <span class="hljs-keyword">complex</span>&lt;_Tp&gt;(__re_x, _Tp(<span class="hljs-number">0</span>));
+    }
+    <span class="hljs-keyword">return</span> __is;
+}</code></pre></div></body>
+</html>

@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>关于main函数的参数</title>
+<link rel="stylesheet" href="https://csdn.net/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({ TeX: { equationNumbers: {autoNumber: "all"},extensions: ["AMSmath.js","AMSsymbols.js","noErrors.js","noUndefined.js"] } });
+</script>
+</head>
+<body><div class="container"><p>历史上大多数UNIX系统支持main函数带有三个参数：</p>
+
+<pre><code>int main(int argc, char *argv[], char *env[]);
+</code></pre>
+
+<p>其中第二个参数是参数表的地址，第三个参数就是环境表的地址，它们都是一个字符指针数组，每个指针指向一个以null结束的C字符串。 <br>
+另外全局变量environ也包含了环境表指针数组的地址：</p>
+
+<pre><code>extern char **environ;
+</code></pre>
+
+<p>因为ISO C规定main函数只有两个参数，所以POSIX.1也规定应使用environ而不使用第三个参数。 <br>
+下面的例子展示了main函数的参数：</p>
+
+<pre class="prettyprint"><code class=" hljs perl">include &lt;stdio.h&gt;
+<span class="hljs-comment">#include &lt;stdlib.h&gt;</span>
+<span class="hljs-comment">#include &lt;elf.h&gt;</span>
+<span class="hljs-comment">#include &lt;assert.h&gt;</span>
+
+extern char <span class="hljs-variable">**</span>environ;
+
+<span class="hljs-keyword">int</span> main(<span class="hljs-keyword">int</span> argc, char <span class="hljs-variable">*argv</span>[], char <span class="hljs-variable">*env</span>[])
+{
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"sizeof pointer: <span class="hljs-variable">%d</span>\n"</span>, sizeof(void<span class="hljs-variable">*)</span>);
+    assert(argc == <span class="hljs-variable">*(</span><span class="hljs-keyword">int</span><span class="hljs-variable">*)</span>(argv-<span class="hljs-number">1</span>));
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"Argument count: <span class="hljs-variable">%d</span>\n"</span>, argc);
+    <span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span>(; i&lt;argc; ++i)
+    {
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"Argument <span class="hljs-variable">%d</span>: <span class="hljs-variable">%s</span>\n"</span>, i, argv[i]);
+    }
+    assert(argv[argc] == NULL);
+    char <span class="hljs-variable">**</span>p = argv+argc+<span class="hljs-number">1</span>;
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"Environment address: <span class="hljs-variable">%p</span> <span class="hljs-variable">%p</span> <span class="hljs-variable">%p</span>\n"</span>, p, env, environ);
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"Environment:\n"</span>);
+    <span class="hljs-keyword">while</span>(<span class="hljs-variable">*p</span>)
+    {
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"    <span class="hljs-variable">%s</span>\n"</span>, <span class="hljs-variable">*p</span>);
+        p++;
+    }
+    assert(<span class="hljs-variable">*p</span>++ == NULL);
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"Auxiliary vectors:\n"</span>);
+<span class="hljs-comment">#ifdef __x86_64__</span>
+    Elf64_auxv_t <span class="hljs-variable">*aux</span> = (Elf64_auxv_t<span class="hljs-variable">*)</span>p;
+<span class="hljs-comment">#else</span>
+    Elf32_auxv_t <span class="hljs-variable">*aux</span> = (Elf32_auxv_t<span class="hljs-variable">*)</span>p;
+<span class="hljs-comment">#endif</span>
+    <span class="hljs-keyword">while</span>(aux-&gt;a_type != AT_NULL)
+    {
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"    Type: <span class="hljs-variable">%2d</span> Value: <span class="hljs-variable">%x</span>\n"</span>, aux-&gt;a_type, aux-&gt;a_un.a_val);
+        ++aux;
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+</code></pre>
+
+<p>C程序的典型存储器安排是这样的：</p>
+
+<pre><code>命令行参数和环境变量   高地址
+------------------
+栈
+------------------
+堆
+------------------
+未初始化的数据
+------------------
+初始化的数据
+------------------
+程序正文              低地址
+</code></pre>
+
+<p>环境表和环境字符串通常占用的是进程地址空间顶部，它下面是栈空间，所以它不能向上(高地址)又不能向下(低地址)扩展。如果要增加一个环境变量，操作就比较复杂了。 <br>
+如果是第一次增加一个新name，调用malloc为新的环境表分配空间，然后将原来的环境表复制过来，并将指向新name=value字符串的指针放到环境表的尾部，再将一个空指针放在其后，最后更新environ使之指向新环境表。由于evnp是值传递的，它的值并不会进行更新。 <br>
+如果不是第一次增加一个新name，只要调用realloc扩展空间，然后将指向新name=value字符串的指针放到环境表的尾部，再将一个空指针放在其后。此时environ的值可能变化也可能不变。 <br>
+第一次增加新name时，复制原来的环境表这一步可能是通过environ去寻找旧的环境表，所以用户程序最好不要修改environ的值。 <br>
+有两个函数可以增加一个新的环境变量：</p>
+
+<pre><code>#include &lt;stdlib.h&gt;
+int putenv(chat *str);
+int setenv(const char *name, const char *value, int rewrite);
+</code></pre>
+
+<p>setenv会分配存储区，以便存放name=value字符串。putenv则可能直接把传递给它的字符串地址放入环境表尾部，如果这字符串是存放在栈中则可能会发生错误。 <br>
+以下例程展示了增加一个环境变量的操作：</p>
+
+<pre class="prettyprint"><code class=" hljs perl"><span class="hljs-comment">#include &lt;stdio.h&gt;</span>
+<span class="hljs-comment">#include &lt;stdlib.h&gt;</span>
+
+extern char <span class="hljs-variable">**</span>environ;
+
+<span class="hljs-keyword">int</span> main(<span class="hljs-keyword">int</span> argc, char <span class="hljs-variable">*argv</span>[])
+{
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"environ is <span class="hljs-variable">%p</span>\n"</span>,environ);
+    char <span class="hljs-variable">**</span>p = environ;
+    <span class="hljs-keyword">while</span>(<span class="hljs-variable">*p</span>) ++p;
+    <span class="hljs-keyword">if</span>(environ) <span class="hljs-keyword">printf</span>(<span class="hljs-string">"last element address is <span class="hljs-variable">%p</span>\n"</span>,p[-<span class="hljs-number">1</span>]);
+    char buf[<span class="hljs-number">64</span>]={<span class="hljs-string">"name=value"</span>};
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"putenv\nbuf address is p\n"</span>,buf);
+    putenv(buf);
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"new environ is <span class="hljs-variable">%p</span>\n"</span>,environ);
+    p = environ;
+    <span class="hljs-keyword">while</span>(<span class="hljs-variable">*p</span>) ++p;
+    <span class="hljs-keyword">if</span>(environ)
+    {
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"the one before last address is <span class="hljs-variable">%p</span>\n"</span>,p[-<span class="hljs-number">2</span>]);
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"last element address is <span class="hljs-variable">%p</span>\n"</span>,p[-<span class="hljs-number">1</span>]);
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+<p>参考 <br>
+程序员的自我修养 <br>
+UNIX环境高级编程 7.6 C程序的存储空间布局 <br>
+UNIX环境高级编程 7.6 环境变量</p></div></body>
+</html>

@@ -1,0 +1,67 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>一些树的知识</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><p>设树T的度为4，其中度为1，2，3，和4的节点个数分别为4，2，1，1。则T中的叶子数为？</p>
+<pre><code>每条边对应一个节点，只有根节点没有相应的边。所以
+节点个数 = 边数+1
+一个度为4的节点对应有4条出边，
+一个度为3的节点对应有3条出边，
+一个度为2的节点对应有2条出边，
+一个度为1的节点对应有条出边，
+叶子节点没有出边。
+所以 边数 = 1*4+2*2+3*1+4*1 = 15
+所以 节点个数 = 16
+除去度为1，2，3，和4的节点
+剩下的就是叶子节点
+8个叶子节点
+</code></pre>
+<hr>
+<p>二叉树中，度为2的节点个数 = 度为0的节点个数-1</p>
+<hr>
+<p>二叉树遍历中先中后指的是根节点的位置，以D表示根节点，先序就是DLR，中序是LDR，后序是LRD，左子树始终在右子树之前。</p>
+<p>对二叉树进行层次遍历应借助于队列而不是栈这种数据结构：</p>
+<ol>
+<li>访问根结点，并将根结点入队</li>
+<li>当队列不空时，重复下列操作<br>
+从队列退出一个结点：<br>
+若其有左孩子，将其左孩子入队<br>
+若其有右孩子，将其右孩子入队</li>
+<li>重复步骤2</li>
+</ol>
+<hr>
+<p>二叉排序树（Binary Sort Tree），又称二叉查找树（Binary Search Tree），亦称二叉搜索树。<br>
+BST或者是一棵空树，或者是具有下列性质的二叉树：<br>
+（1）若左子树不空，则左子树上所有结点的值均小于它的根结点的值；<br>
+（2）若右子树不空，则右子树上所有结点的值均大于它的根结点的值；<br>
+（3）左、右子树也分别为二叉排序树；<br>
+（4）没有键值相等的节点。</p>
+<p>平衡二叉查找树，简称平衡二叉树，它的每个结点的左右子树的高度之差的绝对值最多为1。<br>
+红黑树(RB-Tree)是一种平衡二叉树，sgi的map，set都基于RB-tree。</p>
+<hr>
+<p>B树是一种多路平衡查找树。B树中所有节点的孩子节点最大值称为B树的阶，通常用m表示。一个节点有k个孩子时，必有k-1个关键字才能将子树中所有关键字划分为k个子集。<br>
+一个m阶的B树具有如下几个特征：</p>
+<ol>
+<li>根节点至少有两个子女</li>
+<li>每个中间节点都包含k-1个元素和k个孩子，其中ceil(m/2) ≤ k ≤ m</li>
+<li>每一个叶子节点都包含k-1个元素，其中 ceil(m/2) ≤ k ≤ m</li>
+<li>所有的叶子节点都位于同一层</li>
+<li>每个节点中的元素从小到大排列，节点当中k-1个元素正好是k个孩子包含的元素的值域划分</li>
+<li>每个节点的结构为：（A0，K1，A1，K2，A2，…  ，Kn，An）。其中，Ki(1≤i≤n)为关键字，且Ki&lt;K(i+1) 1≤i≤n-1。Ai(0≤i≤n)为指向子树根节点的指针，且Ai所指子树所有节点中的关键字均小于K(i+1)。n为结点中关键字的个数，满足ceil(m/2)-1≤n≤m-1。</li>
+</ol>
+<p>下面是往B树中依次插入6 10 4 14 5 11 15 3 2 12 1 7 8 8 6 3 6 21 5 15 15 6 32 23 45 65 7 8 6 5 4的演示动画：<br>
+<img src="https://img-blog.csdnimg.cn/20181201130646259.gif" alt="btreebuild"><br>
+参考<br>
+<a href="https://blog.csdn.net/z_ryan/article/details/79685072">https://blog.csdn.net/z_ryan/article/details/79685072</a><br>
+<a href="http://www.cnblogs.com/vincently/p/4526560.html">http://www.cnblogs.com/vincently/p/4526560.html</a></p>
+</div>
+</body>
+
+</html>

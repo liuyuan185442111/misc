@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STL之basic_string</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>basic_string在basic_string.h中定义，部分成员函数在basic_string.tcc中定义。</p>
+
+<pre><code>template &lt;typename _CharT, typename _Traits, typename _Alloc&gt;
+class basic_string;
+</code></pre>
+
+
+
+<h2 id="copy-on-write">COPY-ON-WRITE</h2>
+
+<p>如果直接去看源码，会比较难理解，因为basic_string的实现使用了COPY-ON-WRITE技术。关于COPY-ON-WRITE技术可移步</p>
+
+<blockquote>
+  <p><a href="http://blog.sina.com.cn/s/blog_6211cd0501011a9a.html" target="_blank">《关于COPY-ON-WRITE 》</a></p>
+</blockquote>
+
+<p>sgi在basic_string内部定义了一个Rep的结构体，负责COPY-ON-WRITE的实现。要实现COPY-ON-WRITE，就必须对分配的内存块进行计数，Rep就用来进行计数，并把它放在每个内存块的起始位置。同时Rep里还存有一些状态信息。 <br>
+所以内存布局是这样的，Rep|char_type, char_type, char_type……</p>
+
+<p>此外basic_string内部还定义了一个继承自Alloc的结构体Alloc_hider，它有一个数据成员_M_p，_M_p指向实际的数据。然后定义了一个Alloc_hider类型的数据成员M_dataplus。 </p>
+
+<pre class="prettyprint"><code class=" hljs vbnet">A <span class="hljs-built_in">string</span> looks <span class="hljs-keyword">like</span> this：
+                                [_Rep]
+                                _M_length
+[basic_string&lt;char_type&gt;]       _M_capacity
+_M_dataplus                     _M_state
+_M_p---------------------------&gt;一个未命名的char_type数组
+
+_M_p指向<span class="hljs-built_in">string</span>的第一个字符, 将它强制转换为pointer-<span class="hljs-keyword">to</span>-Rep后，再减<span class="hljs-number">1</span>便得到内存块的起始地址</code></pre>
+
+<p>下面是上述的相关源码：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-keyword">private</span>:
+<span class="hljs-keyword">struct</span> _Rep
+{
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Alloc::rebind&lt;<span class="hljs-keyword">char</span>&gt;::other _Raw_bytes_alloc;
+
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> size_type  _S_max_size;
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> _CharT     _S_terminal;
+    size_type       _M_length;
+    size_type       _M_capacity;
+    _Atomic_word    _M_references;
+
+    <span class="hljs-keyword">bool</span> _M_is_leaked() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_references &lt; <span class="hljs-number">0</span>;
+    }
+
+    <span class="hljs-keyword">bool</span> _M_is_shared() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_references &gt; <span class="hljs-number">0</span>;
+    }
+
+    <span class="hljs-keyword">void</span> _M_set_leaked()
+    {
+        _M_references = -<span class="hljs-number">1</span>;
+    }
+
+    <span class="hljs-keyword">void</span> _M_set_sharable()
+    {
+        _M_references = <span class="hljs-number">0</span>;
+    }
+
+    <span class="hljs-comment">// 数据块的实际地址</span>
+    _CharT *_M_refdata() <span class="hljs-keyword">throw</span>()
+    {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">reinterpret_cast</span>&lt;_CharT*&gt; (<span class="hljs-keyword">this</span> + <span class="hljs-number">1</span>);
+    }
+
+    _CharT &amp;<span class="hljs-keyword">operator</span>[](size_t __s) <span class="hljs-keyword">throw</span>()
+    {
+        <span class="hljs-keyword">return</span> _M_refdata()[__s];
+    }
+
+    <span class="hljs-comment">// 创建可容纳capacity个CharT的内存块, 需额外考虑起始的Rep和终止的空字符</span>
+    <span class="hljs-keyword">static</span> _Rep* _S_create(size_t __capacity, <span class="hljs-keyword">const</span> _Alloc&amp; __alloc)
+    {
+        size_t __size = (__capacity + <span class="hljs-number">1</span>) * <span class="hljs-keyword">sizeof</span>(_CharT) + <span class="hljs-keyword">sizeof</span>(_Rep);
+        <span class="hljs-keyword">void</span>* __place = _Raw_bytes_alloc(__alloc).allocate(__size);
+        _Rep *__p = <span class="hljs-keyword">new</span> (__place) _Rep;
+        __p-&gt;_M_capacity = __capacity;
+        __p-&gt;_M_set_sharable();
+        __p-&gt;_M_length = <span class="hljs-number">0</span>;
+        <span class="hljs-keyword">return</span> __p;
+    }
+
+    <span class="hljs-comment">// 释放</span>
+    <span class="hljs-keyword">void</span> _M_dispose(<span class="hljs-keyword">const</span> _Alloc&amp; __a)
+    {
+        <span class="hljs-keyword">if</span> (__exchange_and_add(&amp;_M_references, -<span class="hljs-number">1</span>) &lt;= <span class="hljs-number">0</span>)
+            _M_destroy(__a);
+    }
+
+    <span class="hljs-comment">// 销毁</span>
+    <span class="hljs-keyword">void</span> _M_destroy(<span class="hljs-keyword">const</span> _Alloc&amp; __a) <span class="hljs-keyword">throw</span>();
+    {
+        size_type __size = <span class="hljs-keyword">sizeof</span>(_Rep) + (_M_capacity + <span class="hljs-number">1</span>) * <span class="hljs-keyword">sizeof</span>(_CharT);
+        _Raw_bytes_alloc(__a).deallocate(<span class="hljs-keyword">reinterpret_cast</span>&lt;<span class="hljs-keyword">char</span>*&gt;(<span class="hljs-keyword">this</span>), __size);
+    }
+
+    <span class="hljs-comment">// 后文说明</span>
+    _CharT *_M_grab(<span class="hljs-keyword">const</span> _Alloc&amp; __alloc1, <span class="hljs-keyword">const</span> _Alloc&amp; __alloc2)
+    {
+        <span class="hljs-keyword">return</span> (!_M_is_leaked() &amp;&amp; __alloc1 == __alloc2) ?
+               _M_refcopy() : _M_clone(__alloc1);
+    }
+
+    <span class="hljs-comment">// 引用复制</span>
+    _CharT* _M_refcopy() <span class="hljs-keyword">throw</span>()
+    {
+        __atomic_add(&amp;_M_references, <span class="hljs-number">1</span>);
+        <span class="hljs-keyword">return</span> _M_refdata();
+    }
+
+    <span class="hljs-comment">// 克隆, 需复制内存空间</span>
+    _CharT* _M_clone(<span class="hljs-keyword">const</span> _Alloc&amp; __alloc, size_type __res = <span class="hljs-number">0</span>);
+    {
+        _Rep* __r = _Rep::_S_create(_M_length + __res, __alloc);
+        <span class="hljs-keyword">if</span> (_M_length)
+        {
+            <span class="hljs-comment">// 非空字符串</span>
+            <span class="hljs-keyword">try</span>
+            {
+                traits_type::copy(__r-&gt;_M_refdata(), _M_refdata(), _M_length);
+            }
+            <span class="hljs-keyword">catch</span>(...)
+            {
+                __r-&gt;_M_destroy(__alloc);
+                <span class="hljs-keyword">throw</span>;
+            }
+        }
+        __r-&gt;_M_length = _M_length;
+        <span class="hljs-keyword">return</span> __r-&gt;_M_refdata();
+    }
+};
+
+
+<span class="hljs-keyword">struct</span> _Alloc_hider : _Alloc
+{
+    _Alloc_hider(_CharT* __dat, <span class="hljs-keyword">const</span> _Alloc&amp; __a) : _Alloc(__a), _M_p(__dat) { }
+    _CharT* _M_p; <span class="hljs-comment">// The actual data</span>
+};
+
+<span class="hljs-keyword">mutable</span> _Alloc_hider    _M_dataplus;</code></pre>
+
+
+
+<h3 id="成员变量">成员变量</h3>
+
+<p>Rep有5个成员变量 <br>
+_S_max_size, 字符串的最大长度, max_size()将返回这个值 <br>
+_S_terminal, 字符串的结束标志, 被初始化为_CharT(), 也就是0 <br>
+_M_length, 字符串的长度 <br>
+_M_capacity, 字符串的容量, capacity()将返回这个值 <br>
+_M_references, 引用计数</p>
+
+<p>_M_capacity被初始化为(((npos - sizeof(_Rep))/sizeof(_CharT)) - 1) / 4， <br>
+由npos = sizeof(_Rep) + (m * sizeof(_CharT)) + sizeof(_CharT)得 <br>
+m = ((npos - sizeof(_Rep))/sizeof(CharT)) - 1，本实现取这个值的1/4。</p>
+
+<p>_M_capacity不小于_M_length，实际分配的空间为(__capacity + 1) * sizeof(_CharT) + sizeof(_Rep)</p>
+
+<p>string包含_M_length + 1个字符，1就是结尾的空字符</p>
+
+<p>_M_references有3种状态: <br>
+-1：一个引用，允许修改 <br>
+0：一个引用，可共享，允许修改 <br>
+n&gt;0：n+1个引用，不允许修改，其他允许的操作需要加锁</p>
+
+
+
+<h3 id="原子操作">原子操作</h3>
+
+<pre class="prettyprint"><code class=" hljs cs">_Atomic_word __attribute__((__unused__))
+__exchange_and_add(<span class="hljs-keyword">volatile</span> _Atomic_word*, <span class="hljs-keyword">int</span>);
+<span class="hljs-keyword">void</span> __attribute__((__unused__))
+__atomic_add(<span class="hljs-keyword">volatile</span> _Atomic_word*, <span class="hljs-keyword">int</span>);</code></pre>
+
+<p>它们在atomicity.h中定义，都将第2个参数加到第1个参数上，区别在于前者返回第一个参数的初始值。 <br>
+<code>__attribute__((__unused__))</code>表示此函数可能用不到，用来消除编译器警告。</p>
+
+
+
+<h3 id="mgrab函数">_M_grab函数</h3>
+
+<p>在这个函数中将判断是进行引用计数加1还是重新建立一个新的字符串。必须说明的该函数只有在basic_string的copy ctor和assignment中才可能被调用，也就是说只有在新的字符串按copy或者赋值创建的时候才考虑使用引用计数。 <br>
+进行refcopy或者clone的关键标识是：首先没有内存泄漏标志（关于这个标志主要是禁止string再次被共享），然后就是两个string对象的分配相同。</p>
+
+
+
+<h2 id="构造和析构">构造和析构</h2>
+
+<p>basic_string定义了7(或9)个构造函数, 在某些情况下, gcc使用了重载, 而没有使用标准指示的默认参数。所以标准说明是7个构造函数, 这里是9个构造函数。</p>
+
+<pre class="prettyprint"><code class=" hljs scss"><span class="hljs-comment">// 默认构造函数, 创建一个空字符串</span>
+<span class="hljs-value">inline</span> <span class="hljs-function">basic_string()</span>;
+explicit <span class="hljs-function">basic_string(const _Alloc&amp; __a)</span>;
+
+<span class="hljs-comment">// 复制构造函数</span>
+<span class="hljs-function">basic_string(const basic_string&amp; str)</span>;
+
+<span class="hljs-comment">// 由子串构造, 串+位置+长度</span>
+<span class="hljs-function">basic_string(const basic_string&amp; __str, size_type __pos, size_type __n = npos)</span>;
+<span class="hljs-function">basic_string(const basic_string&amp; __str, size_type __pos, size_type __n, const _Alloc&amp; __a)</span>;
+
+<span class="hljs-comment">// 由c-string构造</span>
+<span class="hljs-function">basic_string(const charT* s, const allocator_type&amp; alloc = <span class="hljs-function">allocator_type()</span>)</span>;
+
+<span class="hljs-comment">// 由buffer构造, 指针+长度</span>
+<span class="hljs-function">basic_string(const charT* s, size_type n,
+             const allocator_type&amp; alloc = <span class="hljs-function">allocator_type()</span>)</span>;
+
+<span class="hljs-comment">// fill constructor, 用n个字符c来填充</span>
+<span class="hljs-function">basic_string(size_type n, charT c,
+             const allocator_type&amp; alloc = <span class="hljs-function">allocator_type()</span>)</span>;
+
+<span class="hljs-comment">// range constructor, 用迭代器范围[first,last)来填充</span>
+template &lt;class InputIterator&gt;
+    <span class="hljs-function">basic_string(InputIterator first, InputIterator last,
+                 const allocator_type&amp; alloc = <span class="hljs-function">allocator_type()</span>)</span>;
+
+<span class="hljs-comment">// 析构函数</span>
+~<span class="hljs-function">basic_string()</span>
+{
+    _<span class="hljs-function">M_rep()</span>-&gt;_<span class="hljs-function">M_dispose(this-&gt;<span class="hljs-function">get_allocator()</span>)</span>;
+}</code></pre>
+
+<p>构造函数在内部又调用了_S_construct()，最终是通过调用_Rep::_S_create()来完成的内存分配，然后将首字符的地址存于_M_dataplus._M_p。</p>
+
+
+
+<h2 id="内部函数">内部函数</h2>
+
+<p>basic_string定义了一些private的函数，供其他函数使用。</p>
+
+<pre class="prettyprint"><code class=" hljs coffeescript"><span class="hljs-regexp">//</span> 一个空串所占用的内存块
+<span class="hljs-regexp">//</span> 先加上sizeof(size_type)-<span class="hljs-number">1</span>是考虑sizeof(_Rep)+sizeof(_CharT)不是sizeof(size_type)的整数倍的情况
+<span class="hljs-regexp">//</span> 为什么不直接用char数组来表示呢?
+static size_type _S_empty_rep_storage[(sizeof(_Rep) + sizeof(_CharT) + sizeof(size_type) - <span class="hljs-number">1</span>)/sizeof(size_type)];
+
+<span class="hljs-regexp">//</span> 串的实际地址
+_CharT *_M_data() <span class="hljs-reserved">const</span>
+{
+    <span class="hljs-keyword">return</span> _M_dataplus._M_p;
+}
+
+<span class="hljs-regexp">//</span> 设置串
+_CharT *_M_data(_CharT* __p)
+{
+    <span class="hljs-keyword">return</span> (_M_dataplus._M_p = __p);
+}
+
+<span class="hljs-regexp">//</span> 得到Rep的地址
+_Rep *_M_rep() <span class="hljs-reserved">const</span>
+{
+    <span class="hljs-keyword">return</span> &amp;((reinterpret_cast&lt;_Rep*&gt; (_M_data()))[-<span class="hljs-number">1</span>]);
+}
+
+<span class="hljs-regexp">//</span> 与begin/end类似的函数, 但没有调用_M_leak, 内部使用
+iterator _M_ibegin() <span class="hljs-reserved">const</span>
+{
+    <span class="hljs-keyword">return</span> iterator(_M_data());
+}
+
+iterator _M_iend() <span class="hljs-reserved">const</span>
+{
+    <span class="hljs-keyword">return</span> iterator(_M_data() + <span class="hljs-keyword">this</span>-&gt;size());
+}
+
+<span class="hljs-regexp">//</span> 将串设置为leaked, 以便对其进行修改
+<span class="hljs-regexp">//</span> 在begin()和non-<span class="hljs-reserved">const</span> op[]里使用
+<span class="hljs-reserved">void</span> _M_leak()
+{
+    <span class="hljs-keyword">if</span> <span class="hljs-function"><span class="hljs-params">(!_M_rep()-&gt;_M_is_leaked())</span>
+        <span class="hljs-title">_M_leak_hard</span><span class="hljs-params">()</span>;
+}
+
+// 返回<span class="hljs-title">pos</span>位置的迭代器, 有越界检查
+<span class="hljs-title">iterator</span> <span class="hljs-title">_M_check</span><span class="hljs-params">(size_type __pos)</span> <span class="hljs-title">const</span>
+{
+    <span class="hljs-title">if</span> <span class="hljs-params">(__pos &gt; <span class="hljs-keyword">this</span>-&gt;size())</span>
+        <span class="hljs-title">__throw_out_of_range</span><span class="hljs-params">(<span class="hljs-string">"basic_string::_M_check"</span>)</span>;
+    <span class="hljs-title">return</span> <span class="hljs-title">_M_ibegin</span><span class="hljs-params">()</span> + <span class="hljs-title">__pos</span>;
+}
+
+// <span class="hljs-title">pos</span>位置再加上<span class="hljs-title">off</span>的便宜量, 需确保<span class="hljs-title">pos</span>位置有效
+<span class="hljs-title">iterator</span> <span class="hljs-title">_M_fold</span><span class="hljs-params">(size_type __pos, size_type __off)</span> <span class="hljs-title">const</span>
+{
+    <span class="hljs-title">size_type</span> <span class="hljs-title">__newoff</span> = <span class="hljs-title">__off</span> &lt; <span class="hljs-title">this</span>-&gt;</span>size() - __pos ? __off : <span class="hljs-keyword">this</span>-&gt;size() - __pos;
+    <span class="hljs-keyword">return</span> (_M_ibegin() + __pos + __newoff);
+}
+
+<span class="hljs-regexp">//</span> 泛化的拷贝
+template&lt;<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">_Iterator</span>&gt;</span>
+static <span class="hljs-reserved">void</span> _S_copy_chars(_CharT* __p, _Iterator __k1, _Iterator __k2)
+{
+    <span class="hljs-keyword">for</span> (; __k1 != __k2; ++__k1, ++__p)
+        <span class="hljs-attribute">traits_type</span>::assign(*__p, *__k1);
+}
+
+static <span class="hljs-reserved">void</span> _S_copy_chars(_CharT* __p, iterator __k1, iterator __k2)
+{
+    _S_copy_chars(__p, __k1.base(), __k2.base());
+}
+
+static <span class="hljs-reserved">void</span> _S_copy_chars(_CharT* __p, const_iterator __k1, const_iterator __k2)
+{
+    _S_copy_chars(__p, __k1.base(), __k2.base());
+}
+
+static <span class="hljs-reserved">void</span> _S_copy_chars(_CharT* __p, _CharT* __k1, _CharT* __k2)
+{
+    <span class="hljs-attribute">traits_type</span>::copy(__p, __k1, __k2 - __k1);
+}
+
+static <span class="hljs-reserved">void</span> _S_copy_chars(_CharT* __p, <span class="hljs-reserved">const</span> _CharT* __k1, <span class="hljs-reserved">const</span> _CharT* __k2)
+{
+    <span class="hljs-attribute">traits_type</span>::copy(__p, __k1, __k2 - __k1);
+}
+
+<span class="hljs-regexp">//</span> 将字符串分为<span class="hljs-number">3</span>部分: begin---pos---pos+len1---end
+<span class="hljs-regexp">//</span> 此函数将中间长度为len1的部分的长度变为len2
+<span class="hljs-regexp">//</span> 前后两部分的数据内容不变, 中间部分数据不处理
+<span class="hljs-reserved">void</span> _M_mutate(size_type __pos, size_type __len1, size_type __len2)
+{
+    size_type       __old_size = <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-reserved">const</span> size_type __new_size = __old_size + __len2 - __len1;
+    <span class="hljs-reserved">const</span> _CharT*        __src = _M_data()  + __pos + __len1;
+    <span class="hljs-reserved">const</span> size_type __how_much = __old_size - __pos - __len1;
+
+    <span class="hljs-keyword">if</span> <span class="hljs-function"><span class="hljs-params">(_M_rep()-&gt;_M_is_shared() || __new_size &gt; capacity())</span>
+    {
+        // 如果有多个引用或<span class="hljs-title">len2</span>&gt;<span class="hljs-title">len1</span>, 则必须<span class="hljs-title">reallocate</span>
+        <span class="hljs-title">allocator_type</span> <span class="hljs-title">__a</span> = <span class="hljs-title">get_allocator</span><span class="hljs-params">()</span>;
+        <span class="hljs-title">_Rep</span>* <span class="hljs-title">__r</span> = <span class="hljs-title">_Rep</span>::<span class="hljs-title">_S_create</span><span class="hljs-params">(__new_size, __a)</span>;
+        <span class="hljs-title">try</span>
+        {
+            <span class="hljs-title">if</span> <span class="hljs-params">(__pos)</span>
+                <span class="hljs-title">traits_type</span>::<span class="hljs-title">copy</span><span class="hljs-params">(__r-&gt;_M_refdata(), _M_data(), __pos)</span>;
+            <span class="hljs-title">if</span> <span class="hljs-params">(__how_much)</span>
+                <span class="hljs-title">traits_type</span>::<span class="hljs-title">copy</span><span class="hljs-params">(__r-&gt;_M_refdata() + __pos + __len2,
+                                  __src, __how_much)</span>;
+        }
+        <span class="hljs-title">catch</span><span class="hljs-params">(...)</span>
+        {
+            <span class="hljs-title">__r</span>-&gt;</span>_M_dispose(get_allocator());
+            <span class="hljs-keyword">throw</span>;
+        }
+        _M_rep<span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>_M_dispose(__a);
+        _M_data(__r-&gt;_M_refdata());
+    }
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (__how_much &amp;&amp; __len1 != __len2)
+    {
+        <span class="hljs-regexp">//</span> 原地操作
+        <span class="hljs-attribute">traits_type</span>::move(_M_data() + __pos + __len2, __src, __how_much);
+    }
+    _M_rep<span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>_M_set_sharable();
+    _M_rep<span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>_M_length = __new_size;
+    _M_data()[__new_size] = <span class="hljs-attribute">_Rep</span>::_S_terminal;
+}
+
+<span class="hljs-regexp">//</span> 设置为leaked, 如果有多个引用, 则做一份clone, 如果只有一个应用, 直接设置为leaked
+<span class="hljs-reserved">void</span> _M_leak_hard()
+{
+    <span class="hljs-keyword">if</span> <span class="hljs-function"><span class="hljs-params">(_M_rep()-&gt;_M_is_shared())</span>
+        <span class="hljs-title">_M_mutate</span><span class="hljs-params">(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>)</span>;
+    <span class="hljs-title">_M_rep</span><span class="hljs-params">()</span>-&gt;</span>_M_set_leaked();
+}
+
+<span class="hljs-regexp">//</span> 返回空串
+static _Rep &amp;_S_empty_rep()
+{
+    <span class="hljs-keyword">return</span> *reinterpret_cast&lt;_Rep*&gt;(&amp;_S_empty_rep_storage);
+}</code></pre>
+
+
+
+<h2 id="迭代器">迭代器</h2>
+
+<p>共8个, 在begin()和end()中, 由于可能会修改串, 所以需要先置为leaked。</p>
+
+<pre class="prettyprint"><code class=" hljs scss">iterator <span class="hljs-function">begin()</span>
+{
+    _<span class="hljs-function">M_leak()</span>;
+    return <span class="hljs-function">iterator(_<span class="hljs-function">M_data()</span>)</span>;
+}
+
+const_iterator <span class="hljs-function">begin()</span> const
+{
+    return <span class="hljs-function">const_iterator(_<span class="hljs-function">M_data()</span>)</span>;
+}
+
+iterator <span class="hljs-function">end()</span>
+{
+    _<span class="hljs-function">M_leak()</span>;
+    return <span class="hljs-function">iterator(_<span class="hljs-function">M_data()</span> + this-&gt;<span class="hljs-function">size()</span>)</span>;
+}
+
+const_iterator <span class="hljs-function">end()</span> const
+{
+    return <span class="hljs-function">const_iterator(_<span class="hljs-function">M_data()</span> + this-&gt;<span class="hljs-function">size()</span>)</span>;
+}
+
+reverse_iterator <span class="hljs-function">rbegin()</span>
+{
+    return <span class="hljs-function">reverse_iterator(this-&gt;<span class="hljs-function">end()</span>)</span>;
+}
+
+const_reverse_iterator <span class="hljs-function">rbegin()</span> const
+{
+    return <span class="hljs-function">const_reverse_iterator(this-&gt;<span class="hljs-function">end()</span>)</span>;
+}
+
+reverse_iterator <span class="hljs-function">rend()</span>
+{
+    return <span class="hljs-function">reverse_iterator(this-&gt;<span class="hljs-function">begin()</span>)</span>;
+}
+
+const_reverse_iterator <span class="hljs-function">rend()</span> const
+{
+    return <span class="hljs-function">const_reverse_iterator(this-&gt;<span class="hljs-function">begin()</span>)</span>;
+}</code></pre>
+
+<h2 id="element-access">element access</h2>
+
+<p>在non-const operator[]中，由于可能会对串进行修改，所以需要先置为leaked。 <br>
+operator[]和at()的功能相同，不过at()做了越界检查。</p>
+
+<pre class="prettyprint"><code class=" hljs cs">const_reference <span class="hljs-keyword">operator</span>[](size_type __pos) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> _M_data()[__pos];
+}
+
+reference <span class="hljs-keyword">operator</span>[](size_type __pos)
+{
+    _M_leak();
+    <span class="hljs-keyword">return</span> _M_data()[__pos];
+}
+
+const_reference at(size_type __n) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">if</span> (__n &gt;= <span class="hljs-keyword">this</span>-&gt;size())
+        __throw_out_of_range(<span class="hljs-string">"basic_string::at"</span>);
+    <span class="hljs-keyword">return</span> _M_data()[__n];
+}
+
+reference at(size_type __n)
+{
+    <span class="hljs-keyword">if</span> (__n &gt;= size())
+        __throw_out_of_range(<span class="hljs-string">"basic_string::at"</span>);
+    _M_leak();
+    <span class="hljs-keyword">return</span> _M_data()[__n];
+}</code></pre>
+
+
+
+<h2 id="capacity">capacity</h2>
+
+<p>与capacity相关的一些操作，比如得到长度，resize等。</p>
+
+<pre class="prettyprint"><code class=" hljs coffeescript"> size_type size() <span class="hljs-reserved">const</span>
+{
+    <span class="hljs-keyword">return</span> _M_rep<span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>_M_length;
+}
+
+size_type length() <span class="hljs-reserved">const</span>
+{
+    <span class="hljs-keyword">return</span> _M_rep<span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>_M_length;
+}
+
+size_type max_size() <span class="hljs-reserved">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-attribute">_Rep</span>::_S_max_size;
+}
+
+<span class="hljs-reserved">void</span> resize(size_type __n, _CharT __c)
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-keyword">if</span> (__size &lt; __n)
+        <span class="hljs-keyword">this</span>-&gt;append(__n - __size, __c);
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (__n &lt; __size)
+        <span class="hljs-keyword">this</span>-&gt;erase(__n);
+}
+
+<span class="hljs-reserved">void</span> resize(size_type __n)
+{
+    <span class="hljs-keyword">this</span>-&gt;resize(__n, _CharT());
+}
+
+size_type capacity() <span class="hljs-reserved">const</span>
+{
+    <span class="hljs-keyword">return</span> _M_rep<span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>_M_capacity;
+}
+
+<span class="hljs-regexp">//</span> 请求改变capacity, 避免减小capacity
+<span class="hljs-reserved">void</span> reserve(size_type __res = <span class="hljs-number">0</span>)
+{
+    <span class="hljs-keyword">if</span> <span class="hljs-function"><span class="hljs-params">(__res &gt; <span class="hljs-keyword">this</span>-&gt;capacity() || _M_rep()-&gt;_M_is_shared())</span>
+    {
+        <span class="hljs-title">allocator_type</span> <span class="hljs-title">__a</span> = <span class="hljs-title">get_allocator</span><span class="hljs-params">()</span>;
+        <span class="hljs-title">_CharT</span>* <span class="hljs-title">__tmp</span> = <span class="hljs-title">_M_rep</span><span class="hljs-params">()</span>-&gt;</span>_M_clone(__a, __res - <span class="hljs-keyword">this</span>-&gt;size());
+        _M_rep<span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>_M_dispose(__a);
+        _M_data(__tmp);
+    }
+}
+<span class="hljs-regexp">//</span> gcc <span class="hljs-number">4.7</span><span class="hljs-number">.1</span>里的版本
+<span class="hljs-reserved">void</span> reserve(size_type __res = <span class="hljs-number">0</span>)
+{
+    <span class="hljs-keyword">if</span> <span class="hljs-function"><span class="hljs-params">(__res != <span class="hljs-keyword">this</span>-&gt;capacity() || _M_rep()-&gt;_M_is_shared())</span>
+    {
+        // <span class="hljs-title">Make</span> <span class="hljs-title">sure</span> <span class="hljs-title">we</span> <span class="hljs-title">don</span>'<span class="hljs-title">t</span> <span class="hljs-title">shrink</span> <span class="hljs-title">below</span> <span class="hljs-title">the</span> <span class="hljs-title">current</span> <span class="hljs-title">size</span>
+        <span class="hljs-title">if</span> <span class="hljs-params">(__res &lt; <span class="hljs-keyword">this</span>-&gt;size())</span>
+            <span class="hljs-title">__res</span> = <span class="hljs-title">this</span>-&gt;</span>size();
+        <span class="hljs-reserved">const</span> allocator_type __a = get_allocator();
+        _CharT* __tmp = _M_rep<span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>_M_clone(__a, __res - <span class="hljs-keyword">this</span>-&gt;size());
+        _M_rep<span class="hljs-function"><span class="hljs-params">()</span>-&gt;</span>_M_dispose(__a);
+        _M_data(__tmp);
+    }
+}
+
+<span class="hljs-regexp">//</span> 销毁串里的数据, 我觉得作用不大
+<span class="hljs-reserved">void</span> clear()
+{
+    _M_mutate(<span class="hljs-number">0</span>, <span class="hljs-keyword">this</span>-&gt;size(), <span class="hljs-number">0</span>);
+}
+
+<span class="hljs-regexp">//</span> 判断串是否为空
+bool empty() <span class="hljs-reserved">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;size() == <span class="hljs-number">0</span>;
+}</code></pre>
+
+
+
+<h2 id="string-operations">string operations</h2>
+
+<p>主要有查找操作。</p>
+
+<pre class="prettyprint"><code class=" hljs java"><span class="hljs-keyword">const</span> _CharT *c_str() <span class="hljs-keyword">const</span>
+{
+    size_type __n = <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-comment">// 这句太保守, 结尾空字符一直都有</span>
+    traits_type::assign(_M_data()[__n], _Rep::_S_terminal);
+    <span class="hljs-keyword">return</span> _M_data();
+}
+
+<span class="hljs-keyword">const</span> _CharT *data() <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> _M_data();
+}
+
+allocator_type get_allocator() <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> _M_dataplus;
+}
+
+<span class="hljs-comment">// 拷贝一个子串到s, 这个子串包含从pos开始的n个字符</span>
+<span class="hljs-comment">// 注意: 此函数不为拷贝内容末尾添加null</span>
+size_type copy(_CharT* __s, size_type __n, size_type __pos = <span class="hljs-number">0</span>) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">if</span> (__n &gt; <span class="hljs-keyword">this</span>-&gt;size() - __pos)
+        __n = <span class="hljs-keyword">this</span>-&gt;size() - __pos;
+    traits_type::copy(__s, _M_data() + __pos, __n);
+    <span class="hljs-keyword">return</span> __n;
+}
+
+<span class="hljs-javadoc">/**
+*  find()查找参数给出的序列在字符串中第一次出现的位置
+*  rfind()查找参数给出的序列在字符串中最后出现的位置
+*/</span>
+<span class="hljs-comment">// 从pos位置开始查找, 与s[0...n-1]相同的子串的位置</span>
+size_type find(<span class="hljs-keyword">const</span> _CharT* __s, size_type __pos, size_type __n) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    size_t __xpos = __pos;
+    <span class="hljs-keyword">const</span> _CharT* __data = _M_data();
+    <span class="hljs-keyword">for</span> (; __xpos + __n &lt;= __size; ++__xpos)
+        <span class="hljs-keyword">if</span> (traits_type::compare(__data + __xpos, __s, __n) == <span class="hljs-number">0</span>)
+            <span class="hljs-keyword">return</span> __xpos;
+    <span class="hljs-keyword">return</span> npos;
+}
+
+<span class="hljs-comment">// 从pos位置开始查找, 与str相同的子串的位置</span>
+size_type find(<span class="hljs-keyword">const</span> basic_string&amp; __str, size_type __pos = <span class="hljs-number">0</span>) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;find(__str.data(), __pos, __str.size());
+}
+
+<span class="hljs-comment">// 从pos位置开始查找, 与s相同的子串的位置</span>
+size_type find(<span class="hljs-keyword">const</span> _CharT* __s, size_type __pos = <span class="hljs-number">0</span>) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;find(__s, __pos, traits_type::length(__s));
+}
+
+<span class="hljs-comment">// 从pos位置开始查找, 与c相同的字符的位置</span>
+size_type find(_CharT __c, size_type __pos = <span class="hljs-number">0</span>) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    size_type __ret = npos;
+    <span class="hljs-keyword">if</span> (__pos &lt; __size)
+    {
+        <span class="hljs-keyword">const</span> _CharT* __data = _M_data();
+        size_type __n = __size - __pos;
+        <span class="hljs-keyword">const</span> _CharT* __p = traits_type::find(__data + __pos, __n, __c);
+        <span class="hljs-keyword">if</span> (__p)
+            __ret = __p - __data;
+    }
+    <span class="hljs-keyword">return</span> __ret;
+}
+
+size_type rfind(<span class="hljs-keyword">const</span> basic_string&amp; __str, size_type __pos = npos) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;rfind(__str.data(), __pos, __str.size());
+}
+
+<span class="hljs-comment">// 从pos位置开始向左查找, 与s[0...n-1]相同的子串的位置</span>
+size_type
+rfind(<span class="hljs-keyword">const</span> _CharT* __s, size_type __pos, size_type __n) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-keyword">if</span> (__n &lt;= __size)
+    {
+        __pos = std::min(__size - __n, __pos);
+        <span class="hljs-keyword">const</span> _CharT* __data = _M_data();
+        do
+        {
+            <span class="hljs-keyword">if</span> (traits_type::compare(__data + __pos, __s, __n) == <span class="hljs-number">0</span>)
+                <span class="hljs-keyword">return</span> __pos;
+        }
+        <span class="hljs-keyword">while</span> (__pos-- &gt; <span class="hljs-number">0</span>);
+    }
+    <span class="hljs-keyword">return</span> npos;
+}
+
+size_type rfind(<span class="hljs-keyword">const</span> _CharT* __s, size_type __pos = npos) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;rfind(__s, __pos, traits_type::length(__s));
+}
+
+size_type rfind(_CharT __c, size_type __pos = npos) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-keyword">if</span> (__size)
+    {
+        size_t __xpos = __size - <span class="hljs-number">1</span>;
+        <span class="hljs-keyword">if</span> (__xpos &gt; __pos)
+            __xpos = __pos;
+
+        <span class="hljs-keyword">for</span> (++__xpos; __xpos-- &gt; <span class="hljs-number">0</span>; )
+            <span class="hljs-keyword">if</span> (traits_type::eq(_M_data()[__xpos], __c))
+                <span class="hljs-keyword">return</span> __xpos;
+    }
+    <span class="hljs-keyword">return</span> npos;
+}
+
+<span class="hljs-comment">// 从pos位置开始, 在字符串中查找第一个字符, 这个字符在序列s[0...n-1]中, 返回这个字符的位置</span>
+size_type find_first_of(<span class="hljs-keyword">const</span> _CharT* __s, size_type __pos, size_type __n) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">if</span> (__n == <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> npos;
+    <span class="hljs-keyword">for</span> (; __pos &lt; <span class="hljs-keyword">this</span>-&gt;size(); ++__pos)
+    {
+        <span class="hljs-keyword">const</span> _CharT* __p = traits_type::find(__s, __n, _M_data()[__pos]);
+        <span class="hljs-keyword">if</span> (__p)
+            <span class="hljs-keyword">return</span> __pos;
+    }
+    <span class="hljs-keyword">return</span> npos;
+}
+
+size_type find_first_of(<span class="hljs-keyword">const</span> basic_string&amp; __str, size_type __pos = <span class="hljs-number">0</span>) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;find_first_of(__str.data(), __pos, __str.size());
+}
+
+size_type find_first_of(<span class="hljs-keyword">const</span> _CharT* __s, size_type __pos = <span class="hljs-number">0</span>) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;find_first_of(__s, __pos, traits_type::length(__s));
+}
+
+<span class="hljs-comment">// 特殊情况</span>
+size_type find_first_of(_CharT __c, size_type __pos = <span class="hljs-number">0</span>) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;find(__c, __pos);
+}
+
+<span class="hljs-comment">// 从pos位置向左, 在字符串中查找第一个字符, 这个字符在序列s[0...n-1]中, 返回这个字符的位置</span>
+size_type find_last_of(<span class="hljs-keyword">const</span> _CharT* __s, size_type __pos, size_type __n) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-keyword">if</span> (__size &amp;&amp; __n)
+    {
+        <span class="hljs-keyword">if</span> (--__size &gt; __pos)
+            __size = __pos;
+        do
+        {
+            <span class="hljs-keyword">if</span> (traits_type::find(__s, __n, _M_data()[__size]))
+                <span class="hljs-keyword">return</span> __size;
+        }
+        <span class="hljs-keyword">while</span> (__size-- != <span class="hljs-number">0</span>);
+    }
+    <span class="hljs-keyword">return</span> npos;
+}
+
+size_type find_last_of(<span class="hljs-keyword">const</span> basic_string&amp; __str, size_type __pos = npos) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;find_last_of(__str.data(), __pos, __str.size());
+}
+
+size_type find_last_of(<span class="hljs-keyword">const</span> _CharT* __s, size_type __pos = npos) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;find_last_of(__s, __pos, traits_type::length(__s));
+}
+
+size_type find_last_of(_CharT __c, size_type __pos = npos) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;rfind(__c, __pos);
+}
+
+<span class="hljs-comment">// find_first_not_of()和find_first_of()类似, 不过判断条件相反, 便不再赘述</span>
+
+<span class="hljs-comment">// find_last_not_of()和find_last_of(), 不过判断条件相反, 便不再赘述</span>
+
+<span class="hljs-comment">// 获取一个子串</span>
+basic_string substr(size_type __pos = <span class="hljs-number">0</span>, size_type __n = npos) <span class="hljs-keyword">const</span>
+{
+    <span class="hljs-keyword">if</span> (__pos &gt; <span class="hljs-keyword">this</span>-&gt;size())
+        __throw_out_of_range(<span class="hljs-string">"basic_string::substr"</span>);
+    <span class="hljs-keyword">return</span> basic_string(*<span class="hljs-keyword">this</span>, __pos, __n);
+}
+
+<span class="hljs-keyword">int</span> compare(<span class="hljs-keyword">const</span> basic_string&amp; __str) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    size_type __osize = __str.size();
+    size_type __len = min(__size, __osize);
+
+    <span class="hljs-keyword">int</span> __r = traits_type::compare(_M_data(), __str.data(), __len);
+    <span class="hljs-keyword">if</span> (!__r)
+        __r =  __size - __osize;
+    <span class="hljs-keyword">return</span> __r;
+}
+
+<span class="hljs-comment">// 从pos位置开始的n个字符, 和str做比较</span>
+<span class="hljs-keyword">int</span> compare(size_type __pos, size_type __n, <span class="hljs-keyword">const</span> basic_string&amp; __str) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    size_type __osize = __str.size();
+    <span class="hljs-keyword">if</span> (__pos &gt; __size)
+        __throw_out_of_range(<span class="hljs-string">"basic_string::compare"</span>);
+
+    size_type __rsize= min(__size - __pos, __n);
+    size_type __len = min(__rsize, __osize);
+    <span class="hljs-keyword">int</span> __r = traits_type::compare(_M_data() + __pos, __str.data(), __len);
+    <span class="hljs-keyword">if</span> (!__r)
+        __r = __rsize - __osize;
+    <span class="hljs-keyword">return</span> __r;
+}
+
+<span class="hljs-comment">// 从pos1位置开始的n1个字符, 和str的pos2位置开始的n2个字符做比较</span>
+<span class="hljs-keyword">int</span> compare(size_type __pos1, size_type __n1, <span class="hljs-keyword">const</span> basic_string&amp; __str,
+            size_type __pos2, size_type __n2) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    size_type __osize = __str.size();
+    <span class="hljs-keyword">if</span> (__pos1 &gt; __size || __pos2 &gt; __osize)
+        __throw_out_of_range(<span class="hljs-string">"basic_string::compare"</span>);
+
+    size_type __rsize = min(__size - __pos1, __n1);
+    size_type __rosize = min(__osize - __pos2, __n2);
+    size_type __len = min(__rsize, __rosize);
+    <span class="hljs-keyword">int</span> __r = traits_type::compare(_M_data() + __pos1,
+                                   __str.data() + __pos2, __len);
+    <span class="hljs-keyword">if</span> (!__r)
+        __r = __rsize - __rosize;
+    <span class="hljs-keyword">return</span> __r;
+}
+
+<span class="hljs-keyword">int</span> compare(<span class="hljs-keyword">const</span> _CharT* __s) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-keyword">int</span> __r = traits_type::compare(_M_data(), __s, __size);
+    <span class="hljs-keyword">if</span> (!__r)
+        __r = __size - traits_type::length(__s);
+    <span class="hljs-keyword">return</span> __r;
+}
+
+<span class="hljs-keyword">int</span> compare(size_type __pos, size_type __n1, <span class="hljs-keyword">const</span> _CharT* __s) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-keyword">if</span> (__pos &gt; __size)
+        __throw_out_of_range(<span class="hljs-string">"basic_string::compare"</span>);
+
+    size_type __osize = traits_type::length(__s);
+    size_type __rsize = min(__size - __pos, __n1);
+    size_type __len = min(__rsize, __osize);
+    <span class="hljs-keyword">int</span> __r = traits_type::compare(_M_data() + __pos, __s, __len);
+    <span class="hljs-keyword">if</span> (!__r)
+        __r = __rsize - __osize;
+    <span class="hljs-keyword">return</span> __r;
+}
+
+<span class="hljs-keyword">int</span> compare(size_type __pos, size_type __n1,
+            <span class="hljs-keyword">const</span> _CharT* __s, size_type __n2) <span class="hljs-keyword">const</span>
+{
+    size_type __size = <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-keyword">if</span> (__pos &gt; __size)
+        __throw_out_of_range(<span class="hljs-string">"basic_string::compare"</span>);
+
+    size_type __osize = min(traits_type::length(__s), __n2);
+    size_type __rsize = min(__size - __pos, __n1);
+    size_type __len = min(__rsize, __osize);
+    <span class="hljs-keyword">int</span> __r = traits_type::compare(_M_data() + __pos, __s, __len);
+    <span class="hljs-keyword">if</span> (!__r)
+        __r = __rsize - __osize;
+    <span class="hljs-keyword">return</span> __r;
+}</code></pre>
+
+
+
+<h2 id="modifiers">modifiers</h2>
+
+<p>这些函数会对字符串进行修改。</p>
+
+<pre class="prettyprint"><code class=" hljs java"><span class="hljs-keyword">void</span> push_back(_CharT __c)
+{
+    <span class="hljs-keyword">this</span>-&gt;replace(_M_iend(), _M_iend(), <span class="hljs-number">1</span>, __c);
+}
+
+<span class="hljs-keyword">void</span> swap(basic_string&amp; __s)
+{
+    <span class="hljs-keyword">if</span> (_M_rep()-&gt;_M_is_leaked())
+        _M_rep()-&gt;_M_set_sharable();
+    <span class="hljs-keyword">if</span> (__s._M_rep()-&gt;_M_is_leaked())
+        __s._M_rep()-&gt;_M_set_sharable();
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>-&gt;get_allocator() == __s.get_allocator())
+    {
+        _CharT* __tmp = _M_data();
+        _M_data(__s._M_data());
+        __s._M_data(__tmp);
+    }
+    <span class="hljs-keyword">else</span>
+    {
+        basic_string __tmp1(_M_ibegin(), _M_iend(), __s.get_allocator());
+        basic_string __tmp2(__s._M_ibegin(), __s._M_iend(), <span class="hljs-keyword">this</span>-&gt;get_allocator());
+        *<span class="hljs-keyword">this</span> = __tmp2;
+        __s = __tmp1;
+    }
+}
+
+<span class="hljs-javadoc">/**
+* 以下是replace(), 有太多重载版本了
+* 主要有两个版本, 一个接受四个参数, 前两个是字符串的迭代器, 后两个是要替换内容的迭代器;
+* 第二个接受四个参数, 前两个是字符串的迭代器, 第三个是size_type类型, 第四个是_CharT类型, 表示替换内容为多个相同字符.
+* 其他版本都是调用前两个版本!
+*/</span>
+basic_string&amp;
+replace(iterator __i1, iterator __i2, size_type __n2, _CharT __c)
+{
+    size_type __n1 = __i2 - __i1;
+    size_type __off1 = __i1 - _M_ibegin();
+    _M_mutate (__off1, __n1, __n2);
+    <span class="hljs-keyword">if</span> (__n2)
+        traits_type::assign(_M_data() + __off1, __n2, __c);
+    <span class="hljs-keyword">return</span> *<span class="hljs-keyword">this</span>;
+}
+
+template&lt;class _InputIterator&gt;
+basic_string&amp;
+replace(iterator __i1, iterator __i2,
+        _InputIterator __k1, _InputIterator __k2)
+{
+    <span class="hljs-keyword">return</span> _M_replace(__i1, __i2, __k1, __k2,
+                      typename iterator_traits&lt;_InputIterator&gt;::iterator_category());
+}
+
+template&lt;class _InputIterator&gt;
+basic_string&amp;
+_M_replace(iterator __i1, iterator __i2, _InputIterator __k1,
+           _InputIterator __k2, input_iterator_tag)
+{
+    basic_string __s(__k1, __k2);
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(__i1, __i2, __s._M_ibegin(), __s._M_iend());
+}
+
+<span class="hljs-comment">// 将[i1,i2)替换为[k1,k2)</span>
+template&lt;class _FwdIterator&gt;
+basic_string &amp;
+_M_replace(iterator __i1, iterator __i2,
+           _FwdIterator __k1, _FwdIterator __k2, forward_iterator_tag)
+{
+    size_type __dold = __i2 - __i1;
+    size_type __dnew = static_cast&lt;size_type&gt;(distance(__k1, __k2));
+
+    size_type __off = __i1 - _M_ibegin();
+    <span class="hljs-keyword">if</span> (__dnew)
+        _S_copy_chars(_M_data() + __off, __k1, __k2);
+
+    <span class="hljs-keyword">return</span> *<span class="hljs-keyword">this</span>;
+}
+
+basic_string&amp;
+replace(iterator __i1, iterator __i2, <span class="hljs-keyword">const</span> basic_string&amp; __str)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(__i1, __i2, __str.begin(), __str.end());
+}
+
+basic_string&amp;
+replace(iterator __i1, iterator __i2,
+        <span class="hljs-keyword">const</span> _CharT* __s, size_type __n)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(__i1, __i2, __s, __s + __n);
+}
+
+basic_string&amp;
+replace(iterator __i1, iterator __i2, <span class="hljs-keyword">const</span> _CharT* __s)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(__i1, __i2, __s,
+                         __s + traits_type::length(__s));
+}
+
+<span class="hljs-comment">// replace [pos,pos+n) with str</span>
+basic_string&amp;
+replace(size_type __pos, size_type __n, <span class="hljs-keyword">const</span> basic_string&amp; __str)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_check(__pos), _M_fold(__pos, __n),
+                         __str.begin(), __str.end());
+}
+
+<span class="hljs-comment">// replace [pos,pos+n1) with str [s,s+n2)</span>
+basic_string&amp;
+replace(size_type __pos, size_type __n1, <span class="hljs-keyword">const</span> _CharT* __s,
+        size_type __n2)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_check(__pos), _M_fold(__pos, __n1),
+                         __s, __s + __n2);
+}
+
+<span class="hljs-comment">// replace [pos,pos+n1) with s</span>
+basic_string&amp;
+replace(size_type __pos, size_type __n1, <span class="hljs-keyword">const</span> _CharT* __s)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_check(__pos), _M_fold(__pos, __n1),
+                         __s, __s + traits_type::length(__s));
+}
+
+<span class="hljs-comment">// replace [pos,pos+n1) with n2 x c</span>
+basic_string&amp;
+replace(size_type __pos, size_type __n1, size_type __n2, _CharT __c)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_check(__pos), _M_fold(__pos, __n1), __n2, __c);
+}
+
+<span class="hljs-comment">// replace [pos1,pos1+n1) with [pos2,pos2+n2) of str</span>
+basic_string&amp;
+replace(size_type __pos1, size_type __n1, <span class="hljs-keyword">const</span> basic_string&amp; __str,
+        size_type __pos2, size_type __n2)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_check(__pos1), _M_fold(__pos1, __n1),
+                         __str._M_check(__pos2), __str._M_fold(__pos2, __n2));
+}
+
+<span class="hljs-javadoc">/**
+* 以下是append()
+* 实质是调用replace(), 前两个参数固定为_M_iend()
+*/</span>
+basic_string&amp;
+append(<span class="hljs-keyword">const</span> basic_string&amp; __str, size_type __pos, size_type __n)
+{
+    <span class="hljs-comment">// If appending itself, string needs to pre-reserve the</span>
+    <span class="hljs-comment">// correct size so that _M_mutate does not clobber the</span>
+    <span class="hljs-comment">// iterators formed here.</span>
+    size_type __len = min(__str.size() - __pos, __n) + <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-keyword">if</span> (__len &gt; <span class="hljs-keyword">this</span>-&gt;capacity())
+        <span class="hljs-keyword">this</span>-&gt;reserve(__len);
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_iend(), _M_iend(), __str._M_check(__pos),
+                         __str._M_fold(__pos, __n));
+}
+
+basic_string&amp;
+append(<span class="hljs-keyword">const</span> _CharT* __s, size_type __n)
+{
+    size_type __len = __n + <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-keyword">if</span> (__len &gt; <span class="hljs-keyword">this</span>-&gt;capacity())
+        <span class="hljs-keyword">this</span>-&gt;reserve(__len);
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_iend(), _M_iend(), __s, __s + __n);
+}
+
+basic_string&amp;
+append(size_type __n, _CharT __c)
+{
+    size_type __len = __n + <span class="hljs-keyword">this</span>-&gt;size();
+    <span class="hljs-keyword">if</span> (__len &gt; <span class="hljs-keyword">this</span>-&gt;capacity())
+        <span class="hljs-keyword">this</span>-&gt;reserve(__len);
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_iend(), _M_iend(), __n, __c);
+}
+
+basic_string&amp;
+append(<span class="hljs-keyword">const</span> _CharT* __s)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;append(__s, traits_type::length(__s));
+}
+
+template&lt;class _InputIterator&gt;
+basic_string&amp;
+append(_InputIterator __first, _InputIterator __last)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_iend(), _M_iend(), __first, __last);
+}
+
+<span class="hljs-javadoc">/**
+* 以下是assign(), 很多也调用了replace()
+*/</span>
+<span class="hljs-comment">// *this &lt;= str</span>
+basic_string&amp;
+assign(<span class="hljs-keyword">const</span> basic_string&amp; __str)
+{
+    <span class="hljs-keyword">if</span> (_M_rep() != __str._M_rep())
+    {
+        allocator_type __a = <span class="hljs-keyword">this</span>-&gt;get_allocator();
+        _CharT* __tmp = __str._M_rep()-&gt;_M_grab(__a, __str.get_allocator());
+        _M_rep()-&gt;_M_dispose(__a);
+        _M_data(__tmp);
+    }
+    <span class="hljs-keyword">return</span> *<span class="hljs-keyword">this</span>;
+}
+
+<span class="hljs-comment">// *this &lt;= [first,last)</span>
+template&lt;class _InputIterator&gt;
+basic_string&amp;
+assign(_InputIterator __first, _InputIterator __last)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_ibegin(), _M_iend(), __first, __last);
+}
+
+basic_string&amp;
+assign(<span class="hljs-keyword">const</span> basic_string&amp; __str, size_type __pos, size_type __n)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;assign(__str._M_check(__pos), __str._M_fold(__pos, __n));
+}
+
+basic_string&amp;
+assign(<span class="hljs-keyword">const</span> _CharT* __s, size_type __n)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;assign(__s, __s + __n);
+}
+
+basic_string&amp;
+assign(<span class="hljs-keyword">const</span> _CharT* __s)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;assign(__s, __s + traits_type::length(__s));
+}
+
+basic_string&amp;
+assign(size_type __n, _CharT __c)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;replace(_M_ibegin(), _M_iend(), __n, __c);
+}
+
+<span class="hljs-javadoc">/**
+* 以下是+=和=, 前者调用了append(), 后者调用了assign()
+*/</span>
+basic_string&amp;
+operator+=(<span class="hljs-keyword">const</span> basic_string&amp; __str)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;append(__str);
+}
+
+basic_string&amp;
+operator+=(<span class="hljs-keyword">const</span> _CharT* __s)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;append(__s);
+}
+
+basic_string&amp;
+operator+=(_CharT __c)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;append(size_type(<span class="hljs-number">1</span>), __c);
+}
+
+basic_string&amp;
+operator=(<span class="hljs-keyword">const</span> basic_string&amp; __str)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;assign(__str);
+}
+
+basic_string&amp;
+operator=(<span class="hljs-keyword">const</span> _CharT* __s)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;assign(__s);
+}
+
+basic_string&amp;
+operator=(_CharT __c)
+{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>-&gt;assign(<span class="hljs-number">1</span>, __c);
+}
+
+<span class="hljs-javadoc">/**
+* insert()和erase()全程调用了replace(), 我都懒得贴出来了
+*/</span></code></pre>
+
+
+
+<h2 id="非成员函数">非成员函数</h2>
+
+<p>主要是几个运算符重载。</p>
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">typename</span> _CharT, <span class="hljs-keyword">typename</span> _Traits, <span class="hljs-keyword">typename</span> _Alloc&gt;
+<span class="hljs-keyword">inline</span> <span class="hljs-keyword">void</span>
+swap(basic_string&lt;_CharT, _Traits, _Alloc&gt;&amp; __lhs,
+     basic_string&lt;_CharT, _Traits, _Alloc&gt;&amp; __rhs)
+{
+    __lhs.swap(__rhs);
+}
+
+<span class="hljs-comment">// +运算符主要步骤是, 新建一个串, 调用reserve()调整容量, 再调用append(), 这里不再赘述</span>
+
+<span class="hljs-comment">// 比较运算符的重载全是调用compare(), 这里不再赘述</span>
+
+<span class="hljs-comment">// 下面的代码从gcc 4.7.1里拿到</span>
+<span class="hljs-comment">// &gt;&gt;运算符和getline()的重载主要还是和basic_istream有关, 等到了输入输出相关内容时再看吧; &lt;&lt;运算符应该简单多了, 就不用看了.</span>
+<span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">typename</span> _CharT, <span class="hljs-keyword">typename</span> _Traits, <span class="hljs-keyword">typename</span> _Alloc&gt;
+basic_istream&lt;_CharT, _Traits&gt;&amp;
+<span class="hljs-keyword">operator</span>&gt;&gt;(basic_istream&lt;_CharT, _Traits&gt;&amp; __in,
+           basic_string&lt;_CharT, _Traits, _Alloc&gt;&amp; __str)
+{
+    <span class="hljs-keyword">typedef</span> basic_istream&lt;_CharT, _Traits&gt;      __istream_type;
+    <span class="hljs-keyword">typedef</span> basic_string&lt;_CharT, _Traits, _Alloc&gt;   __string_type;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> __istream_type::ios_base         __ios_base;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> __istream_type::int_type       __int_type;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> __string_type::size_type       __size_type;
+    <span class="hljs-keyword">typedef</span> ctype&lt;_CharT&gt;               __ctype_type;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> __ctype_type::ctype_base         __ctype_base;
+
+    __size_type __extracted = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">typename</span> __ios_base::iostate __err = __ios_base::goodbit;
+    <span class="hljs-keyword">typename</span> __istream_type::sentry __cerb(__in, <span class="hljs-keyword">false</span>);
+    <span class="hljs-keyword">if</span> (__cerb)
+    {
+        __try
+        {
+            <span class="hljs-comment">// Avoid reallocation for common case.</span>
+            __str.erase();
+            _CharT __buf[<span class="hljs-number">128</span>];
+            __size_type __len = <span class="hljs-number">0</span>;
+            <span class="hljs-keyword">const</span> streamsize __w = __in.width();
+            <span class="hljs-keyword">const</span> __size_type __n = __w &gt; <span class="hljs-number">0</span> ? <span class="hljs-keyword">static_cast</span>&lt;__size_type&gt;(__w)
+                                    : __str.max_size();
+            <span class="hljs-keyword">const</span> __ctype_type&amp; __ct = use_facet&lt;__ctype_type&gt;(__in.getloc());
+            <span class="hljs-keyword">const</span> __int_type __eof = _Traits::eof();
+            __int_type __c = __in.rdbuf()-&gt;sgetc();
+
+            <span class="hljs-keyword">while</span> (__extracted &lt; __n
+                    &amp;&amp; !_Traits::eq_int_type(__c, __eof)
+                    &amp;&amp; !__ct.is(__ctype_base::space,
+                                _Traits::to_char_type(__c)))
+            {
+                <span class="hljs-keyword">if</span> (__len == <span class="hljs-keyword">sizeof</span>(__buf) / <span class="hljs-keyword">sizeof</span>(_CharT))
+                {
+                    __str.append(__buf, <span class="hljs-keyword">sizeof</span>(__buf) / <span class="hljs-keyword">sizeof</span>(_CharT));
+                    __len = <span class="hljs-number">0</span>;
+                }
+                __buf[__len++] = _Traits::to_char_type(__c);
+                ++__extracted;
+                __c = __in.rdbuf()-&gt;snextc();
+            }
+            __str.append(__buf, __len);
+
+            <span class="hljs-keyword">if</span> (_Traits::eq_int_type(__c, __eof))
+                __err |= __ios_base::eofbit;
+            __in.width(<span class="hljs-number">0</span>);
+        }
+        __catch(__cxxabiv1::__forced_unwind&amp;)
+        {
+            __in._M_setstate(__ios_base::badbit);
+            __throw_exception_again;
+        }
+        __catch(...)
+        {
+            <span class="hljs-comment">// _GLIBCXX_RESOLVE_LIB_DEFECTS</span>
+            <span class="hljs-comment">// 91. Description of operator&gt;&gt; and getline() for string&lt;&gt;</span>
+            <span class="hljs-comment">// might cause endless loop</span>
+            __in._M_setstate(__ios_base::badbit);
+        }
+    }
+    <span class="hljs-comment">// 211.  operator&gt;&gt;(istream&amp;, string&amp;) doesn't set failbit</span>
+    <span class="hljs-keyword">if</span> (!__extracted)
+        __err |= __ios_base::failbit;
+    <span class="hljs-keyword">if</span> (__err)
+        __in.setstate(__err);
+    <span class="hljs-keyword">return</span> __in;
+}
+
+<span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">typename</span> _CharT, <span class="hljs-keyword">typename</span> _Traits, <span class="hljs-keyword">typename</span> _Alloc&gt;
+basic_istream&lt;_CharT, _Traits&gt;&amp;
+getline(basic_istream&lt;_CharT, _Traits&gt;&amp; __in,
+        basic_string&lt;_CharT, _Traits, _Alloc&gt;&amp; __str, _CharT __delim)
+{
+    <span class="hljs-keyword">typedef</span> basic_istream&lt;_CharT, _Traits&gt;      __istream_type;
+    <span class="hljs-keyword">typedef</span> basic_string&lt;_CharT, _Traits, _Alloc&gt;   __string_type;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> __istream_type::ios_base         __ios_base;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> __istream_type::int_type       __int_type;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> __string_type::size_type       __size_type;
+
+    __size_type __extracted = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">const</span> __size_type __n = __str.max_size();
+    <span class="hljs-keyword">typename</span> __ios_base::iostate __err = __ios_base::goodbit;
+    <span class="hljs-keyword">typename</span> __istream_type::sentry __cerb(__in, <span class="hljs-keyword">true</span>);
+    <span class="hljs-keyword">if</span> (__cerb)
+    {
+        __try
+        {
+            __str.erase();
+            <span class="hljs-keyword">const</span> __int_type __idelim = _Traits::to_int_type(__delim);
+            <span class="hljs-keyword">const</span> __int_type __eof = _Traits::eof();
+            __int_type __c = __in.rdbuf()-&gt;sgetc();
+
+            <span class="hljs-keyword">while</span> (__extracted &lt; __n
+                    &amp;&amp; !_Traits::eq_int_type(__c, __eof)
+                    &amp;&amp; !_Traits::eq_int_type(__c, __idelim))
+            {
+                __str += _Traits::to_char_type(__c);
+                ++__extracted;
+                __c = __in.rdbuf()-&gt;snextc();
+            }
+
+            <span class="hljs-keyword">if</span> (_Traits::eq_int_type(__c, __eof))
+                __err |= __ios_base::eofbit;
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (_Traits::eq_int_type(__c, __idelim))
+            {
+                ++__extracted;
+                __in.rdbuf()-&gt;sbumpc();
+            }
+            <span class="hljs-keyword">else</span>
+                __err |= __ios_base::failbit;
+        }
+        __catch(__cxxabiv1::__forced_unwind&amp;)
+        {
+            __in._M_setstate(__ios_base::badbit);
+            __throw_exception_again;
+        }
+        __catch(...)
+        {
+            <span class="hljs-comment">// _GLIBCXX_RESOLVE_LIB_DEFECTS</span>
+            <span class="hljs-comment">// 91. Description of operator&gt;&gt; and getline() for string&lt;&gt;</span>
+            <span class="hljs-comment">// might cause endless loop</span>
+            __in._M_setstate(__ios_base::badbit);
+        }
+    }
+    <span class="hljs-keyword">if</span> (!__extracted)
+        __err |= __ios_base::failbit;
+    <span class="hljs-keyword">if</span> (__err)
+        __in.setstate(__err);
+    <span class="hljs-keyword">return</span> __in;
+}</code></pre>
+
+
+
+<h2 id="参考">参考</h2>
+
+<p>STL中string的源码解读 <br>
+<a href="http://blog.csdn.net/pizi0475/article/details/5288432" target="_blank">http://blog.csdn.net/pizi0475/article/details/5288432</a></p></div></body>
+</html>

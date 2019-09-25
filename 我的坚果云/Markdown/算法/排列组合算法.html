@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>排列组合算法</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h2 id="nextpermutation">next_permutation</h2>
+
+<p>STL的algorithm提供了next_permutation和prev_permutation函数，用来求下一个或上一个全排列。 <br>
+next_permutation的实现： <br>
+在当前序列中，从尾端往前寻找两个相邻元素，前一个记为*i，后一个记为*ii，并且满足*i &lt; *ii。然后再从尾端寻找另一个元素*j，如果满足*i &lt; *j，即将第i个元素与第j个元素对调，并将第ii个元素之后（包括ii）的所有元素颠倒排序，即求出下一个序列了。</p>
+
+<pre><code>template&lt;class BidirectionalIterator&gt;
+bool next_permutation(BidirectionalIterator _First, BidirectionalIterator _Last);
+template&lt;class BidirectionalIterator, class BinaryPredicate&gt;
+bool next_permutation(BidirectionalIterator _First, BidirectionalIterator _Last, BinaryPredicate _Comp);
+</code></pre>
+
+<p>我以int数组实现这个算法：</p>
+
+<pre class="prettyprint"><code class=" hljs perl">template &lt;typename T&gt;
+void nswap(T <span class="hljs-variable">*a</span>, T <span class="hljs-variable">*b</span>)
+{
+    <span class="hljs-keyword">if</span>(a == b) <span class="hljs-keyword">return</span>;
+    T temp;
+    temp = <span class="hljs-variable">*a</span>;
+    <span class="hljs-variable">*a</span> = <span class="hljs-variable">*b</span>;
+    <span class="hljs-variable">*b</span> = temp;
+}
+//反转序列[first,<span class="hljs-keyword">last</span>)
+template &lt;typename T&gt;
+void <span class="hljs-keyword">reverse</span>(T first, T <span class="hljs-keyword">last</span>)
+{
+    --<span class="hljs-keyword">last</span>;
+    <span class="hljs-keyword">while</span>(<span class="hljs-keyword">last</span> - first &gt; <span class="hljs-number">0</span>)
+        nswap(first++, <span class="hljs-keyword">last</span>--);
+}
+//区间为[first,<span class="hljs-keyword">last</span>)
+bool next_permutation(<span class="hljs-keyword">int</span> <span class="hljs-variable">*first</span>, <span class="hljs-keyword">int</span> <span class="hljs-variable">*last</span>)
+{
+    <span class="hljs-keyword">if</span>(<span class="hljs-keyword">last</span> - first &lt; <span class="hljs-number">2</span>) <span class="hljs-keyword">return</span> false; <span class="hljs-regexp">//</span>只有一个元素或为空
+
+    <span class="hljs-keyword">int</span> <span class="hljs-variable">*ii</span> = <span class="hljs-keyword">last</span>-<span class="hljs-number">1</span>;
+    <span class="hljs-keyword">while</span>(!(<span class="hljs-variable">*(</span>ii-<span class="hljs-number">1</span>)&lt;<span class="hljs-variable">*ii</span>))
+    {
+        --ii;
+        <span class="hljs-regexp">//</span>已是最大序列，反转一次换到最小序列
+        <span class="hljs-keyword">if</span>(ii == first)
+        {
+            <span class="hljs-keyword">reverse</span>(first, <span class="hljs-keyword">last</span>);
+            <span class="hljs-keyword">return</span> false;
+        }
+    }
+    <span class="hljs-keyword">int</span> <span class="hljs-variable">*i</span> = ii-<span class="hljs-number">1</span>;
+    <span class="hljs-keyword">int</span> <span class="hljs-variable">*j</span> = <span class="hljs-keyword">last</span>-<span class="hljs-number">1</span>;
+    <span class="hljs-keyword">for</span>(; j!=i; --j)
+    {
+        <span class="hljs-keyword">if</span>(<span class="hljs-variable">*i</span> &lt; <span class="hljs-variable">*j</span>)
+        {
+            nswap(i, j);
+            <span class="hljs-keyword">break</span>;
+        }
+    }
+
+    <span class="hljs-keyword">reverse</span>(ii, <span class="hljs-keyword">last</span>); <span class="hljs-regexp">//</span>置换[ii,<span class="hljs-keyword">last</span>)
+
+    <span class="hljs-keyword">return</span> true;
+}</code></pre>
+
+
+
+<h2 id="遍历和回溯求解排列组合">遍历和回溯求解排列组合</h2>
+
+<p>算法描述如下： <br>
+结果存于数组a中 <br>
+判断a[i]是否符合条件，若符合再判断是否已到第N位，若不符合，再判断a[i]加一还是回到第i-1位继续判断 <br>
+a[i]的初值是a[i-1]值的下一个值 <br>
+若a[i]的值与a[i-1]相等时，第i位此轮遍历结束 <br>
+低位逐次加1，此位遍历结束时，其上一位加1，直到第1位加到N程序结束 <br>
+数组a的a[0]弃置不用，用以表示排列组合元素的数字从1开始</p>
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-preprocessor">#include &lt;stdio.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;stdlib.h&gt;</span>
+
+<span class="hljs-comment">//排列,否则是组合</span>
+<span class="hljs-preprocessor">#define arrange</span>
+<span class="hljs-comment">//求解A(N,M)或C(N,M)</span>
+<span class="hljs-preprocessor">#define N 4</span>
+<span class="hljs-preprocessor">#define M 4</span>
+
+<span class="hljs-keyword">int</span> a[N+<span class="hljs-number">1</span>] = {<span class="hljs-number">0</span>,<span class="hljs-number">1</span>};<span class="hljs-comment">//必须保证a[1]为1</span>
+<span class="hljs-keyword">int</span> counter = <span class="hljs-number">0</span>;<span class="hljs-comment">//计算排列或组合数, 注意数目太大时可能溢出</span>
+
+<span class="hljs-comment">//将符合条件的情况输出</span>
+<span class="hljs-keyword">void</span> show()
+{
+    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> k=<span class="hljs-number">1</span>; k&lt;=N; ++k)
+        <span class="hljs-built_in">printf</span>(<span class="hljs-string">"%d"</span>,a[k]);
+    <span class="hljs-built_in">printf</span>(<span class="hljs-string">" "</span>);
+    ++counter;
+}
+
+<span class="hljs-comment">//判断数组a第i位的值是否符合要求</span>
+<span class="hljs-keyword">bool</span> ismatch(<span class="hljs-keyword">int</span> i)
+{
+    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> k=<span class="hljs-number">1</span>; k&lt;i; ++k)
+    {
+<span class="hljs-preprocessor">#ifdef arrange<span class="hljs-comment">//排列</span></span>
+        <span class="hljs-keyword">if</span>(a[k] == a[i]) <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+<span class="hljs-preprocessor">#else<span class="hljs-comment">//组合</span></span>
+        <span class="hljs-keyword">if</span>(a[k] &gt;= a[i]) <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+<span class="hljs-preprocessor">#endif</span>
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+}
+
+<span class="hljs-comment">//回溯或自加</span>
+<span class="hljs-keyword">int</span> backtrack(<span class="hljs-keyword">int</span> &amp;i)
+{
+    <span class="hljs-keyword">if</span>(a[i] == a[i-<span class="hljs-number">1</span>])<span class="hljs-comment">//若a[i]的值已经经过一圈追上a[i-1]</span>
+    {
+        --i;<span class="hljs-comment">//i值减1,退回处理前一个元素</span>
+        <span class="hljs-keyword">if</span>(a[i]==M &amp;&amp; i&gt;<span class="hljs-number">1</span>)
+            a[i] = <span class="hljs-number">1</span>;<span class="hljs-comment">//当第i位的值达到M时,第i位的值取1</span>
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(a[i]==M &amp;&amp; i==<span class="hljs-number">1</span>)<span class="hljs-comment">//当第一位的值达到M时结束</span>
+            <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<span class="hljs-comment">//遍历结束,退出程序</span>
+        <span class="hljs-keyword">else</span> ++a[i];<span class="hljs-comment">//第i位的值取下一个,加1</span>
+    }
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(a[i]==M) a[i]=<span class="hljs-number">1</span>;
+    <span class="hljs-keyword">else</span> ++a[i];
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;
+}
+
+<span class="hljs-comment">//遍历</span>
+<span class="hljs-keyword">void</span> ergodic(<span class="hljs-keyword">void</span>)
+{
+    <span class="hljs-keyword">int</span> i=<span class="hljs-number">1</span>;
+    <span class="hljs-keyword">while</span>(<span class="hljs-number">1</span>)
+    {
+        <span class="hljs-keyword">if</span>(ismatch(i))<span class="hljs-comment">//第i位已经满足要求,处理第i+1位</span>
+        {
+            <span class="hljs-keyword">if</span>(i==N)<span class="hljs-comment">//i已到达N,获得了一个结果</span>
+            {
+                show();
+                <span class="hljs-keyword">if</span>(!backtrack(i)) <span class="hljs-keyword">return</span>;
+            }
+            <span class="hljs-keyword">else</span><span class="hljs-comment">//继续处理下一位</span>
+            {
+                ++i;
+                <span class="hljs-keyword">if</span>(a[i-<span class="hljs-number">1</span>] == M) a[i] = <span class="hljs-number">1</span>;<span class="hljs-comment">//a[i]的初值是a[i-1]值的下一个值</span>
+                <span class="hljs-keyword">else</span> a[i] = a[i-<span class="hljs-number">1</span>] + <span class="hljs-number">1</span>;
+            }
+        }
+        <span class="hljs-keyword">else</span><span class="hljs-comment">//第i位不满足要求,需要重新设置:回溯至第i-1位或a[i]加1</span>
+            <span class="hljs-keyword">if</span>(!backtrack(i)) <span class="hljs-keyword">return</span>;
+    }
+}
+
+<span class="hljs-keyword">int</span> main(<span class="hljs-keyword">void</span>)
+{
+    ergodic();
+    <span class="hljs-built_in">printf</span>(<span class="hljs-string">"\n\n共 %d 种排列/组合.\n"</span>,counter);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre></div></body>
+</html>

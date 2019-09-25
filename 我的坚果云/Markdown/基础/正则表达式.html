@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>正则表达式</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h2 id="运算符">运算符</h2>
+
+<h3 id="基本">基本</h3>
+
+<table>
+<thead>
+<tr>
+  <th align="center">字符</th>
+  <th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td align="center">\</td>
+  <td>转义字符，对下一个字符进行转义，或解析为一个反向引用。</td>
+</tr>
+<tr>
+  <td align="center">.</td>
+  <td>匹配除“\n”之外的任何单个字符。要匹配包括“\n”在内的任何字符，请使用像“[\s\S]”的模式。</td>
+</tr>
+<tr>
+  <td align="center">\xnn</td>
+  <td>匹配一个十六进制字符，其中n是一个用两个十六进制数字表示的字符。</td>
+</tr>
+<tr>
+  <td align="center">\unnnn</td>
+  <td>匹配一个Unicode字符，nnnn是一个用四个十六进制数字表示的Unicode字符。</td>
+</tr>
+</tbody></table>
+
+
+<h3 id="非打印字符控制字符">非打印字符/控制字符</h3>
+
+<p>非打印字符也可以是正则表达式的组成部分。下表列出了表示非打印字符的转义序列：</p>
+
+<table>
+<thead>
+<tr>
+  <th>字符</th>
+  <th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>\cx</td>
+  <td>匹配由x指明的控制字符。x的值必须为A-Z或a-z之一；否则，将c视为一个原义的“c”字符。</td>
+</tr>
+<tr>
+  <td>\s</td>
+  <td>匹配任何空白字符，包括空格、制表符、换页符等，等价于 [\f\n\r\t\v]。</td>
+</tr>
+<tr>
+  <td>\S</td>
+  <td>匹配任何非空白字符。等价于 [^\f\n\r\t\v]。</td>
+</tr>
+<tr>
+  <td>\f</td>
+  <td>匹配一个换页符，等价于\x0c和\cL。</td>
+</tr>
+<tr>
+  <td>\n</td>
+  <td>匹配一个换行符，等价于\x0a和\cJ。</td>
+</tr>
+<tr>
+  <td>\r</td>
+  <td>匹配一个回车符，等价于\x0d和\cM。</td>
+</tr>
+<tr>
+  <td>\t</td>
+  <td>匹配一个制表符，等价于\x09和\cI。</td>
+</tr>
+<tr>
+  <td>\v</td>
+  <td>匹配一个垂直制表符，等价于\x0b和\cK。</td>
+</tr>
+</tbody></table>
+
+
+
+
+<h3 id="定位符">定位符</h3>
+
+<p>定位符使您能够将正则表达式定位到行首或行尾，或者使您能够创建这样的正则表达式，这些正则表达式出现在一个单词内、在一个单词的开头或者一个单词的结尾。</p>
+
+<table>
+<thead>
+<tr>
+  <th>字符</th>
+  <th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>^</td>
+  <td>匹配输入字符串开始的位置。</td>
+</tr>
+<tr>
+  <td><span>$</span></td>
+  <td>匹配输入字符串结尾的位置。</td>
+</tr>
+<tr>
+  <td>\b</td>
+  <td>匹配一个字边界，比如与字前后空格、标点间的位置。</td>
+</tr>
+<tr>
+  <td>\B</td>
+  <td>非字边界匹配。</td>
+</tr>
+</tbody></table>
+
+
+<p><strong>注意：</strong> <br>
+1. 不能将限定符（后面讲述）与定位符一起使用。由于在紧靠换行或者字边界的前面或后面不能有一个以上位置，因此不允许诸如 ^* 之类的表达式。 <br>
+2. 如果设置了 RegExp 对象的 Multiline 属性，^ 和 $ 变成匹配行的开始处和结束处。 <br>
+3. 更精确的说法，\b 匹配这样的位置：它的前一个字符和后一个字符不全是（一个是，一个不是或不存在）\w（后面讲述）。 <br>
+4. ^ 是 [ ] 里第一个字符时，表示相反的意思。</p>
+
+<h3 id="字符集合">字符集合</h3>
+
+<p>[ ] 匹配所包含的任意一个字符。</p>
+
+<table>
+<thead>
+<tr>
+  <th>字符</th>
+  <th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>[xyz]</td>
+  <td>字符集合，匹配所包含的任意一个字符。</td>
+</tr>
+<tr>
+  <td>[^xyz]</td>
+  <td>负值字符集合，匹配未包含的任意字符。</td>
+</tr>
+<tr>
+  <td>[a-z]</td>
+  <td>字符范围，匹配指定范围内的任意字符。</td>
+</tr>
+<tr>
+  <td>[^a-z]</td>
+  <td>负值字符范围，匹配任何不在指定范围内的任意字符。</td>
+</tr>
+</tbody></table>
+
+
+<p><strong>注意：</strong> <br>
+1.若要在中括号表达式中包括 ] 字符，请将它放在第一位，紧跟在开始 [ 后面，或 [^ 后面。 <br>
+2.若要在中括号表达式中包括连字符，请采用下列方法之一： <br>
+&nbsp;&nbsp;&nbsp;&nbsp;用反斜杠将它转义： [\-] <br>
+&nbsp;&nbsp;&nbsp;&nbsp;将连字符放在中括号列表的开始或结尾。例如下面的表达式匹配所有小写字母和连字符：[-a-z]或[a-z-]</p>
+
+
+
+<h3 id="限定符">限定符</h3>
+
+<p>限定符用来指定正则表达式的一个给定组件必须要出现多少次才能满足匹配，有：</p>
+
+<table>
+<thead>
+<tr>
+  <th>字符</th>
+  <th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>{n}</td>
+  <td>匹配确定的 n 次，n 是一个非负整数。</td>
+</tr>
+<tr>
+  <td>{n,}</td>
+  <td>至少匹配 n 次，n 是一个非负整数。</td>
+</tr>
+<tr>
+  <td>{n,m}</td>
+  <td>最少匹配 n 次且最多匹配 m 次，m 和 n 均为非负整数，且 n&lt;=m。</td>
+</tr>
+<tr>
+  <td>*</td>
+  <td>匹配前面的子表达式零次或多次，等价于{0,}。</td>
+</tr>
+<tr>
+  <td>+</td>
+  <td>匹配前面的子表达式一次或多次，等价于 {1,}。</td>
+</tr>
+<tr>
+  <td>?</td>
+  <td>匹配前面的子表达式零次或一次，等价于 {0,1}。</td>
+</tr>
+</tbody></table>
+
+
+<p><strong>注意：</strong> <br>
+1. 限定符都是贪婪的，在它们的后面加上一个 ? 就可以实现非贪婪或最小匹配。 <br>
+非贪婪模式尽可能少的匹配所搜索的字符串，而默认的贪婪模式则尽可能多的匹配所搜索的字符串。 <br>
+2. 现在可以列出几个例子了：</p>
+
+<pre class="prettyprint"><code class=" hljs css">^\<span class="hljs-tag">s</span>*$  匹配空行
+^<span class="hljs-attr_selector">[a-zA-Z0-9_]</span><span class="hljs-rules">{<span class="hljs-rule">1,}</span></span>$
+^<span class="hljs-attr_selector">[a-zA-Z0-9_]</span>+$    所有包含一个以上的字母、数字或下划线的字符串
+^<span class="hljs-attr_selector">[0-9]</span><span class="hljs-rules">{<span class="hljs-rule">1,}</span></span>$
+^<span class="hljs-attr_selector">[0-9]</span>+$   所有的自然数
+^\<span class="hljs-tag">-</span><span class="hljs-rules">{<span class="hljs-rule">0,1}</span></span><span class="hljs-attr_selector">[0-9]</span><span class="hljs-rules">{<span class="hljs-rule">1,}</span></span>$
+^\<span class="hljs-tag">-</span>?<span class="hljs-attr_selector">[0-9]</span>+$    所有的整数
+^\<span class="hljs-tag">-</span><span class="hljs-rules">{<span class="hljs-rule">0,1}</span></span><span class="hljs-attr_selector">[0-9]</span><span class="hljs-rules">{<span class="hljs-rule">0,}</span></span>\.<span class="hljs-rules">{<span class="hljs-rule">0,1}</span></span><span class="hljs-attr_selector">[0-9]</span><span class="hljs-rules">{<span class="hljs-rule">0,}</span></span>$
+^\<span class="hljs-tag">-</span>?<span class="hljs-attr_selector">[0-9]</span>*\.?<span class="hljs-attr_selector">[0-9]</span>*$   所有的小数</code></pre>
+
+
+
+<h3 id="选择和组">选择和组</h3>
+
+<p>选择项之间用 | 分隔，外边常加上小括号来组合一个模式的各个部分，( 和 ) 之间的表达式定义为“组”（group）。例如“industr(?:y|ies)”就是一个比“industry|industries”更简略的表达式。 <br>
+但用圆括号会有一个副作用，是相关的匹配会被缓存，此时可用 ?: 放在第一个选项前来消除这种副作用。</p>
+
+<table>
+<thead>
+<tr>
+  <th>字符</th>
+  <th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>( )</td>
+  <td>标记一个子表达式的开始和结束位置，子表达式可以获取供以后使用。</td>
+</tr>
+<tr>
+  <td>(?:pattern)</td>
+  <td>匹配pattern但不获取匹配结果，也就是说这是一个非获取匹配，不进行存储供以后使用。</td>
+</tr>
+</tbody></table>
+
+
+
+
+<h3 id="反向引用">反向引用</h3>
+
+<p>对一个正则表达式模式或部分模式两边添加圆括号将导致相关匹配存储到一个临时缓冲区中，所捕获的每个子匹配都按照在正则表达式模式中从左到右出现的顺序存储。 <br>
+缓冲区编号从 1 开始，最多可存储 99 个捕获的子表达式。每个缓冲区都可以使用 ‘\n’ 访问，其中 n 为一个标识特定缓冲区的一位或两位十进制数。</p>
+
+<table>
+<thead>
+<tr>
+  <th>字符</th>
+  <th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>\num</td>
+  <td>对所获取的匹配的引用，其中num是一个正整数。例如，“(.)\1”匹配两个连续的相同字符。</td>
+</tr>
+<tr>
+  <td>\n</td>
+  <td>标识一个八进制转义值或一个反向引用。如果 \n 之前至少 n 个获取的子表达式，则 \n 为反向引用。否则，如果 n 为八进制数字（0-7），则 \n 为一个八进制转义值。</td>
+</tr>
+<tr>
+  <td>\nm</td>
+  <td>标识一个八进制转义值或一个反向引用。如果 \nm 之前至少有 nm 个获取的子表达式，则 \nm 为反向引用。如果 \nm 之前至少有 n 个获取的子表达式，则 \nm 解释为\n 和 m。如果前面的条件都不满足，若 n 和 m 均为八进制数字（0-7），则 \nm 为一个八进制转义值。</td>
+</tr>
+<tr>
+  <td>\nml</td>
+  <td>如果n，m，l均为八进制数字（0-7），则 \nml 为一个八进制转义值。</td>
+</tr>
+</tbody></table>
+
+
+<p>应用举例： <br>
+<strong>1. </strong>查找文本中两个相同的相邻单词的匹配项 <br>
+以下面的句子为例：Is is the cost of of gasoline going up up?</p>
+
+<pre><code>\b([a-z]+)\s+\1\b
+</code></pre>
+
+<p><b>2. </b>vim中的替换 <br>
+将所有方法 foo(a,b,c) 的实例改为 foo(b,a,c)。这里 a、b 和 c 可以是任何提供给方法 foo() 的参数。也就是说我们要实现这样的转换：  <br>
+foo(10,7,2)  foo(7,10,2)  <br>
+foo(x+13,y-2,10)  foo(y-2,x+13,10)  <br>
+foo( bar(8), x+y+z, 5)  foo( x+y+z, bar(8), 5) <br>
+下面这条替换命令能够实现：</p>
+
+<pre><code>:%s/foo(\([^,]*\),\([^,]*\),\([^)]*\))/foo(\2,\1,\3)/g
+:%s/foo(\([^,]\+\),\([^,]\+\),\([^)]\+\))/foo(\2,\1,\3)/g
+</code></pre>
+
+<p>vim里 ( 和 ) 是作为普通字符的，如果作为组包含符使用，需要进行转义，+如要作为限定符使用也需要进行转义。 <br>
+这条替换命令不能对foo的参数中包含“,”的情况进行正确处理。 <br>
+<strong>附vim查找命令格式：[range]s/from/to/[flags]</strong></p>
+
+<pre class="prettyprint"><code class=" hljs vbnet">range：搜索范围，如果没有指定范围，则作用于但前行。
+    :<span class="hljs-number">1</span>,<span class="hljs-number">10</span>s/<span class="hljs-keyword">from</span>/<span class="hljs-keyword">to</span>/ 表示在第<span class="hljs-number">1</span>到第<span class="hljs-number">10</span>行（包含第<span class="hljs-number">1</span>，第<span class="hljs-number">10</span>行）之间搜索替换
+    :<span class="hljs-number">10</span>s/<span class="hljs-keyword">from</span>/<span class="hljs-keyword">to</span>/ 表示只在第<span class="hljs-number">10</span>行搜索替换
+    :%s/<span class="hljs-keyword">from</span>/<span class="hljs-keyword">to</span>/ 表示在所有行中搜索替换
+    :<span class="hljs-number">1</span>,$s/<span class="hljs-keyword">from</span>/<span class="hljs-keyword">to</span>/ 同上
+flags有如下四个选项
+    c confirm 每次替换前询问
+    e <span class="hljs-keyword">error</span> 不显示错误
+    g globle 不询问，整行替换。如果不加g选项，则只替换每行的第一个匹配到的字符串
+    i ignore 忽略大小写</code></pre>
+
+<p><strong>3. </strong>分解URL <br>
+将下面的URL分解为协议（ftp、http等）、域地址、页路径： <br>
+<code>http://www.baidu.com:80/html/html-tutorial.html</code> <br>
+下面的正则表达式提供该功能：</p>
+
+<pre><code>(\w+):\/\/([^/:]+):?(\d*)([^\s]*)
+</code></pre>
+
+<p>将正则表达式应用到上面的 URL，各子匹配项包含下面的内容： <br>
+- 第一个括号子表达式包含“http” <br>
+- 第二个括号子表达式包含“www.baidu.com” <br>
+- 第三个括号子表达式包含“80” <br>
+- 第四个括号子表达式包含“/html/html-tutorial.html” <br>
+<strong>4. </strong>匹配 HTML 标记</p>
+
+<pre><code>&lt;\s*(\S+)\s*([^&gt;]*)&gt;[\s\S]*&lt;\s*\/\1\s*&gt;
+</code></pre>
+
+<p>&lt;，0或多个空白，1或多个非空白，0或多个空白，0或多个非^字符，&lt;，0或多个任意字符，&lt;，0或多个空白，/，标记名，0或多个空白，&gt; <br>
+其中把html标记和属性存了起来。</p>
+
+
+
+<h3 id="预查">预查</h3>
+
+<table>
+<thead>
+<tr>
+  <th>字符</th>
+  <th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>(?=pattern)</td>
+  <td>正向肯定预查，在任何匹配 pattern 的字符串开始处匹配查找字符串。这是一个非获取匹配，也就是说，该匹配不需要获取供以后使用。</td>
+</tr>
+<tr>
+  <td>(?!pattern)</td>
+  <td>正向否定预查，在任何不匹配 pattern 的字符串开始处匹配查找字符串。这是一个非获取匹配，也就是说，该匹配不需要获取供以后使用。</td>
+</tr>
+<tr>
+  <td><code>(?&lt;=pattern)</code></td>
+  <td>反向肯定预查，与正向肯定预查类似，只是方向相反。</td>
+</tr>
+<tr>
+  <td><code>(?&lt;!pattern)</code></td>
+  <td>反向否定预查，与正向否定预查类似，只是方向相反。</td>
+</tr>
+</tbody></table>
+
+
+<p>预查不消耗字符，也就是说，在一个匹配发生后，在最后一次匹配之后开始下一次匹配的搜索，而不是从包含预查的字符之后开始。</p>
+
+<p>“Windows(?=95|98|NT|2000)”能匹配“Windows2000”中的“Windows”，但不能匹配“Windows3.1”中的“Windows”。 <br>
+“Windows(?!95|98|NT|2000)”能匹配“Windows3.1”中的“Windows”，但不能匹配“Windows2000”中的“Windows”。 <br>
+“(?&lt;=95|98|NT|2000)Windows”能匹配“2000Windows”中的“Windows”，但不能匹配“3.1Windows”中的“Windows”。 <br>
+<code>(?&lt;!95|98|NT|2000)Windows</code>能匹配“3.1Windows”中的“Windows”，但不能匹配“2000Windows”中的“Windows”。</p>
+
+
+
+<h3 id="其他">其他</h3>
+
+<table>
+<thead>
+<tr>
+  <th>字符</th>
+  <th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>\d</td>
+  <td>匹配一个数字字符，等价于[0-9]。</td>
+</tr>
+<tr>
+  <td>\D</td>
+  <td>匹配一个非数字字符，等价于[^0-9]。</td>
+</tr>
+<tr>
+  <td>\w</td>
+  <td>匹配包括下划线的任何单词字符。类似但不等价于[A-Za-z0-9_]，这里的“单词”字符使用Unicode字符集。</td>
+</tr>
+<tr>
+  <td>\W</td>
+  <td>匹配任何非单词字符。</td>
+</tr>
+</tbody></table>
+
+
+
+
+<h2 id="优先级">优先级</h2>
+
+<p>相同优先级的从左到右进行运算，不同优先级的运算先高后低。下表从最高到最低说明了各种正则表达式运算符的优先级顺序：</p>
+
+<table>
+<thead>
+<tr>
+  <th>运算符</th>
+  <th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>\</td>
+  <td>转义符</td>
+</tr>
+<tr>
+  <td>()，(?:)，(?=)，[]</td>
+  <td>圆括号和方括号</td>
+</tr>
+<tr>
+  <td>*，+，?，{n}，{n,}，{n,m}</td>
+  <td>限定符</td>
+</tr>
+<tr>
+  <td>^，$，任何字符</td>
+  <td>定位点和序列（即位置和顺序）</td>
+</tr>
+<tr>
+  <td>|</td>
+  <td>或操作</td>
+</tr>
+</tbody></table>
+
+
+<p>字符具有高于或运算符的优先级，使得“m|food”匹配“m”或“food”。若要匹配“mood”或“food”，请使用括号创建子表达式，从而产生“(m|f)ood”。如果不需要缓存匹配项，可以这样写 “(?:m|f)ood”。</p>
+
+
+
+<h2 id="参考资料">参考资料</h2>
+
+<p><a href="http://www.w3cschool.cc/">W3School正则表达式教程</a> <br>
+百度百科 <br>
+<a href="http://blog.csdn.net/liuyuan185442111/article/details/45463071">行者：正则表达式</a> <br>
+<a href="http://tool.chinaz.com/regex/">正则表达式测试工具</a></p></div></body>
+</html>

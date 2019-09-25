@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MySQL的常用语句</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="数据库">数据库</h1>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs ">创建数据库
+<span class="hljs-operator"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">DATABASE</span> db_name [<span class="hljs-keyword">DEFAULT</span> <span class="hljs-keyword">CHARACTER</span> <span class="hljs-keyword">SET</span> character_set];</span>
+
+删除数据库
+<span class="hljs-operator"><span class="hljs-keyword">DROP</span> <span class="hljs-keyword">DATABASE</span> db_name;</span>
+
+修改数据库默认字符集
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">DATABASE</span> db_name <span class="hljs-keyword">DEFAULT</span> <span class="hljs-keyword">CHARACTER</span> <span class="hljs-keyword">SET</span> = utf8;</span></code></pre>
+
+
+
+<h1 id="表">表</h1>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs ">创建表
+<span class="hljs-operator"><span class="hljs-keyword">CREATE</span> [<span class="hljs-keyword">TEMPORARY</span>] <span class="hljs-keyword">TABLE</span> [<span class="hljs-keyword">IF</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">EXISTS</span>] tbl_name (列的定义)
+[ENGINE=存储引擎 <span class="hljs-keyword">DEFAULT</span> CHARSET=字符集 AUTO-INCREMENT=自增开始数字];</span>
+
+其中"列的定义"格式为:
+列名 类型 [NOT NULL|NULL] [DEFAULT 默认值] [AUTO_INCREMENT] [CHARACTER <span class="hljs-operator"><span class="hljs-keyword">SET</span>=字符集]
+
+主键被当做一列, 所以出现在<span class="hljs-string">"列的定义"</span>部分:
+<span class="hljs-keyword">PRIMARY</span> <span class="hljs-keyword">KEY</span>(列名)</span></code></pre>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs ">删除表
+<span class="hljs-operator"><span class="hljs-keyword">DROP</span> <span class="hljs-keyword">TABLE</span> tbl_name;</span>
+
+添加列
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> tbl_name <span class="hljs-keyword">ADD</span> 列名 列类型 [<span class="hljs-keyword">AFTER</span> 某列|<span class="hljs-keyword">FIRST</span>];</span>
+
+删除列
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> tbl_name <span class="hljs-keyword">DROP</span> 列名;</span>
+
+修改列类型
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> tbl_name MODIFY 列名 新类型 新参数;</span>
+
+修改列名和列类型
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> tbl_name CHANGE 旧列名 新列名 新类型 新参数;</span>
+
+更改主键
+主键被当成一列, 先删除旧主键, 再添加新主键
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> 表名 <span class="hljs-keyword">DROP</span> <span class="hljs-keyword">PRIMARY</span> <span class="hljs-keyword">KEY</span>;</span>
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> 表名 <span class="hljs-keyword">ADD</span> <span class="hljs-keyword">PRIMARY</span> <span class="hljs-keyword">KEY</span>(列名);</span>
+
+重命名表
+<span class="hljs-operator">RENAME <span class="hljs-keyword">TABLE</span> 表名 <span class="hljs-keyword">TO</span> 新表名;</span>
+或者
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> 表名 RENAME [<span class="hljs-keyword">AS</span>] 新表名;</span>
+
+描述表
+<span class="hljs-operator"><span class="hljs-keyword">SHOW</span> [<span class="hljs-keyword">FULL</span>] COLUMNS <span class="hljs-keyword">FROM</span> 表名;</span>
+DESCRIBE 表名;
+DESCRIBE 表名 列名;
+
+排序表
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> tbl_name <span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> col_name;</span>
+
+复制表
+<span class="hljs-operator"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> tbl_name <span class="hljs-keyword">LIKE</span> old_tbl_name;</span>
+或
+<span class="hljs-operator"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> tbl_name <span class="hljs-keyword">AS</span> (<span class="hljs-keyword">SELECT</span> 语句);</span>
+前者复制表结构, 但不复制数据; 后者复制数据, 但表结构可能不同.
+可用<span class="hljs-operator"><span class="hljs-keyword">SHOW</span> <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> tbl_name;</span>或DESC tbl_name;来比较表结构的异同.
+
+修改自增初值
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> tbl_name AUTO_INCREMENT = 起始数字;</span>
+
+清空表
+<span class="hljs-operator"><span class="hljs-keyword">TRUNCATE</span> <span class="hljs-keyword">TABLE</span> tbl_name;</span>
+或者
+<span class="hljs-operator"><span class="hljs-keyword">DELETE</span> tbl_name;</span>
+前者会重置自增初值.
+
+清空第10条以后数据
+<span class="hljs-operator"><span class="hljs-keyword">DELETE</span> <span class="hljs-keyword">FROM</span> tbl_name <span class="hljs-keyword">WHERE</span> id <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">IN</span> (<span class="hljs-keyword">SELECT</span> TOP <span class="hljs-number">10</span> id <span class="hljs-keyword">FROM</span> tbl_name <span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> id);</span>
+
+改变表的默认字符集, 并且将所有列的字符集进行转换
+<span class="hljs-operator"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">TABLE</span> tbl_name CONVERT <span class="hljs-keyword">TO</span> <span class="hljs-keyword">CHARACTER</span> <span class="hljs-keyword">SET</span> charset_name;</span></code></pre>
+
+
+
+<h1 id="记录">记录</h1>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs "><span class="hljs-operator"><span class="hljs-keyword">INSERT</span>
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> 表名[(列名)] <span class="hljs-keyword">VALUES</span>(常量);</span>
+
+<span class="hljs-operator"><span class="hljs-keyword">UPDATE</span>
+<span class="hljs-keyword">UPDATE</span> 表名 <span class="hljs-keyword">SET</span> 列名=表达式 [<span class="hljs-keyword">WHERE</span> 条件];</span>
+
+<span class="hljs-operator"><span class="hljs-keyword">SELECT</span>
+<span class="hljs-keyword">SELECT</span> [<span class="hljs-keyword">ALL</span>|<span class="hljs-keyword">DISTINCT</span>] &lt;目标列表达式&gt;
+<span class="hljs-keyword">FROM</span> &lt;表名或视图名&gt;
+[<span class="hljs-keyword">WHERE</span> &lt;条件表达式&gt;]
+[<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> &lt;列名&gt; [<span class="hljs-keyword">HAVING</span> &lt;条件表达式&gt;]
+[<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span>&lt;列名<span class="hljs-number">2</span>&gt; [<span class="hljs-keyword">ASC</span>|<span class="hljs-keyword">DESC</span>]];</span>
+DISTINCT用于去掉结果中的重复行, 没有DISTINCT, 即默认ALL.
+
+<span class="hljs-operator"><span class="hljs-keyword">REPLACE</span>
+<span class="hljs-keyword">REPLACE</span> <span class="hljs-keyword">INTO</span> 表名 <span class="hljs-keyword">VALUES</span>(数据);</span>
+如果新插入数据在表中没有重复, 则执行插入; 如果主键重复, 则将表中重复数据替换为新数据.
+
+随机选择指定数目的数据
+用 order by rand() limit 5 子句.</code></pre>
+
+
+
+<h1 id="功能">功能</h1>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs ">修改用户名
+<span class="hljs-operator">RENAME <span class="hljs-keyword">USER</span> old_user <span class="hljs-keyword">TO</span> new_user;</span>
+
+修改密码
+<span class="hljs-operator"><span class="hljs-keyword">SET</span> PASSWORD [<span class="hljs-keyword">FOR</span> <span class="hljs-keyword">user</span>] = PASSWORD(‘newpassword’);</span>
+如果不加for user, 表示修改当前用户的密码. user的格式为’name’@’host’.
+
+整理碎片
+OPTIMIZE TABLE tbl_name; </code></pre>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs ">创建用户thor, 密码为word
+<span class="hljs-operator"><span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> mysql.<span class="hljs-keyword">user</span>(host,<span class="hljs-keyword">user</span>,password) <span class="hljs-keyword">values</span>(<span class="hljs-string">"%"</span>,<span class="hljs-string">"thor"</span>,password(<span class="hljs-string">"word"</span>));</span>
+flush privileges;
+实际工作是在mysql.user表中添加相应记录.
+
+授予权限, 将数据库thunder中左右表的权限授予thor
+<span class="hljs-operator"><span class="hljs-keyword">grant</span> <span class="hljs-keyword">all</span> <span class="hljs-keyword">privileges</span> <span class="hljs-keyword">on</span> thunder.* <span class="hljs-keyword">to</span> thor@<span class="hljs-string">"%"</span>;</span>
+flush privileges;
+
+或者将创建用户和授予权限放在一起
+<span class="hljs-operator"><span class="hljs-keyword">grant</span> <span class="hljs-keyword">all</span> <span class="hljs-keyword">privileges</span> <span class="hljs-keyword">on</span> thunder.* <span class="hljs-keyword">to</span> thor@<span class="hljs-string">"%"</span> identified <span class="hljs-keyword">by</span> ‘password’;</span>
+flush privileges;</code></pre></div></body>
+</html>

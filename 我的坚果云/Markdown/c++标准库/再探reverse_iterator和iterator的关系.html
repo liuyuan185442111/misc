@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>再探reverse_iterator和iterator的关系</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>reference：Effective STL:item 28 了解如何通过reverse_iterator的base得到iterator</p>
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-preprocessor">#include &lt;iterator&gt;</span>
+<span class="hljs-preprocessor">#include &lt;iostream&gt;</span>
+<span class="hljs-preprocessor">#include &lt;vector&gt;</span>
+<span class="hljs-preprocessor">#include &lt;algorithm&gt;</span>
+<span class="hljs-preprocessor">#include &lt;cassert&gt;</span>
+<span class="hljs-keyword">using</span> <span class="hljs-keyword">namespace</span> <span class="hljs-built_in">std</span>;
+
+<span class="hljs-comment">/**
+ begin         i               end
+|  1  |  2  |  3  |  4  |  5  |
+  rend               ri        rbegin
+
+reverse_iterator内部拥有一个iterator,是一个适配器,主要特殊之处在于:
+    reference operator*() const
+    {
+        Iterator tmp = current;
+        return *--tmp;
+    }
+所以对rbegin()内部存储的是end(),但解引用的值是5.*ri的值是3,所以find(v.rbegin(), v.rend(), 3);的返回值就是ri.
+参考我的博客《STL之迭代器》
+*/</span>
+
+<span class="hljs-keyword">int</span> main()
+{
+    <span class="hljs-keyword">int</span> t[<span class="hljs-number">5</span>] = {<span class="hljs-number">1</span>,<span class="hljs-number">2</span>,<span class="hljs-number">3</span>,<span class="hljs-number">4</span>,<span class="hljs-number">5</span>};
+    <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;<span class="hljs-keyword">int</span>&gt;</span> v(t, t+<span class="hljs-number">5</span>);
+    <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;<span class="hljs-keyword">int</span>&gt;</span>::iterator i = find(v.begin(), v.end(), <span class="hljs-number">3</span>);
+    <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;<span class="hljs-keyword">int</span>&gt;</span>::reverse_iterator ri = find(v.rbegin(), v.rend(), <span class="hljs-number">3</span>);
+    assert(*i == <span class="hljs-number">3</span>);
+    assert(*ri == <span class="hljs-number">3</span>);
+    assert(ri.base()-i == <span class="hljs-number">1</span>);
+    <span class="hljs-comment">//若要删除元素3</span>
+    v.erase(--ri.base());<span class="hljs-comment">//或者使用 v.erase((++ri).base());</span>
+    ostream_iterator&lt;<span class="hljs-keyword">int</span>&gt; out_it(<span class="hljs-built_in">cout</span>,<span class="hljs-string">", "</span>);
+    copy(v.begin(), v.end(), out_it);
+}
+
+<span class="hljs-comment">/**
+但《Effective STL》指出,对于一些vector和string的一些实现,"v.erase(--ri.base());"无法通过编译.
+因为在这样的实现中,iterator是以内置指针的方式来实现的,所以ri.base()的结果是一个指针,而自加操作符不能用于rvalue,例如:
+int getint()
+{
+    return 6;
+}
+int main()
+{
+    ++getint();//error
+    return 0;
+}
+如果ri.base()是一个真正的对象就没问题了,自加操作会变成调用操作符函数.
+或者,将v.erase(--ri.base());替换为v.erase(ri.base()-1);就没有问题了.
+*/</span></code></pre></div></body>
+</html>

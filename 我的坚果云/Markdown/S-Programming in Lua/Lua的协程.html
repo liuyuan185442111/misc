@@ -1,0 +1,98 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lua的协程</title>
+<link rel="stylesheet" href="https://csdn.net/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({ TeX: { equationNumbers: {autoNumber: "all"},extensions: ["AMSmath.js","AMSsymbols.js","noErrors.js","noUndefined.js"] } });
+</script>
+</head>
+<body><div class="container"><p>coroutine包的主要函数： <br>
+coroutine.create(f) <br>
+接受一个函数，创建一个协程并返回它 <br>
+coroutine.resume(co, …) <br>
+启动或再次启动一个协程的执行。第一个参数是create的返回值。用于首次启动一个协程时，后面的参数作为co的参数；用于再次启动一个协程时，程序将回到协程co调用yield释放运行权的地方，并将resume后面的参数作为yield的返回值。如果程序没有任何运行错误，会返回ture和协程co下次调用yield时传给yield的参数，如果有错误，则返回false加上错误信息。如果协程co运行结束，resume将返回ture和co的返回值。 <br>
+coroutine.yield(…) <br>
+yield将释放当前协程的运行权，运行权交给对该协程调用resume的协程，并将yield的参数返回给原协程，作为resume的第二个返回值。被resume唤醒时，resume传入的参数将作为yield的返回值。</p>
+
+<p>类似coroutine.create，coroutine.wrap这个函数也将创建一个coroutine，但是它并不返回coroutine本身，而是返回一个函数取而代之。一旦你调用这个返回函数，就会切入coroutine运行。所有传入这个函数的参数等同于传入coroutine.resume的参数。Returns the same values returned by resume, except the first boolean。和coroutine.resume不同，coroutine.wrap不捕获任何错误；所有的错误都应该由调用者自己传递。</p>
+
+<p>coroutine.running() <br>
+返回当前正在运行的协程，如果被主线程调用返回nil。正在运行的协程用它来获得自己的信息，所以不需要参数。 <br>
+coroutine.status(co) <br>
+返回协程co的状态。当创建一个协程时，它处于suspended状态；被resume启动后，协程处于running状态；协程结束后，处于dead状态；当yield之后，协程处于normal状态。</p>
+
+<p>摘取一段云风的代码来解释协程的工作机制：</p>
+
+<pre class="prettyprint"><code class=" hljs lua"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">foo</span><span class="hljs-params">(a)</span></span>
+        <span class="hljs-built_in">print</span>(<span class="hljs-string">"infoo"</span>,a)
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">coroutine</span>.yield(<span class="hljs-number">2</span>*a)
+<span class="hljs-keyword">end</span>
+
+co = <span class="hljs-built_in">coroutine</span>.create(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(a,b)</span></span>
+        <span class="hljs-built_in">print</span>(<span class="hljs-string">"body1"</span>,a,b)
+        <span class="hljs-keyword">local</span> r=foo(a+<span class="hljs-number">1</span>)
+        <span class="hljs-built_in">print</span>(<span class="hljs-string">"body2"</span>,r)
+        <span class="hljs-keyword">local</span> r,s=<span class="hljs-built_in">coroutine</span>.yield(a+b,a-b)
+        <span class="hljs-built_in">print</span>(<span class="hljs-string">"body3"</span>,r,s)
+        <span class="hljs-keyword">return</span> b,<span class="hljs-string">"end"</span>
+<span class="hljs-keyword">end</span>)
+
+<span class="hljs-built_in">print</span>(<span class="hljs-string">"main1"</span>,<span class="hljs-built_in">coroutine</span>.resume(co,<span class="hljs-number">6</span>,<span class="hljs-number">2</span>))
+<span class="hljs-built_in">print</span>(<span class="hljs-string">"main2"</span>,<span class="hljs-built_in">coroutine</span>.resume(co,<span class="hljs-string">"m"</span>))
+<span class="hljs-built_in">print</span>(<span class="hljs-string">"main3"</span>,<span class="hljs-built_in">coroutine</span>.resume(co,<span class="hljs-string">"x"</span>,<span class="hljs-string">"y"</span>))
+<span class="hljs-built_in">print</span>(<span class="hljs-string">"main4"</span>,<span class="hljs-built_in">coroutine</span>.resume(co))
+
+<span class="hljs-comment">--[[
+body1   6       2
+infoo   7
+main1   true    14
+body2   m
+main2   true    8       4
+body3   x       y
+main3   true    2       end
+main4   false   cannot resume dead coroutine
+--]]</span></code></pre>
+
+<p>用Lua的协程来模拟生产者-消费者问题：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs livecodeserver"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">product</span>()</span>
+     <span class="hljs-built_in">local</span> i = <span class="hljs-number">0</span>
+     <span class="hljs-keyword">while</span> <span class="hljs-constant">true</span> <span class="hljs-built_in">do</span>
+          i = i + <span class="hljs-number">1</span>
+          coroutine.yield(i)    <span class="hljs-comment">--将生产的物品发送给消费者</span>
+     <span class="hljs-function"><span class="hljs-keyword">end</span></span>
+<span class="hljs-function"><span class="hljs-keyword">end</span></span>
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">request</span>(<span class="hljs-title">productor</span>)</span>
+     <span class="hljs-built_in">local</span> status, <span class="hljs-built_in">value</span> = coroutine.resume(productor)
+     <span class="hljs-constant">return</span> <span class="hljs-built_in">value</span>
+<span class="hljs-function"><span class="hljs-keyword">end</span></span>
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">consume</span>(<span class="hljs-title">productor</span>)</span>
+     <span class="hljs-keyword">for</span> m=<span class="hljs-number">1</span>,<span class="hljs-number">10</span> <span class="hljs-built_in">do</span>
+          <span class="hljs-built_in">local</span> i = request(productor)    <span class="hljs-comment">--向生产者请求物品</span>
+          print(<span class="hljs-string">"得到物品"</span>,i)
+     <span class="hljs-function"><span class="hljs-keyword">end</span></span>
+<span class="hljs-function"><span class="hljs-keyword">end</span></span>
+
+productor = coroutine.<span class="hljs-built_in">create</span>(product)
+consume(productor)</code></pre>
+
+<p>不像两个线程，一个生产一个消费，这里就只有一个线程，生产者主动yield来释放所有权。</p>
+
+<p><a href="https://blog.csdn.net/liuyuan185442111/article/details/82626963">这里</a>有coroutine.wrap的一些例子。</p>
+
+<p>参考 <br>
+理解Lua中最强大的特性-coroutine <br>
+<a href="https://my.oschina.net/wangxuanyihaha/blog/186401">https://my.oschina.net/wangxuanyihaha/blog/186401</a> <br>
+Lua 协同程序(coroutine) <br>
+<a href="http://www.runoob.com/lua/lua-coroutine.html">http://www.runoob.com/lua/lua-coroutine.html</a> <br>
+Lua 5.1 Reference Manual <br>
+<a href="http://www.lua.org/manual/5.1/index.html">http://www.lua.org/manual/5.1/index.html</a></p></div></body>
+</html>

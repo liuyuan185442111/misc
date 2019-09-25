@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>网络与并发</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h2 id="一tcp和udp程序基础框架">一、TCP和UDP程序基础框架</h2>
+
+<p><img src="http://img.blog.csdn.net/20151004114213027" alt="TCP框架" title=""></p>
+
+<p><img src="http://img.blog.csdn.net/20151004125117155" alt="UDP框架" title=""></p>
+
+<p>accept是阻塞的。 <br>
+recv和recvfrom，都有两种模式，阻塞和非阻塞，可以通过ioctl函数来设置。阻塞模式是一直等待直到有数据到达，非阻塞模式是立即返回，需要通过消息，异步事件等来查询完成状态。</p>
+
+
+
+<h2 id="二socket描述符">二、socket描述符</h2>
+
+<p>Linux下执行 ulimit -n 输出 1024，说明对于一个进程而言最多只能打开1024个文件（所以select就做了1024的限制）。 <br>
+在Linux下，socket描述符其实就是文件描述符，每一个tcp连接都要占一个文件描述符，它和硬盘文件及其它IO设备共享取值空间，因为0,1,2分别预留给了标准输入，标准输出和标准错误，因此socket描述符最小从3开始，若程序在访问socket的同时还会访问磁盘文件或其它IO设备，将会用掉一部分文件描述符，导致socket描述符不再连续，但所有打开的IO设备描述符加在一起，则严格表现为连续递增（这就是为什么select可以用连续的1024个比特来标识监控的连接）。</p>
+
+
+
+<h2 id="三并发数量">三、并发数量</h2>
+
+<p>系统用一个四元组来唯一标识一个TCP连接：{local ip, local port, remote ip, remote port}。 <br>
+服务端监听某个端口，accept返回的新的TCP连接，这个新的tcp连接使用的仍然是监听的那个端口。再来一个新的客户端，服务器上根本不需要再开一个端口，就用原来的端口就行了。一个端口上可以维持几乎无数多个tcp连接，只要硬件资源足够。 <br>
+那如何处理多个客户端的tcp请求呢，一个方法是来一个新的客户端就开一个进程/线程，另一个方法是使用I/O多路复用。 <br>
+OS记好哪个端口的数据提交到哪个应用，并记录每个进程所使用的文件描述符和tcp连接的对应关系。 <br>
+说到底，端口号不过是为了方便os将数据交给应用而使用的区分方式。</p>
+
+<h2 id="四同步异步阻塞非阻塞">四、同步、异步、阻塞、非阻塞</h2>
+
+<p>对于一个network IO (这里我们以read举例)，它会涉及到两个系统对象，一个是调用这个IO的process (or thread)，另一个就是系统内核(kernel)。当一个read操作发生时，它会经历两个阶段： <br>
+ 1 等待数据准备 (Waiting for the data to be ready) <br>
+ 2 将数据从内核拷贝到进程中 (Copying the data from the kernel to the process) <br>
+记住这两点很重要，因为这些IO Model的区别就是在两个阶段上各有不同的情况。</p>
+
+<p>blocking I/O  <br>
+在linux中，默认情况下所有的socket都是blocking，一个典型的读操作流程大概是这样： <br>
+<img src="http://img.my.csdn.net/uploads/201007/31/0_1280550787I2K8.gif" alt="阻塞IO" title=""></p>
+
+<p>non-blocking I/O <br>
+linux下，可以通过设置socket使其变为non-blocking。当对一个non-blocking socket执行读操作时，流程是这个样子： <br>
+<img src="http://hi.csdn.net/attachment/201007/31/0_128055089469yL.gif" alt="非阻塞IO" title=""></p>
+
+<p>I/O multiplexing <br>
+select/epoll的好处就在于单个process就可以同时处理多个网络连接的I/O。它的基本原理就是select/epoll这个function会不断的轮询所负责的所有socket，当某个socket有数据到达了，就通知用户进程。它的流程如图： <br>
+<img src="http://hi.csdn.net/attachment/201007/31/0_1280551028YEeQ.gif" alt="I/O复用" title=""> <br>
+执行select后，process被select阻塞的。</p>
+
+<p>Asynchronous I/O <br>
+linux下的asynchronous I/O其实用得很少。先看一下它的流程： <br>
+<img src="http://hi.csdn.net/attachment/201007/31/0_1280551287S777.gif" alt="Asynchronous I/O" title=""> <br>
+用户进程发起read操作之后，立刻就可以开始去做其它的事。而另一方面，从kernel的角度，当它收到一个asynchronous read之后，首先它会立刻返回，所以不会对用户进程产生任何block。然后，kernel会等待数据准备完成，然后将数据拷贝到用户内存，当这一切都完成之后，kernel会给用户进程发送一个signal，告诉它read操作完成了。</p>
+
+<h2 id="参考">参考</h2>
+
+<p><a href="http://www.embedu.org/column/column179.htm" target="_blank">基于Socket的UDP和TCP编程介绍</a> <br>
+<a href="http://c.biancheng.net/cpp/u/hs10/" target="_blank">socket API</a> <br>
+<a href="http://yaocoder.blog.51cto.com/2668309/1312821" target="_blank">网络编程释疑之：单台服务器上的并发TCP连接数可以有多少</a> <br>
+<a href="http://blog.csdn.net/dreamfreelancer/article/details/4335571" target="_blank">Linux和Windows下Socket句柄（描述符）的分配策略</a> <br>
+<a href="http://blog.csdn.net/historyasamirror/article/details/5778378" target="_blank">IO - 同步，异步，阻塞，非阻塞</a></p></div></body>
+</html>

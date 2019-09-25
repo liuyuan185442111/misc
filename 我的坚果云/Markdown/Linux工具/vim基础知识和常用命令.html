@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vim基础知识和常用命令</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>本篇主要内容是vim的基本知识，常用命令等，不涉及需要额外安装的插件。</p>
+
+<p>Vim的相关路径 <br>
+/usr/bin/vim <br>
+/usr/share/vim/vim/vim63/</p>
+
+<p>配置文件 <br>
+/etc/vimrc，此文件影响整个系统的Vim。 <br>
+~/.vimrc，此文件只影响本用户的Vim。 <br>
+~/.vimrc文件中的配置会覆盖/etc/vimrc中的配置。</p>
+
+<p>Vim的插件（plugin）安装在Vim的runtimepath目录下，你可以在Vim命令行下运行<code>set rtp</code>命令查看。</p>
+
+<p>vim（visual improved）有normal、insert、visual、ex（command）四种模式。</p>
+
+
+
+<h2 id="insert模式">insert模式</h2>
+
+<p>从normal模式进入insert模式：</p>
+
+<pre><code>i insert, 在当前字符的左边插入
+a append, 在当前字符的右边插入
+I 在当前行首字符(非空白字符)的左边插入
+A 在当前行尾字符的右边插入
+o 在下一行插入
+O 在上一行插入
+s substitute, 删除当前字符然后进入插入模式
+S 删除当前行然后进入插入模式
+</code></pre>
+
+<p>通过c命令进入insert模式在下节介绍。</p>
+
+
+
+<h2 id="常用指令">常用指令</h2>
+
+<table>
+<thead>
+<tr>
+  <th>指令</th>
+  <th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td><strong>文件打开和关闭</strong></td>
+  <td></td>
+</tr>
+<tr>
+  <td>vi +3 file</td>
+  <td>打开file并移动到第三行</td>
+</tr>
+<tr>
+  <td>vi + file</td>
+  <td>打开file并移动到最后一行</td>
+</tr>
+<tr>
+  <td>vi + /pattern file</td>
+  <td>这将使光标移动到第一个满足pattern的位置</td>
+</tr>
+<tr>
+  <td>vi -R file</td>
+  <td>以只读模式打开</td>
+</tr>
+<tr>
+  <td>vim -d file1 file2</td>
+  <td>以对比模式(diff)打开文件</td>
+</tr>
+<tr>
+  <td>vim -o file1 file2</td>
+  <td>打开横向水平窗口</td>
+</tr>
+<tr>
+  <td>vim -O file1 file2</td>
+  <td>打开纵向垂直窗口</td>
+</tr>
+<tr>
+  <td>:q</td>
+  <td>quit</td>
+</tr>
+<tr>
+  <td>:w</td>
+  <td>write</td>
+</tr>
+<tr>
+  <td>:x</td>
+  <td>write and quit</td>
+</tr>
+<tr>
+  <td>:qa</td>
+  <td>退出所有的</td>
+</tr>
+<tr>
+  <td>:e!</td>
+  <td>取消所有的更改，回到最初的模样</td>
+</tr>
+<tr>
+  <td><strong>光标行内移动</strong></td>
+  <td></td>
+</tr>
+<tr>
+  <td>fx</td>
+  <td>移动光标到当前行的下一个字符x处</td>
+</tr>
+<tr>
+  <td>Fx</td>
+  <td>移动光标到当前行的上一个字符x处</td>
+</tr>
+<tr>
+  <td>tx</td>
+  <td>移动光标到当前行的下一个字符x左边的位置</td>
+</tr>
+<tr>
+  <td>;</td>
+  <td>重复上面的移动</td>
+</tr>
+<tr>
+  <td>,</td>
+  <td>反方向重复上面的移动</td>
+</tr>
+<tr>
+  <td>0</td>
+  <td>移动光标到当前行行首</td>
+</tr>
+<tr>
+  <td>^</td>
+  <td>移动光标到当前行第一个非空白字符处</td>
+</tr>
+<tr>
+  <td>$</td>
+  <td>移动光标到当前行行尾</td>
+</tr>
+<tr>
+  <td><strong>光标跨行跳转</strong></td>
+  <td></td>
+</tr>
+<tr>
+  <td>%</td>
+  <td>跳转到配对的括号</td>
+</tr>
+<tr>
+  <td>[[</td>
+  <td>移动光标到上一个行首是{的行</td>
+</tr>
+<tr>
+  <td>]]</td>
+  <td>移动光标到下一个行首是{的行</td>
+</tr>
+<tr>
+  <td>w</td>
+  <td>移动光标到下一个词的头部，以标点和空白分隔</td>
+</tr>
+<tr>
+  <td>W</td>
+  <td>同上，但以空白分割，下面的E, B类同</td>
+</tr>
+<tr>
+  <td>e</td>
+  <td>移动光标到当前词或下一个词的尾部</td>
+</tr>
+<tr>
+  <td>b</td>
+  <td>移动光标到当前词或上一个词的头部</td>
+</tr>
+<tr>
+  <td>”</td>
+  <td>两个单引号，移动光标到光标上次停靠的地方</td>
+</tr>
+<tr>
+  <td>gd</td>
+  <td>移动光标到当前光标所在处函数或变量定义的地方</td>
+</tr>
+<tr>
+  <td>gf</td>
+  <td>跳转到相应的头文件(可通过<code>:set path+=xxx</code>来添加头文件目录xxx)</td>
+</tr>
+<tr>
+  <td>K</td>
+  <td>在man里查找当前光标所在处的词</td>
+</tr>
+<tr>
+  <td>ctrl-b</td>
+  <td>向上移动一屏</td>
+</tr>
+<tr>
+  <td>ctrl-f</td>
+  <td>向下移动一屏</td>
+</tr>
+<tr>
+  <td>ctrl-u</td>
+  <td>向上移动半屏</td>
+</tr>
+<tr>
+  <td>ctrl-d</td>
+  <td>向下移动半屏</td>
+</tr>
+<tr>
+  <td>ctrl-e</td>
+  <td>屏幕向上移动一行</td>
+</tr>
+<tr>
+  <td>ctrl-y</td>
+  <td>屏幕向下移动一行</td>
+</tr>
+<tr>
+  <td>gg</td>
+  <td>移动光标到文件首行</td>
+</tr>
+<tr>
+  <td>G</td>
+  <td>移动光标到文件末行</td>
+</tr>
+<tr>
+  <td>nG或:n</td>
+  <td>移动光标到第n行</td>
+</tr>
+<tr>
+  <td><code>n|</code></td>
+  <td>移动到第n列</td>
+</tr>
+<tr>
+  <td>H</td>
+  <td>移动光标到当前屏首行</td>
+</tr>
+<tr>
+  <td>M</td>
+  <td>移动光标到当前屏中间行</td>
+</tr>
+<tr>
+  <td>L</td>
+  <td>移动光标到当前屏末行</td>
+</tr>
+<tr>
+  <td>3H</td>
+  <td>使光标移动到当前屏幕的首行的下数第三行</td>
+</tr>
+<tr>
+  <td>*</td>
+  <td>移动光标到下一个光标当前所在位置的字符串出现的位置</td>
+</tr>
+<tr>
+  <td>#</td>
+  <td>移动光标到上一个光标当前所在位置的字符串出现的位置</td>
+</tr>
+<tr>
+  <td>shift-{</td>
+  <td>上一个空行</td>
+</tr>
+<tr>
+  <td>shift-}</td>
+  <td>下一个空行</td>
+</tr>
+<tr>
+  <td>50%</td>
+  <td>跳转到文档50%处</td>
+</tr>
+<tr>
+  <td><strong>搜索和替换</strong></td>
+  <td></td>
+</tr>
+<tr>
+  <td>/pattern</td>
+  <td>搜索pattern</td>
+</tr>
+<tr>
+  <td>?pattern</td>
+  <td>反向搜索pattern</td>
+</tr>
+<tr>
+  <td>n</td>
+  <td>在同一方向重复上一次搜索命令</td>
+</tr>
+<tr>
+  <td>N</td>
+  <td>在反方向上重复上一次搜索命令</td>
+</tr>
+<tr>
+  <td>:s/old/new/g</td>
+  <td>在当前行中将old替换为new，g表示global，替换当前行的所有匹配</td>
+</tr>
+<tr>
+  <td>:m,ns/old/new/g</td>
+  <td>在m到n行中进行替换</td>
+</tr>
+<tr>
+  <td>:%s/old/new/g</td>
+  <td>全文替换，最后一项如加上c表示confirm，需要确认替换操作</td>
+</tr>
+<tr>
+  <td><strong>编辑</strong></td>
+  <td></td>
+</tr>
+<tr>
+  <td>dd</td>
+  <td>delete, 删除当前行</td>
+</tr>
+<tr>
+  <td>cc</td>
+  <td>change, 删除当前行并进入插入模式</td>
+</tr>
+<tr>
+  <td>dw</td>
+  <td>删除下一个词，当前位置到下一个词的开始位置，前闭后开</td>
+</tr>
+<tr>
+  <td>cw</td>
+  <td>删除下一个词并进入插入模式，当前位置到下一个词的开始位置，前闭后开</td>
+</tr>
+<tr>
+  <td>D</td>
+  <td>删除从当前光标位置到行尾</td>
+</tr>
+<tr>
+  <td>C</td>
+  <td>删除从当前光标位置到行尾并进入插入模式</td>
+</tr>
+<tr>
+  <td>x</td>
+  <td>删除当前字符</td>
+</tr>
+<tr>
+  <td>X</td>
+  <td>删除前一个字符</td>
+</tr>
+<tr>
+  <td>yy</td>
+  <td>yank，复制当前行</td>
+</tr>
+<tr>
+  <td>yj/y1j/2yy</td>
+  <td>复制两行</td>
+</tr>
+<tr>
+  <td>y$</td>
+  <td>复制到行尾</td>
+</tr>
+<tr>
+  <td>p</td>
+  <td>put，在当前位置后粘贴</td>
+</tr>
+<tr>
+  <td>P</td>
+  <td>在当前位置前粘贴</td>
+</tr>
+<tr>
+  <td>]p</td>
+  <td>粘贴且正确缩进</td>
+</tr>
+<tr>
+  <td>r</td>
+  <td>replace，修改光标所在字符</td>
+</tr>
+<tr>
+  <td>R</td>
+  <td>进入替换模式，相当于按两次insert键</td>
+</tr>
+<tr>
+  <td><code>"a</code></td>
+  <td>两个单引号，接下来的yank或paste操作使用使用寄存器a</td>
+</tr>
+<tr>
+  <td><code>"ayy</code></td>
+  <td>当前行复制到寄存器a中</td>
+</tr>
+<tr>
+  <td>~</td>
+  <td>转换大小写</td>
+</tr>
+<tr>
+  <td>g~iw</td>
+  <td>当前word切换大小写</td>
+</tr>
+<tr>
+  <td>gUiw</td>
+  <td>当前word大写</td>
+</tr>
+<tr>
+  <td>guiw</td>
+  <td>当前word小写</td>
+</tr>
+<tr>
+  <td>gU回车</td>
+  <td>当前行大写</td>
+</tr>
+<tr>
+  <td><strong>代码相关</strong></td>
+  <td></td>
+</tr>
+<tr>
+  <td>ctrl-p</td>
+  <td>上一个补全</td>
+</tr>
+<tr>
+  <td>ctrl-n</td>
+  <td>下一个补全</td>
+</tr>
+<tr>
+  <td>ctrl-e</td>
+  <td>停止补全并回到原来录入的文字</td>
+</tr>
+<tr>
+  <td>ctrl-y</td>
+  <td>停止补全，并接受当前所选的项目</td>
+</tr>
+<tr>
+  <td>&gt;&gt;</td>
+  <td>右移本行</td>
+</tr>
+<tr>
+  <td>&lt;&lt;</td>
+  <td>左移本行</td>
+</tr>
+<tr>
+  <td>==</td>
+  <td>缩进本行</td>
+</tr>
+<tr>
+  <td>:!cmd</td>
+  <td>执行shell命令</td>
+</tr>
+<tr>
+  <td>:r!date</td>
+  <td>将当前时间插入</td>
+</tr>
+<tr>
+  <td>gg=G</td>
+  <td>格式化整个文件</td>
+</tr>
+<tr>
+  <td>zf</td>
+  <td>生成折叠</td>
+</tr>
+<tr>
+  <td>zo</td>
+  <td>打开光标下的折叠</td>
+</tr>
+<tr>
+  <td>zO</td>
+  <td>循环打开光标下的折叠，也就是说，如果存在多级折叠，每一级都会被打开</td>
+</tr>
+<tr>
+  <td>zc</td>
+  <td>关闭光标下的折叠</td>
+</tr>
+<tr>
+  <td>zC</td>
+  <td>循环关闭光标下的折叠</td>
+</tr>
+<tr>
+  <td>[z</td>
+  <td>到当前打开折叠的开始</td>
+</tr>
+<tr>
+  <td>]z</td>
+  <td>到当前打开折叠的结束</td>
+</tr>
+<tr>
+  <td>zj</td>
+  <td>向下移动到下一个折叠的开始处</td>
+</tr>
+<tr>
+  <td>zk</td>
+  <td>向上移动到上一个折叠的结束处</td>
+</tr>
+<tr>
+  <td><strong>标记和宏</strong></td>
+  <td></td>
+</tr>
+<tr>
+  <td>ma</td>
+  <td>在当前光标的位置标记一个标记，名字为a</td>
+</tr>
+<tr>
+  <td>‘a</td>
+  <td>单引号，到书签a处</td>
+</tr>
+<tr>
+  <td>‘.</td>
+  <td>到上次编辑文件的地方</td>
+</tr>
+<tr>
+  <td>:marks</td>
+  <td>查看标记列表</td>
+</tr>
+<tr>
+  <td>:delmarks</td>
+  <td>可以删除指定标记</td>
+</tr>
+<tr>
+  <td>qa</td>
+  <td>开始录制宏a，按下q结束录制</td>
+</tr>
+<tr>
+  <td>@a</td>
+  <td>执行宏a</td>
+</tr>
+<tr>
+  <td><strong>其他</strong></td>
+  <td></td>
+</tr>
+<tr>
+  <td>ctrl-g</td>
+  <td>文章行数和当前位置占总行数的百分比</td>
+</tr>
+<tr>
+  <td>g ctrl-g</td>
+  <td>文档字数统计</td>
+</tr>
+<tr>
+  <td>:ab mail y@qq.com</td>
+  <td>以后输入mail再按空格就会替换为y@qq.com</td>
+</tr>
+<tr>
+  <td>J</td>
+  <td>join，将上下两行合并，删除两行之间的换行符</td>
+</tr>
+<tr>
+  <td>u</td>
+  <td>撤销</td>
+</tr>
+<tr>
+  <td>.</td>
+  <td>repeat</td>
+</tr>
+<tr>
+  <td>z 回车</td>
+  <td>使当前行成为屏幕首行</td>
+</tr>
+<tr>
+  <td>z.</td>
+  <td>使当前行成为屏幕中间行</td>
+</tr>
+<tr>
+  <td>z-</td>
+  <td>使当前行成为屏幕尾行</td>
+</tr>
+<tr>
+  <td><strong>多窗口</strong></td>
+  <td></td>
+</tr>
+<tr>
+  <td>ctrl-w s</td>
+  <td>split window</td>
+</tr>
+<tr>
+  <td>ctrl-w v</td>
+  <td>split window vertically</td>
+</tr>
+<tr>
+  <td>ctrl-w w</td>
+  <td>switch window</td>
+</tr>
+<tr>
+  <td>ctrl-w q</td>
+  <td>quit a window</td>
+</tr>
+<tr>
+  <td><strong>多标签</strong></td>
+  <td></td>
+</tr>
+<tr>
+  <td>:tabe filename</td>
+  <td>edit file in new tab</td>
+</tr>
+<tr>
+  <td>gt</td>
+  <td>next tab</td>
+</tr>
+<tr>
+  <td>gT</td>
+  <td>previous tab</td>
+</tr>
+<tr>
+  <td>:tabr</td>
+  <td>first tab</td>
+</tr>
+<tr>
+  <td>:tabl</td>
+  <td>last tab</td>
+</tr>
+<tr>
+  <td>:tabm n</td>
+  <td>move current tab after tab n</td>
+</tr>
+</tbody></table>
+
+
+
+
+<h2 id="visual模式">visual模式</h2>
+
+<p>从normal进入visual模式：</p>
+
+<pre><code>v 按字符选择
+V 按行选择
+ctrl-v 按块（矩形）选择
+</code></pre>
+
+<p>可视模式下，可以使用光标移动指令来选择字符，然后可对所选区域执行删除、复制等命令，以及以下命令：</p>
+
+<pre><code>U 大写所选区域字母
+u 小写所选区域字母
+~ 更改所选区域字母大小写
+o 移动到标记区域的另一边
+O 移动到标记区域的另一角
+&lt; 左移所选区域
+&gt; 右移所选区域
+= 格式化所选区域
+</code></pre>
+
+
+
+<h2 id="i和a修饰符">i和a修饰符</h2>
+
+<pre><code>i : 内部
+a : 周围
+iw : 单词内（不包括单词周围的空格）
+aw : 单词周围（包括单词周围的空格）
+
+i&lt; : 选择一对“&lt;&gt;”中的所有字符
+i{ : 选择一对“{}”中的所有字符
+i[ : 选择一对“[]”中的所有字符
+i( : 选择一对“()”中的所有字符
+it : 选择一对html标签内部的所有字符
+i" : 选择一对双引号中的所有字符
+i' : 选择一对单引号中的所有字符
+</code></pre>
+
+<p>例如：visual模式下输入iw会选中光标所在单词，normal模式下<code>daw</code>会删除该单词和单词周围的空格。</p>
+
+<p>特别的，如果光标当前位置在双引号处于同一行并在双引号前面，只需要输入<code>ci”</code>就可以删除双引号内部的所有内容，并将光标移到双引号中间进入插入模式。对于单引号和HTML标签也有效。</p>
+
+
+
+<h2 id="ex模式">ex模式</h2>
+
+<p>ex（还是/还有ed？）是Unix下的一个文本编辑器，vi就是ex的“visual mode”，以冒号开头的命令，都属于ex命令。 <br>
+早期的显示器只有按行显示的功能，当你希望显示某行，输入命令，显示器上才会显示那行。而控制显示器显示文本的命令行工具，就是ex。 <br>
+对于大段文本的操作，使用ex命令更方便。 <br>
+ex的命令都是基于行的，获得行号有下面几种方法：</p>
+
+<pre><code>3 直接输入行号
+3,6 行范围, 前闭后闭
+. 当前行
+/pattern/ 满足pattern的第一行
+$ 最后一行
+% 每一行
+</code></pre>
+
+<p>部分命令举例：</p>
+
+<table>
+<thead>
+<tr>
+  <th>命令</th>
+  <th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+  <td>:3</td>
+  <td>显示第三行</td>
+</tr>
+<tr>
+  <td>:3,6d</td>
+  <td>删除3到6行</td>
+</tr>
+<tr>
+  <td>:3,6m14</td>
+  <td>将3到6行放到14行的位置</td>
+</tr>
+<tr>
+  <td><code>:.,.+3d</code></td>
+  <td>删除当前行及后面3行，共4行</td>
+</tr>
+<tr>
+  <td>:/pattern/d</td>
+  <td>删除包含pattern的第一行</td>
+</tr>
+<tr>
+  <td><code>:/pattern1/,/pattern2/d</code></td>
+  <td>删除从pattern1到pattern2的行</td>
+</tr>
+<tr>
+  <td>:3,6w another</td>
+  <td>将3-6行另存为文件another</td>
+</tr>
+<tr>
+  <td>:9,13w &gt;&gt; another</td>
+  <td>将9-13行追加到文件another后面</td>
+</tr>
+<tr>
+  <td>:r another</td>
+  <td>将another文件的内容追到到当前文件光标后</td>
+</tr>
+<tr>
+  <td>:3r another</td>
+  <td>将another文件的内容追到到当前文件第3行后</td>
+</tr>
+<tr>
+  <td>:1,3co4</td>
+  <td>将第1到3行复制到第4行后</td>
+</tr>
+<tr>
+  <td>:1,3t4</td>
+  <td>将第1到3行复制到第4行后</td>
+</tr>
+<tr>
+  <td>:1,3 y/ya</td>
+  <td>复制1到3行到剪切板中</td>
+</tr>
+<tr>
+  <td>:[range] y/ya name</td>
+  <td>复制[range]到剪切板中name中</td>
+</tr>
+<tr>
+  <td>:n pu</td>
+  <td>把剪切板中的内容粘贴到第n行下面</td>
+</tr>
+<tr>
+  <td>:n pu name</td>
+  <td>把剪切板中名字为name的拷贝粘贴到第n行下面</td>
+</tr>
+</tbody></table>
+
+
+
+
+<h2 id="tips">tips</h2>
+
+<p><code>''</code>，<code>'.</code>，<code>'a</code>中的引号可以是单引号，也可以是反引号，不同之处在于反引号在跳转时会精确到列，而单引号不会回到跳转时光标所在的那一列，而是把光标放在第一个非空白字符上。</p>
+
+<p><code>''</code>只能回到上次跳转位置上，如果想回到更老的跳转位置，使用命令<code>ctrl-o</code>，与它相对应的，是<code>ctrl-i</code>，它跳转到更新的跳转位置。这两个命令前面可以加数字来表示倍数。使用命令<code>:jumps</code>可以查看跳转表。</p>
+
+<p>如果文件没有修改:x不会修改文件的时间戳，因此就不需要重新编译。而:wq命令，即使文件未修改也会修改时间戳，也即会触发重新编译。</p>
+
+<p>通过<code>/\&lt;word\&gt;</code>来匹配整个词，而不是词的一部分，*和#就是这样查找的。</p>
+
+<p>在编辑模式下，可以通过Ctrl+T手动增加本行缩进，Ctrl+D手动减少本行缩进。</p>
+
+<p>通过<code>:!sh</code>来打开一个新的解析器，这样就省去了通过ex一行一行输入命令的时间，可以在使用完sh后，通过Ctrl+D回到vim。</p>
+
+<p>使用”q/”和”q?”命令，在vim窗口最下面打开一个新的窗口，这个窗口会列出你的查找历史记录，你可以使用任何vim编辑命令对此窗口的内容进行编辑，然后再按回车，就会对光标所在的行的内容进行查找。</p>
+
+<p>在normal模式下按下Ctrl+z组合键，vim就会被丢到后台执行，fg切换后台任务。</p>
+
+
+
+<h2 id="ctags">ctags</h2>
+
+<p>vim默认安装了ctags。它遍历源代码文件生成tags文件，这些tags文件能被编辑器或其它工具用来快速查找定位源代码中的符号（tag/symbol），如变量名，函数名等。</p>
+
+<p>进入项目代码根目录，在shell里执行以下命令： <br>
+ctags -R <br>
+会在源代码目录生成tags文件，Vim默认会自动读取当前目录下的tags文件。可以在vi中输入变量名来查找tag，如： <br>
+:tag zgame <br>
+将查找包含变量名为zgame的符号。 <br>
+也可以在编辑模式下，在函数或变量上面按下ctrl+]，光标将自动跳转到他们的定义处，按ctrl-t，则回到上次跳转前的位置。</p>
+
+<p>也可以在vim里设置tags文件的位置： <br>
+:set tags=~/vim63/tags</p>
+
+
+
+<h2 id="my-vimrc">my vimrc</h2>
+
+
+
+<pre class="prettyprint"><code class=" hljs applescript"><span class="hljs-string">" Sets how many lines of history VIM has to remember
+set history=60
+
+"</span> display line <span class="hljs-type">number</span>
+<span class="hljs-keyword">set</span> <span class="hljs-type">number</span>
+
+<span class="hljs-string">" Enable syntax highlighting
+syntax enable
+
+colorscheme desert
+set background=dark
+
+let mapleader = "</span>,<span class="hljs-string">"
+let g:mapleader = "</span>,<span class="hljs-string">"
+
+"</span> Disable highlight when &lt;leader&gt;&lt;cr&gt; <span class="hljs-keyword">is</span> pressed
+map &lt;silent&gt; &lt;leader&gt;&lt;cr&gt; :noh&lt;cr&gt;
+
+<span class="hljs-string">" Smart way to move between windows
+map &lt;C-j&gt; &lt;C-W&gt;j
+map &lt;C-k&gt; &lt;C-W&gt;k
+map &lt;C-h&gt; &lt;C-W&gt;h
+map &lt;C-l&gt; &lt;C-W&gt;l
+
+"</span> Enable filetype plugins
+filetype plugin <span class="hljs-function_start"><span class="hljs-keyword">on</span></span>
+filetype indent <span class="hljs-function_start"><span class="hljs-keyword">on</span></span>
+
+<span class="hljs-string">" Set 5 lines to the cursor - when moving vertically using j/k
+set so=5
+
+"</span> Ignore case when searching
+<span class="hljs-keyword">set</span> ignorecase
+
+<span class="hljs-string">" When searching try to be smart about cases
+"</span> 小写字符忽略大小写,有大写字符则精确匹配
+<span class="hljs-keyword">set</span> smartcase
+
+<span class="hljs-string">" Highlight search results
+set hlsearch
+
+"</span> Makes search act like search <span class="hljs-keyword">in</span> modern browsers
+<span class="hljs-string">" 显示实时搜索效果
+set incsearch
+
+"</span> Use spaces <span class="hljs-keyword">instead of</span> tabs
+<span class="hljs-keyword">set</span> expandtab
+
+<span class="hljs-string">" Be smart when using tabs
+set smarttab
+
+"</span> <span class="hljs-number">1</span> <span class="hljs-constant">tab</span> == <span class="hljs-number">4</span> spaces
+<span class="hljs-keyword">set</span> shiftwidth=<span class="hljs-number">4</span>
+<span class="hljs-keyword">set</span> tabstop=<span class="hljs-number">4</span>
+
+<span class="hljs-keyword">set</span> ai <span class="hljs-string">"autoindent
+set si "</span>Smart indent
+
+<span class="hljs-string">" 文件路径 格式 文件类型 ascii码 行列 百分比
+set statusline=%F\ [%{&amp;ff}]\ [%Y]\ [\%b/0x\%B]\ (%l,%v)[%p%%]
+
+"</span> 这个命令会确保你的状态条总会显示在窗口的倒数第二行
+<span class="hljs-keyword">set</span> laststatus=<span class="hljs-number">2</span>
+
+<span class="hljs-string">" 高亮匹配括号对，这样当你输入右括号时，光标会暂时跳转到左括号处闪烁
+set showmatch
+
+"</span> 简单的调试用
+namp &lt;F10&gt; osystem(<span class="hljs-string">"echo \"\" &gt;&gt; ~/my.log"</span>);&lt;Esc&gt;<span class="hljs-number">16</span>hi
+iamp &lt;F10&gt; system(<span class="hljs-string">"echo \"\" &gt;&gt; ~/my.log"</span>);&lt;Esc&gt;<span class="hljs-number">16</span>hi
+
+<span class="hljs-string">" 备份文件的保存位置
+set backupdir=/tmp
+
+"</span> 解决一些乱码问题
+<span class="hljs-keyword">set</span> fileencodings=utf-<span class="hljs-number">8</span>,gbk
+
+<span class="hljs-string">" 添加一些头文件的目录,使'g f'命令更好用
+set path=.,/usr/include,一些自定义目录</span></code></pre>
+
+
+
+<h2 id="参考">参考</h2>
+
+<p>全面介绍 <br>
+<a href="http://blog.csdn.net/liuyuan185442111/article/details/51471093" target="_blank">http://blog.csdn.net/liuyuan185442111/article/details/51471093</a> <br>
+ex的介绍 <br>
+<a href="http://csprojectedu.com/2016/01/27/VimInAction-4/" target="_blank">http://csprojectedu.com/2016/01/27/VimInAction-4/</a> <br>
+一个vimrc配置文件 <br>
+<a href="http://amix.dk/vim/vimrc.html" target="_blank">http://amix.dk/vim/vimrc.html</a></p></div></body>
+</html>

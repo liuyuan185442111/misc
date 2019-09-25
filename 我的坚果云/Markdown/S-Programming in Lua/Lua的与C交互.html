@@ -1,0 +1,297 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lua的与C交互</title>
+<link rel="stylesheet" href="https://csdn.net/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({ TeX: { equationNumbers: {autoNumber: "all"},extensions: ["AMSmath.js","AMSsymbols.js","noErrors.js","noUndefined.js"] } });
+</script>
+</head>
+<body><div class="container"><h2 id="c调lua">c调Lua</h2>
+
+<p>c通过一个Lua提供的虚拟栈与Lua进行交互。第一个压入栈中的元素索引为1，第二个压入的元素索引为2，依此类推。-1表示栈顶元素，即随后压入的元素，-2表示栈顶下面的元素，依此类推。</p>
+
+<p>c主要通过两个函数调用Lua的函数，lua_call和lua_pcall，《Lua 5.1 Reference Manual》对它们的介绍如下：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs applescript">void lua_call (lua_State *L, int nargs, int nresults);
+
+Calls a function.
+
+To call a function you must use <span class="hljs-keyword">the</span> following protocol: <span class="hljs-keyword">first</span>, <span class="hljs-keyword">the</span> function <span class="hljs-keyword">to</span> be called
+<span class="hljs-keyword">is</span> pushed <span class="hljs-keyword">onto</span> <span class="hljs-keyword">the</span> stack; <span class="hljs-keyword">then</span>, <span class="hljs-keyword">the</span> arguments <span class="hljs-keyword">to</span> <span class="hljs-keyword">the</span> function are pushed <span class="hljs-keyword">in</span> direct
+order; <span class="hljs-keyword">that</span> <span class="hljs-keyword">is</span>, <span class="hljs-keyword">the</span> <span class="hljs-keyword">first</span> argument <span class="hljs-keyword">is</span> pushed <span class="hljs-keyword">first</span>. Finally you call lua_call; nargs <span class="hljs-keyword">is</span>
+<span class="hljs-keyword">the</span> <span class="hljs-type">number</span> <span class="hljs-keyword">of</span> arguments <span class="hljs-keyword">that</span> you pushed <span class="hljs-keyword">onto</span> <span class="hljs-keyword">the</span> stack. All arguments <span class="hljs-keyword">and</span> <span class="hljs-keyword">the</span> function
+value are popped <span class="hljs-keyword">from</span> <span class="hljs-keyword">the</span> stack when <span class="hljs-keyword">the</span> function <span class="hljs-keyword">is</span> called. The function results are
+pushed <span class="hljs-keyword">onto</span> <span class="hljs-keyword">the</span> stack when <span class="hljs-keyword">the</span> function returns. The <span class="hljs-type">number</span> <span class="hljs-keyword">of</span> results <span class="hljs-keyword">is</span> adjusted <span class="hljs-keyword">to</span>
+nresults, unless nresults <span class="hljs-keyword">is</span> LUA_MULTRET. In this case, all results <span class="hljs-keyword">from</span> <span class="hljs-keyword">the</span> function
+are pushed. Lua takes care <span class="hljs-keyword">that</span> <span class="hljs-keyword">the</span> returned values fit <span class="hljs-keyword">into</span> <span class="hljs-keyword">the</span> stack <span class="hljs-constant">space</span>. The
+function results are pushed <span class="hljs-keyword">onto</span> <span class="hljs-keyword">the</span> stack <span class="hljs-keyword">in</span> direct order (<span class="hljs-keyword">the</span> <span class="hljs-keyword">first</span> <span class="hljs-constant">result</span> <span class="hljs-keyword">is</span> pushed
+<span class="hljs-keyword">first</span>), so <span class="hljs-keyword">that</span> <span class="hljs-keyword">after</span> <span class="hljs-keyword">the</span> call <span class="hljs-keyword">the</span> <span class="hljs-keyword">last</span> <span class="hljs-constant">result</span> <span class="hljs-keyword">is</span> <span class="hljs-function_start"><span class="hljs-keyword">on</span></span> <span class="hljs-keyword">the</span> top <span class="hljs-keyword">of</span> <span class="hljs-keyword">the</span> stack.
+
+Any <span class="hljs-keyword">error</span> inside <span class="hljs-keyword">the</span> called function <span class="hljs-keyword">is</span> propagated upwards (<span class="hljs-keyword">with</span> a longjmp).
+
+The following example shows how <span class="hljs-keyword">the</span> host program can do <span class="hljs-keyword">the</span> equivalent <span class="hljs-keyword">to</span> this Lua code:
+     a = f(<span class="hljs-string">"how"</span>, t.x, <span class="hljs-number">14</span>)
+Here <span class="hljs-keyword">it</span> <span class="hljs-keyword">is</span> <span class="hljs-keyword">in</span> C:
+     lua_getfield(L, LUA_GLOBALSINDEX, <span class="hljs-string">"f"</span>); /* function <span class="hljs-keyword">to</span> be called */
+     lua_pushstring(L, <span class="hljs-string">"how"</span>);                        /* <span class="hljs-number">1</span>st argument */
+     lua_getfield(L, LUA_GLOBALSINDEX, <span class="hljs-string">"t"</span>);   /* table <span class="hljs-keyword">to</span> be indexed */
+     lua_getfield(L, -<span class="hljs-number">1</span>, <span class="hljs-string">"x"</span>);        /* push <span class="hljs-constant">result</span> <span class="hljs-keyword">of</span> t.x (<span class="hljs-number">2</span>nd arg) */
+     lua_remove(L, -<span class="hljs-number">2</span>);                  /* remove 't' <span class="hljs-keyword">from</span> <span class="hljs-keyword">the</span> stack */
+     lua_pushinteger(L, <span class="hljs-number">14</span>);                          /* <span class="hljs-number">3</span>rd argument */
+     lua_call(L, <span class="hljs-number">3</span>, <span class="hljs-number">1</span>);     /* call 'f' <span class="hljs-keyword">with</span> <span class="hljs-number">3</span> arguments <span class="hljs-keyword">and</span> <span class="hljs-number">1</span> <span class="hljs-constant">result</span> */
+     lua_setfield(L, LUA_GLOBALSINDEX, <span class="hljs-string">"a"</span>);        /* <span class="hljs-keyword">set</span> <span class="hljs-keyword">global</span> 'a' */
+
+Note <span class="hljs-keyword">that</span> <span class="hljs-keyword">the</span> code <span class="hljs-keyword">above</span> <span class="hljs-keyword">is</span> <span class="hljs-string">"balanced"</span>: <span class="hljs-keyword">at</span> <span class="hljs-keyword">its</span> <span class="hljs-keyword">end</span>, <span class="hljs-keyword">the</span> stack <span class="hljs-keyword">is</span> <span class="hljs-keyword">back</span> <span class="hljs-keyword">to</span> <span class="hljs-keyword">its</span> original
+configuration. This <span class="hljs-keyword">is</span> considered good programming practice.
+
+
+int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc);
+
+Calls a function <span class="hljs-keyword">in</span> protected mode.
+
+Both nargs <span class="hljs-keyword">and</span> nresults have <span class="hljs-keyword">the</span> same meaning <span class="hljs-keyword">as</span> <span class="hljs-keyword">in</span> lua_call. If there are no errors
+during <span class="hljs-keyword">the</span> call, lua_pcall behaves exactly like lua_call. However, <span class="hljs-keyword">if</span> there <span class="hljs-keyword">is</span> any
+<span class="hljs-keyword">error</span>, lua_pcall catches <span class="hljs-keyword">it</span>, pushes a single value <span class="hljs-function_start"><span class="hljs-keyword">on</span></span> <span class="hljs-keyword">the</span> stack (<span class="hljs-keyword">the</span> <span class="hljs-keyword">error</span> message), <span class="hljs-keyword">and</span>
+returns an <span class="hljs-keyword">error</span> code. Like lua_call, lua_pcall always removes <span class="hljs-keyword">the</span> function <span class="hljs-keyword">and</span> <span class="hljs-keyword">its</span>
+arguments <span class="hljs-keyword">from</span> <span class="hljs-keyword">the</span> stack.
+
+If errfunc <span class="hljs-keyword">is</span> <span class="hljs-number">0</span>, <span class="hljs-keyword">then</span> <span class="hljs-keyword">the</span> <span class="hljs-keyword">error</span> message returned <span class="hljs-function_start"><span class="hljs-keyword">on</span></span> <span class="hljs-keyword">the</span> stack <span class="hljs-keyword">is</span> exactly <span class="hljs-keyword">the</span> original
+<span class="hljs-keyword">error</span> message. Otherwise, errfunc <span class="hljs-keyword">is</span> <span class="hljs-keyword">the</span> stack index <span class="hljs-keyword">of</span> an <span class="hljs-keyword">error</span> handler function. (In
+<span class="hljs-keyword">the</span> current implementation, this index cannot be a pseudo-index.) In case <span class="hljs-keyword">of</span> runtime
+errors, this function will be called <span class="hljs-keyword">with</span> <span class="hljs-keyword">the</span> <span class="hljs-keyword">error</span> message <span class="hljs-keyword">and</span> <span class="hljs-keyword">its</span> <span class="hljs-constant">return</span> value will be
+<span class="hljs-keyword">the</span> message returned <span class="hljs-function_start"><span class="hljs-keyword">on</span></span> <span class="hljs-keyword">the</span> stack <span class="hljs-keyword">by</span> lua_pcall.
+
+Typically, <span class="hljs-keyword">the</span> <span class="hljs-keyword">error</span> handler function <span class="hljs-keyword">is</span> used <span class="hljs-keyword">to</span> add more debug information <span class="hljs-keyword">to</span> <span class="hljs-keyword">the</span> <span class="hljs-keyword">error</span>
+message, such <span class="hljs-keyword">as</span> a stack traceback. Such information cannot be gathered <span class="hljs-keyword">after</span> <span class="hljs-keyword">the</span> <span class="hljs-constant">return</span>
+<span class="hljs-keyword">of</span> lua_pcall, <span class="hljs-keyword">since</span> <span class="hljs-keyword">by</span> <span class="hljs-keyword">then</span> <span class="hljs-keyword">the</span> stack has unwound.
+
+The lua_pcall function returns <span class="hljs-number">0</span> <span class="hljs-keyword">in</span> case <span class="hljs-keyword">of</span> success <span class="hljs-keyword">or</span> one <span class="hljs-keyword">of</span> <span class="hljs-keyword">the</span> following <span class="hljs-keyword">error</span> codes
+(defined <span class="hljs-keyword">in</span> lua.h):
+LUA_ERRRUN: a runtime <span class="hljs-keyword">error</span>.
+LUA_ERRMEM: memory allocation <span class="hljs-keyword">error</span>. For such errors, Lua <span class="hljs-keyword">does</span> <span class="hljs-keyword">not</span> call <span class="hljs-keyword">the</span> <span class="hljs-keyword">error</span> handler function.
+LUA_ERRERR: <span class="hljs-keyword">error</span> <span class="hljs-keyword">while</span> <span class="hljs-property">running</span> <span class="hljs-keyword">the</span> <span class="hljs-keyword">error</span> handler function.</code></pre>
+
+<p>看一个简单的例子：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs lua">#include <span class="hljs-string">"lua.hpp"</span>
+#include &lt;iostream&gt;
+using namespace std;
+
+int main()
+{
+    lua_State *L = luaL_newstate();
+    luaL_openlibs(L);
+    luaL_dofile(L, <span class="hljs-string">"npc.lua"</span>);
+
+    <span class="hljs-keyword">for</span>(int i=<span class="hljs-number">0</span>;i&lt;<span class="hljs-number">10</span>;++i)
+    {
+        lua_getglobal(L, <span class="hljs-string">"random_fetch"</span>);
+        lua_pushinteger(L, <span class="hljs-number">50</span>);
+        lua_call(L,<span class="hljs-number">1</span>,<span class="hljs-number">1</span>);
+        cout &lt;&lt; (int)lua_tonumber(L,-<span class="hljs-number">1</span>) &lt;&lt; endl;
+        lua_pop(L,<span class="hljs-number">1</span>);
+    }
+    lua_close(L);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+
+//npc.lua
+#! /usr/bin/lua
+npc_pool1 = {<span class="hljs-number">1</span>,<span class="hljs-number">2</span>,<span class="hljs-number">3</span>}
+npc_pool2 = {<span class="hljs-number">11</span>,<span class="hljs-number">12</span>,<span class="hljs-number">13</span>,<span class="hljs-number">14</span>}
+npc_pool3 = {<span class="hljs-number">21</span>,<span class="hljs-number">22</span>,<span class="hljs-number">23</span>,<span class="hljs-number">24</span>,<span class="hljs-number">25</span>}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">random_fetch</span><span class="hljs-params">(exp)</span></span>
+    <span class="hljs-keyword">if</span> exp &gt;= <span class="hljs-number">200</span> <span class="hljs-keyword">then</span>
+        <span class="hljs-keyword">return</span> npc_pool3[<span class="hljs-built_in">math</span>.random(<span class="hljs-number">1</span>,#npc_pool3)]
+    <span class="hljs-keyword">elseif</span> exp &gt;= <span class="hljs-number">100</span> <span class="hljs-keyword">then</span>
+        <span class="hljs-keyword">return</span> npc_pool2[<span class="hljs-built_in">math</span>.random(<span class="hljs-number">1</span>,#npc_pool2)]
+    <span class="hljs-keyword">elseif</span> exp &gt;= <span class="hljs-number">0</span> <span class="hljs-keyword">then</span>
+        <span class="hljs-keyword">return</span> npc_pool1[<span class="hljs-built_in">math</span>.random(<span class="hljs-number">1</span>,#npc_pool1)]
+    <span class="hljs-keyword">end</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>
+<span class="hljs-keyword">end</span>
+
+<span class="hljs-built_in">math</span>.randomseed(<span class="hljs-built_in">tostring</span>(<span class="hljs-built_in">os</span>.time()):reverse():sub(<span class="hljs-number">1</span>,<span class="hljs-number">7</span>))
+<span class="hljs-keyword">for</span> i=<span class="hljs-number">1</span>,<span class="hljs-number">10</span> <span class="hljs-keyword">do</span>
+    <span class="hljs-built_in">print</span>(random_fetch(<span class="hljs-built_in">tonumber</span>(arg[<span class="hljs-number">1</span>])))
+<span class="hljs-keyword">end</span></code></pre>
+
+<p>再看一个简单的Lua解释器程序：</p>
+
+<pre class="prettyprint"><code class=" hljs vala"><span class="hljs-preprocessor">#include &lt;stdio.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;stdlib.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;string.h&gt;</span>
+<span class="hljs-preprocessor">#include "lua.h"</span>
+<span class="hljs-preprocessor">#include "lualib.h"</span>
+<span class="hljs-preprocessor">#include "lauxlib.h"</span>
+
+<span class="hljs-keyword">int</span> main(<span class="hljs-keyword">void</span>)
+{
+    <span class="hljs-keyword">char</span> buff[<span class="hljs-number">256</span>];
+    <span class="hljs-keyword">int</span> error;
+    lua_State *L = luaL_newstate();
+    luaL_openlibs(L);
+
+    <span class="hljs-keyword">while</span>(fgets(buff, sizeof(buff), <span class="hljs-keyword">stdin</span>) != NULL)
+    {
+        error = luaL_loadbuffer(L, buff, strlen(buff), <span class="hljs-string">"test"</span>) || lua_pcall(L,<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,<span class="hljs-number">0</span>);
+        if(error)
+        {
+            fprintf(<span class="hljs-keyword">stderr</span>, <span class="hljs-string">"%s"</span>, lua_tostring(L,-<span class="hljs-number">1</span>));
+            lua_pop(L, <span class="hljs-number">1</span>);
+        }
+    }
+    lua_close(L);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}</code></pre>
+
+<p>int luaL_loadbuffer (lua_State *L, const char *buff, size_t sz, const char *name); <br>
+Loads a buffer as a Lua chunk. This function uses lua_load to load the chunk in the buffer pointed to by buff with size sz. This function returns the same results as lua_load. name is the chunk name, used for debug information and error messages. <br>
+而lua_load的说明里这样描述Loads a Lua chunk. If there are no errors, lua_load pushes the compiled chunk as a Lua function on top of the stack.</p>
+
+
+
+<h2 id="lua调c">Lua调c</h2>
+
+<p>当Lua调用c函数时，也使用了一个栈，c函数从栈中获取函数参数，并将结果压入栈中。每个函数都有自己局部的栈，当Lua调用一个c函数时，第一个参数总是这个局部栈的索引1。将参数放在栈底部，c函数在返回时就无须清空栈中的参数。</p>
+
+<p>所有注册到Lua中的函数都具有相同的原型，该原型就是定义在lua.h中的lua_CFunction：</p>
+
+<pre><code>typedef int (*lua_CFunction)(lua_State *L);
+</code></pre>
+
+<p>它返回一个整数，表示其压入栈中返回值数量。这个函数无须在压入结果前清空栈。在它返回后，Lua会自动删除栈中结果之下的内容。</p>
+
+<p>在Lua中注册一个全局函数的函数是lua_register(L, name, func);，然后就可以在Lua程序中使用函数name了。lua_register其实是个宏：</p>
+
+<pre><code>// in lua.h
+#define lua_register(L,n,f) (lua_pushcfuction(L, (f)), lua_setglobal(L, (n)))
+#define lua_pushcfunction(L,f) lua_pushcclosure(L, (f), 0)
+#defind lua_setglobal(L,s) lua_setfield(L, LUA_GLOBALSINDEX, (s))
+</code></pre>
+
+<p>Then lua_pushcclosure is called to create and push the C function onto the stack, with the argument n telling how many values should be associated with the function. lua_pushcclosure also pops these values from the stack. <br>
+一个例子：</p>
+
+<pre class="prettyprint"><code class=" hljs vala"><span class="hljs-comment">//host.c</span>
+<span class="hljs-preprocessor">#include &lt;stdio.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;lua.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;lualib.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;lauxlib.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;math.h&gt;</span>
+
+<span class="hljs-comment">//反转2个参数</span>
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> reverse(lua_State *L){
+    <span class="hljs-keyword">int</span> a = luaL_checknumber(L, <span class="hljs-number">1</span>);
+    <span class="hljs-comment">//栈索引2的位置不必取出再压入,直接可作为第一个返回值</span>
+    lua_pushnumber(L, a);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">2</span>;
+}
+
+<span class="hljs-keyword">int</span> main()
+{
+    lua_State *L = luaL_newstate();
+    luaL_openlibs(L);
+    lua_register(L, <span class="hljs-string">"swap"</span>, reverse);
+
+    luaL_dofile(L, <span class="hljs-string">"try.lua"</span>);
+    lua_getglobal(L, <span class="hljs-string">"fun"</span>);
+    lua_call(L,<span class="hljs-number">0</span>,<span class="hljs-number">0</span>);
+    lua_close(L);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+
+<span class="hljs-comment">//try.lua</span>
+function fun()
+        print(swap(<span class="hljs-number">1</span>,<span class="hljs-number">2</span>))
+end
+
+<span class="hljs-comment">//编译和输出</span>
+gcc host.c -llua -lm -ldl
+<span class="hljs-number">2</span>       <span class="hljs-number">1</span></code></pre>
+
+<p>以上两部分内容体现了lua的一种典型应用场景是：c程序作为宿主环境，提供给Lua一些方法，然后调用Lua获得一些配置或做一些计算。 <br>
+下面则描述另一种应用场景：用c为Lua编写库。</p>
+
+<h2 id="c模块">c模块</h2>
+
+<p>可以将多个c函数组成一个Lua模块，作为Lua的库，相关代码：</p>
+
+<pre><code>// in lauxlib.h
+typedef struct luaL_Reg {
+    const char *name;
+    lua_CFunction func;
+} luaL_reg;
+void (luaL_register) (lua_State *L, const char *libname, const luaL_reg *l);
+</code></pre>
+
+<p>以从lmathlib.c提取一个只有sin的数学库作为例子：</p>
+
+<pre class="prettyprint"><code class=" hljs vala"><span class="hljs-comment">//mymath.c</span>
+<span class="hljs-preprocessor">#include &lt;math.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;stdlib.h&gt;</span>
+<span class="hljs-preprocessor">#include "lua.h"</span>
+<span class="hljs-preprocessor">#include "lauxlib.h"</span>
+<span class="hljs-preprocessor">#include "lualib.h"</span>
+
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> math_sin (lua_State *L) {
+    lua_pushnumber(L, sin(luaL_checknumber(L, <span class="hljs-number">1</span>)));
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;
+}
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">const</span> luaL_Reg mathlib[] = {
+    {<span class="hljs-string">"sin"</span>, math_sin},
+    {NULL, NULL}
+};
+extern <span class="hljs-keyword">int</span> luaopen_mymath (lua_State *L) {
+    luaL_register(L, <span class="hljs-string">"mymath"</span>, mathlib);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;
+}</code></pre>
+
+<p>luaL_register根据给定的名称（如mymath）创建（或复用）一个table，并用数组mathlib中的信息填充这个table。在luaL_register返回时，会将这个table留在栈中。</p>
+
+<p>在上面简单的Lua解释器实现中，在<code>luaL_openlibs(L);</code>后面加上<code>luaopen_mymath(L);</code>，并和mymath.c一起编译，就可以在解释器里运行<code>print(mymath.sin(9));</code>了。</p>
+
+<p>通过c代码调用mymath库的代码如下：</p>
+
+<pre class="prettyprint"><code class=" hljs autohotkey">#include &lt;stdio.h&gt;
+#include &lt;lua.h&gt;
+#include &lt;lauxlib.h&gt;
+
+extern int luaopen_mymath(lu<span class="hljs-built_in">a_State</span> *L)<span class="hljs-comment">;</span>
+int main()
+{
+    lu<span class="hljs-built_in">a_State</span> *L = luaL_newstate()<span class="hljs-comment">;</span>
+    luaopen_mymath(L)<span class="hljs-comment">;</span>
+    lu<span class="hljs-built_in">a_getfield</span>(L, LU<span class="hljs-built_in">A_GLOBALSINDEX</span>, <span class="hljs-string">"mymath"</span>)<span class="hljs-comment">;</span>
+    lu<span class="hljs-built_in">a_getfield</span>(L, -<span class="hljs-number">1</span>, <span class="hljs-string">"sin"</span>)<span class="hljs-comment">;</span>
+    lu<span class="hljs-built_in">a_pushnumber</span>(L, <span class="hljs-number">9</span>)<span class="hljs-comment">;</span>
+    <span class="hljs-keyword">if</span>(lu<span class="hljs-built_in">a_pcall</span>(L, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>) != <span class="hljs-number">0</span>)
+        error(L, <span class="hljs-string">"error running function sin: %s"</span>, lu<span class="hljs-built_in">a_tostring</span>(L,-<span class="hljs-number">1</span>))<span class="hljs-comment">;</span>
+    <span class="hljs-keyword">if</span>(!lu<span class="hljs-built_in">a_isnumber</span>(L, -<span class="hljs-number">1</span>))
+        error(L, <span class="hljs-string">"function sin must return number"</span>)<span class="hljs-comment">;</span>
+    printf(<span class="hljs-string">"sin(9)=%f,stack size=%d\n"</span>, lu<span class="hljs-built_in">a_tonumber</span>(L, -<span class="hljs-number">1</span>),lu<span class="hljs-built_in">a_gettop</span>(L))<span class="hljs-comment">;</span>
+    lu<span class="hljs-built_in">a_pop</span>(L, <span class="hljs-number">3</span>)<span class="hljs-comment">;</span>
+    lu<span class="hljs-built_in">a_close</span>(L)<span class="hljs-comment">;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span><span class="hljs-comment">;</span>
+}</code></pre>
+
+<p>将之与mymath.c一起编译，运行结果是<code>sin(9)=0.412118,stack size=3</code></p>
+
+<p>以上说明了在lua中通过静态编译使用lua库的方法，然而《Lua程序设计》第26章结尾指出使用自己写的c模块最简单的方法是使用动态链接机制。用 <br>
+<code>gcc -shared -fpic mymath.c /usr/lib64/liblua-5.1.so -o mymath.so</code> <br>
+(注意不要有-c选项，否则会提示only ET_DYN and ET_EXEC can be loaded) <br>
+将其编译成动态库，并将这个库放入C路径(LUA_CPATH)，默认脚本的当前路径也是被包括在LUA_CPATH中的。然后在lua脚本里，require “mymath”之后即可使用mymath库。require这句调用会将动态库mymath链接到Lua，并会寻找luaopen_mymath函数，将其注册为一个Lua函数，然后调用它以打开模块，所以luaopen_mymath必须是lua_CFunction类型的。</p>
+
+<hr>
+
+<p>以上基于Lua 5.1.4</p></div></body>
+</html>

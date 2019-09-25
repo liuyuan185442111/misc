@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>c非标准库参考-杂类</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h2 id="calloc">calloc</h2>
+
+<p>配置内存空间</p>
+
+<pre><code>#include &lt;stdlib.h&gt;
+void *calloc(size_t n, size_t size);
+</code></pre>
+
+<p>calloc()用来配置n个相邻的内存单位，每一单位的大小为size，并返回指向第一个元素的指针。这和使用下列的方式效果相同：malloc(n*size);，不过，在利用calloc()配置内存时会将内存内容初始化为0。</p>
+
+<p>若配置成功则返回一指针，失败则返回NULL。</p>
+
+
+
+<h2 id="fdopen">fdopen</h2>
+
+<p>将文件描述符转为文件指针</p>
+
+<pre><code>#include &lt;stdio.h&gt;
+FILE *fdopen(int fd, const char *mode);
+</code></pre>
+
+<p>fdopen()会将参数fd的文件描述符，转换为对应的文件指针后返回。参数mode字符串则代表着文件指针的流形态，此形态必须和原先文件描述符读写模式相同。</p>
+
+<p>转换成功时返回指向该流的文件指针。失败则返回NULL，并把错误代码存在errno中。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl"><span class="hljs-comment">#include &lt;stdio.h&gt;</span>
+<span class="hljs-keyword">int</span> main()
+{
+    FILE <span class="hljs-variable">*fp</span> = fdopen(<span class="hljs-number">1</span>, <span class="hljs-string">"w+"</span>);
+    fprintf(fp, <span class="hljs-string">"<span class="hljs-variable">%s</span>\n"</span>, <span class="hljs-string">"hello!"</span>);
+    fclose(fp);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+
+hello!
+
+但是如果把输出重定向到文件的话，则会报段错误，为何？</code></pre>
+
+
+
+<h2 id="fileno">fileno</h2>
+
+<p>返回文件流所使用的文件描述符</p>
+
+<pre><code>#include &lt;stdio.h&gt;
+int fileno(FILE *stream);
+</code></pre>
+
+<p>fileno()用来取得参数stream指定的文件流所使用的文件描述符。</p>
+
+<p>返回文件描述符。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl"><span class="hljs-comment">#include &lt;stdio.h&gt;</span>
+<span class="hljs-keyword">int</span> main()
+{
+    FILE <span class="hljs-variable">*fp</span>;
+    <span class="hljs-keyword">int</span> fd;
+    fp=fopen(<span class="hljs-string">"/etc/passwd"</span>, <span class="hljs-string">"r"</span>);
+    fd=fileno(fp);
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"fd=<span class="hljs-variable">%d</span>\n"</span>, fd);
+    fclose(fp);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+
+fd=<span class="hljs-number">3</span></code></pre>
+
+
+
+<h2 id="gcvt">gcvt</h2>
+
+<p>将浮点型数转换为字符串，取四舍五入</p>
+
+<pre><code>#include &lt;stdlib.h&gt;
+char *gcvt(double number, size_t ndigits, char *buf);
+</code></pre>
+
+<p>gcvt()用来将参数number转换成ASCII码字符串，参数ndigits表示显示的数字的数目。若转换成功，转换后的字符串会放在参数buf指针所指的空间。</p>
+
+<p>返回一字符串指针，此地址即为buf指针。</p>
+
+
+
+<h2 id="getopt">getopt</h2>
+
+<p>分析命令行参数</p>
+
+<pre><code>#include &lt;unistd.h&gt;
+extern char *optarg;
+extern int optind, opterr, optopt;
+int getopt(int argc, char *const argv[], const char *optstring);
+</code></pre>
+
+<p>参数argc和argv是由main()传递的参数个数和内容。参数optstring则代表欲处理的选项字符串。此函数会返回在argv中下一个的选项字母，此字母会对应参数optstring中的字母。如果选项字符串里的字母后接着冒号“:”，则表示还有相关的参数，全局变量optarg即会指向此额外参数。如果getopt()找不到符合的参数则会印出错信息，返回值为“?”字符，并将optopt设为选项字符，如果不希望getopt()打印出错信息，则只要将全局变量opterr设为0即可。</p>
+
+<p>如果找到符合的参数则返回此参数字母，如果参数不包含在参数optstring的选项字母则返回“?”字符，分析结束则返回-1。</p>
+
+
+
+<h2 id="getpagesize">getpagesize</h2>
+
+<p>取得内存分页大小</p>
+
+<pre><code>#include &lt;unistd.h&gt;
+size_t getpagesize(void);
+</code></pre>
+
+<p>返回一分页的大小，单位为字节（byte）。此为系统的分页大小，不一定会和硬件分页大小相同。 <br>
+在Intel x86上其返回值应为4096bytes。</p>
+
+
+
+<h2 id="gettimeofday">gettimeofday</h2>
+
+<p>取得当前的时间</p>
+
+<pre><code>#include &lt;sys/time.h&gt;
+int gettimeofday(struct timeval *tv, struct timezone *tz);
+</code></pre>
+
+<p>gettimeofday()会把目前的时间由tv所指的结构返回，当地时区的信息则放到tz所指的结构中。 <br>
+timeval结构定义为：</p>
+
+<pre><code>struct timeval{
+    long tv_sec; /*秒,也就是时间戳*/
+    long tv_usec; /*微秒*/
+};
+</code></pre>
+
+<p>timezone 结构定义为:</p>
+
+<pre><code>struct timezone{
+    int tz_minuteswest; /*和Greenwich时间差了多少分钟*/
+    int tz_dsttime; /*夏令时*/
+};
+</code></pre>
+
+<p>上述两个结构都定义在/usr/include/sys/time.h <br>
+如果tz是NULL，tz不会被填充。</p>
+
+<p>成功则返回0，失败返回-1，错误代码存于errno。EFAULT：指针tv和tz所指的内存空间超出存取权限。</p>
+
+<p>北京东八区tz-&gt;tz_minuteswest为-480，tz-&gt;tz_dsttime为0。</p>
+
+
+
+<h2 id="settimeofday">settimeofday</h2>
+
+<p>设置当前时间</p>
+
+<pre><code>#include &lt;sys/time.h&gt;
+#include &lt;unistd.h&gt;
+int settimeofday(const struct timeval *tv, const struct timezone *tz);
+</code></pre>
+
+<p>settimeofday()会把目前时间设成由tv所指的结构信息，当地时区信息则设成tz所指的结构。注意，只有root权限才能使用此函数修改时间。</p>
+
+<p>成功则返回0，失败返回-1，错误代码存于errno。 <br>
+EPERM：权限不够。 <br>
+EINVAL：时区或某个数据是不正确的，无法正确设置时间。</p>
+
+
+
+<h2 id="isatty">isatty</h2>
+
+<p>判断文件描述符是否是为终端机</p>
+
+<pre><code>#include &lt;unistd.h&gt;
+int isatty(int desc);
+</code></pre>
+
+<p>如果参数desc所代表的文件描述词为一终端机则返回1，否则返回0。</p>
+
+
+
+<h2 id="ttyname">ttyname</h2>
+
+<p>返回一终端机名称，将文件描述符转化为文件名字符串</p>
+
+<pre><code>#include &lt;unistd.h&gt;
+char *ttyname(int desc);
+</code></pre>
+
+<p>如果参数desc所代表的文件描述符为一终端机，则会将此终端机名称由一字符串指针返回，否则返回NULL。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl"><span class="hljs-comment">#include &lt;unistd.h&gt;</span>
+<span class="hljs-comment">#include &lt;sys/types.h&gt;</span>
+<span class="hljs-comment">#include &lt;sys/stat.h&gt;</span>
+<span class="hljs-comment">#include &lt;fcntl.h&gt;</span>
+<span class="hljs-keyword">int</span> main()
+{
+    <span class="hljs-keyword">int</span> fd;
+    char <span class="hljs-variable">*file</span> = <span class="hljs-string">"/dev/tty"</span>;
+    fd = <span class="hljs-keyword">open</span>(fiel, O_RDONLY);
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"<span class="hljs-variable">%s</span>"</span>, file);
+    <span class="hljs-keyword">if</span>(isatty(fd))
+    {
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"is a tty\n"</span>);
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"ttyname = <span class="hljs-variable">%s</span>\n"</span>, ttyname(fd));
+    }
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">printf</span>(<span class="hljs-string">" is not a tty\n"</span>);
+    <span class="hljs-keyword">close</span>(fd);
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+
+/dev/tty is a tty
+ttyname = <span class="hljs-regexp">/dev/tty</span></code></pre>
+
+
+
+<h2 id="memccpy">memccpy</h2>
+
+<p>拷贝内存内容</p>
+
+<pre><code>#include &lt;string.h&gt;
+void *memccpy(void *dest, const void *src, int c, size_t n);
+</code></pre>
+
+<p>memccpy()用来拷贝src所指内存内容到dest所指的地址上，最多拷贝n个字符，当发现c时停止拷贝，返回c所在位置的下一个字节的地址，当没有发现c时返回NULL。</p>
+
+
+
+<h2 id="mmap">mmap</h2>
+
+<p>建立内存映射</p>
+
+<pre><code>#include &lt;unistd.h&gt;
+#include &lt;sys/mman.h&gt;
+void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offsize);
+</code></pre>
+
+<p>mmap()用来将某个文件内容映射到内存中，对该内存区域的存取即是直接对该文件内容的读写。参数start指向欲对应的内存起始地址，通常设为NULL，表示让系统自动选定地址，对应成功后该地址会返回。参数length代表将文件中多大的部分对应到内存。 <br>
+参数prot代表映射区域的保护方式有下列组合： <br>
+PROT_EXEC 映射区域可被执行 <br>
+PROT_READ 映射区域可被读取 <br>
+PROT_WRITE 映射区域可被写入 <br>
+PROT_NONE 映射区域不能存取 <br>
+参数flags会影响映射区域的各种特性： <br>
+MAP_FIXED 如果参数start所指的地址无法成功建立映射时，则放弃映射，不对地址做修正。通常不鼓励用此flag。 <br>
+MAP_SHARED 对映射区域的写入数据会复制回文件内，而且允许其他映射该文件的进程共享。 <br>
+MAP_PRIVATE 对映射区域的写入操作会产生一个映射文件的复制，即私人的“写入时复制”（copy on write）对此区域作的任何修改都不会写回原来的文件内容。 <br>
+MAP_ANONYMOUS 建立匿名映射。此时会忽略参数fd，不涉及文件，而且映射区域无法和其他进程共享。 <br>
+MAP_DENYWRITE 只允许对映射区域的写入操作，其他对文件直接写入的操作将会被拒绝。 <br>
+MAP_LOCKED 将映射区域锁定住，这表示该区域不会被置换（swap）。 <br>
+在调用mmap()时必须要指定MAP_SHARED或MAP_PRIVATE。参数fd为open()返回的文件描述词，代表欲映射到内存的文件。参数offset为文件映射的偏移量，通常设置为0，代表从文件最前方开始对应。</p>
+
+<p>若映射成功则返回映射区的内存起始地址，否则返回MAP_FAILED(-1)，错误原因存于errno中。 <br>
+EBADF：参数fd不是有效的文件描述词 <br>
+EACCES：存取权限有误。如果是MAP_PRIVATE情况下文件必须可读，使用MAP_SHARED则要有PROT_WRITE。 <br>
+EINVAL：参数start、length 或offset有一个不合法。 <br>
+EAGAIN：文件被锁住，或是有太多内存被锁住。 <br>
+ENOMEM：内存不足。</p>
+
+
+
+<h2 id="munmap">munmap</h2>
+
+<p>解除内存映射</p>
+
+<pre><code>#include &lt;unistd.h&gt;
+#include &lt;sys/mman.h&gt;
+int munmap(void *start, size_t length);
+</code></pre>
+
+<p>munmap()用来取消参数start所指的映射内存起始地址，参数length则是欲取消的内存大小。当进程结束或利用exec相关函数来执行其他程序时，映射内存会自动解除，但关闭对应的文件描述词时不会解除映射。</p>
+
+<p>如果解除映射成功则返回0，否则返回-1，错误原因存于errno中。</p>
+
+
+
+<h2 id="putenv">putenv</h2>
+
+<p>改变或增加环境变量</p>
+
+<pre><code>#include &lt;stdlib.h&gt;
+int putenv(const char *string);
+</code></pre>
+
+<p>参数string的格式为name=value，如果该环境变量原先存在，则变量内容会依参数string改变，否则此参数内容会成为新的环境变量。</p>
+
+<p>执行成功则返回0，有错误发生则返回-1。 <br>
+ENOMEM：内存不足，无法配置新的环境变量空间。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl"><span class="hljs-comment">#include &lt;stdlib.h&gt;</span>
+<span class="hljs-keyword">int</span> main()
+{
+    char <span class="hljs-variable">*p</span>;
+    <span class="hljs-keyword">if</span>((p = getenv(<span class="hljs-string">"USER"</span>)))
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"USER = <span class="hljs-variable">%s</span>\n"</span>, p);
+    putenv(<span class="hljs-string">"USER=test"</span>);
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"USER = s\n”, getenv("</span>USER<span class="hljs-string">"));
+}
+
+USER = root
+USER = test</span></code></pre>
+
+
+
+<h2 id="setenv">setenv</h2>
+
+<p>改变或增加环境变量</p>
+
+<pre><code>#include &lt;stdlib.h&gt;
+int setenv(const char *name, const char *value, int overwrite);
+</code></pre>
+
+<p>参数name为环境变量名称字符串。参数value则为变量内容，参数overwrite用来决定是否要改变已存在的环境变量。如果overwrite不为0，而该环境变量原已有内容，则原内容会被改为参数value所指的变量内容。如果overwrite为0，且该环境变量已有内容，则参数value会被忽略。</p>
+
+<p>执行成功则返回0，有错误发生时返回-1。 <br>
+ENOMEM：内存不足，无法配置新的环境变量空间。</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs perl"><span class="hljs-comment">#include &lt;stdlib.h&gt;</span>
+<span class="hljs-keyword">int</span> main()
+{
+    char <span class="hljs-variable">*p</span>;
+    <span class="hljs-keyword">if</span>((p=getenv(<span class="hljs-string">"USER"</span>)))
+        <span class="hljs-keyword">printf</span>(<span class="hljs-string">"USER = <span class="hljs-variable">%s</span>\n"</span>, p);
+    setenv(<span class="hljs-string">"USER"</span>, <span class="hljs-string">"test"</span>, <span class="hljs-number">1</span>);
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"USER = <span class="hljs-variable">%s</span>\n"</span>, getenv(<span class="hljs-string">"USER"</span>));
+    unsetenv(<span class="hljs-string">"USER"</span>);
+    <span class="hljs-keyword">printf</span>(<span class="hljs-string">"USER = <span class="hljs-variable">%s</span>\n"</span>, getenv(<span class="hljs-string">"USER"</span>));
+    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+}
+
+USER = root
+USER = test
+USER = (null)</code></pre>
+
+
+
+<h2 id="unsetenv">unsetenv</h2>
+
+<pre><code>#include &lt;stdlib.h&gt;
+int unsetenv(const char *name); 
+</code></pre>
+
+<p>The unsetenv() function deletes the variable name from the environment. If name does not exist in the environment, then the function  succeeds, and the environment is unchanged.</p>
+
+<p>Return zero on success, or -1 on  error,  with errno set to indicate the cause of the error.</p>
+
+
+
+<h2 id="strcasecmp">strcasecmp</h2>
+
+<p>忽略大小写比较字符串</p>
+
+<pre><code>#include &lt;string.h&gt;
+int strcasecmp(const char *s1, const char *s2);
+</code></pre>
+
+
+
+<h2 id="strncasecmp">strncasecmp</h2>
+
+<p>忽略大小写比较字符串</p>
+
+<pre><code>#include &lt;string.h&gt;
+int strncasecmp(const char *s1, const char *s2, size_t n);
+</code></pre>
+
+<p>strncasecmp()用来比较参数s1和s2字符串前n个字符，比较时会自动忽略大小写的差异。</p>
+
+
+
+<h2 id="strdup">strdup</h2>
+
+<p>复制字符串</p>
+
+<pre><code>#include &lt;string.h&gt;
+char *strdup(const char *s);
+</code></pre>
+
+<p>strdup()会先用maolloc()配置与参数s字符串相同的空间大小，然后将参数s字符串的内容复制到该内存地址，然后把该地址返回。该地址最后可以利用free()来释放。</p>
+
+<p>返回一字符串指针，该指针指向复制后的新字符串地址。若返回NULL表示内存不足。</p>
+
+
+
+<h2 id="toascii">toascii</h2>
+
+<p>将整型数转换成合法的ASCII 码字符</p>
+
+<pre><code>#include &lt;ctype.h&gt;
+int toascii(int c);
+</code></pre>
+
+<p>toascii()会将参数c转换成7位的unsigned char值，第八位则会被清除，此字符即会被转成ASCII码字符。相当于与上0x7F。</p>
+
+<p>将转换成功的ASCII码字符值返回。</p>
+
+
+
+<h2 id="部分网络相关函数">部分网络相关函数</h2>
+
+
+
+<pre class="prettyprint"><code class=" hljs cpp"><span class="hljs-preprocessor">#include &lt;netinet/in.h&gt;</span>
+uint32_t ntohl(uint32_t netlong);
+uint16_t ntohs(uint16_t netshort);
+uint32_t htonl(uint32_t hostlong);
+uint16_t htons(uint16_t hostshort);
+
+<span class="hljs-preprocessor">#include &lt;sys/socket.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;netinet/in.h&gt;</span>
+<span class="hljs-preprocessor">#include &lt;arpa/inet.h&gt;</span>
+<span class="hljs-keyword">int</span> inet_aton(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *cp, <span class="hljs-keyword">struct</span> in_addr *inp);
+<span class="hljs-keyword">char</span> *inet_ntoa(<span class="hljs-keyword">struct</span> in_addr in);
+<span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> <span class="hljs-keyword">int</span> inet_addr(<span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *cp);
+<span class="hljs-keyword">struct</span> in_addr
+{
+    <span class="hljs-keyword">unsigned</span> <span class="hljs-keyword">long</span> <span class="hljs-keyword">int</span> s_addr;
+};
+inet_aton()用来将参数cp所指的网络地址字符串转换成网络使用的二进制的数字，
+然后存于参数inp所指的in_addr结构中。成功返回非<span class="hljs-number">0</span>值，失败返回<span class="hljs-number">0</span>。（与一般成功返回<span class="hljs-number">0</span>不同）
+inet_ntoa()用来将参数in所指的网络二进制的数字转换成网络地址，
+然后将指向此网络地址字符串的指针返回，字符串存储于静态缓冲区。失败返回NULL。
+inet_addr()用来将参数cp所指的网络地址字符串转换成网络所使用的二进制数字。
+网络地址字符串是以数字和点组成的字符串，例如:“<span class="hljs-number">163.13</span><span class="hljs-number">.132</span><span class="hljs-number">.68</span>”。成功则返回对应的网络二进制的数字，失败返回-<span class="hljs-number">1</span>。
+
+<span class="hljs-preprocessor">#include &lt;sys/socket.h&gt;</span>
+<span class="hljs-keyword">int</span> shutdown(<span class="hljs-keyword">int</span> s, <span class="hljs-keyword">int</span> how);
+shutdown()用来终止参数s所指定的socket连接。参数how有下列几种情况:
+how=<span class="hljs-number">0</span> 终止读取操作。
+how=<span class="hljs-number">1</span> 终止传送操作
+how=<span class="hljs-number">2</span> 终止读取及传送操作
+成功则返回<span class="hljs-number">0</span>，失败返回-<span class="hljs-number">1</span>，错误原因存于errno。</code></pre>
+
+<hr>
+
+<p>本篇及其他相关篇目主要总结自：<a href="http://man.chinaunix.net/develop/c&amp;c++/linux_c/default.htm">http://man.chinaunix.net/develop/c&amp;c++/linux_c/default.htm</a></p></div></body>
+</html>

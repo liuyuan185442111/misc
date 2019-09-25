@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STL容器之map/multimap</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>map是映射的意思，存储&lt;key，value&gt;对，在map里，这个数据对整体作为value。 <br>
+map和set类似，所以不多解释了。</p>
+
+<pre class="prettyprint"><code class="language-cpp hljs "><span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">typename</span> Key, <span class="hljs-keyword">typename</span> Tp, <span class="hljs-keyword">typename</span> Compare = <span class="hljs-built_in">std</span>::less&lt;Key&gt;,
+         <span class="hljs-keyword">typename</span> Alloc = <span class="hljs-built_in">std</span>::allocator&lt;<span class="hljs-built_in">std</span>::pair&lt;<span class="hljs-keyword">const</span> Key, Tp&gt; &gt; &gt;
+<span class="hljs-keyword">class</span> <span class="hljs-built_in">map</span>
+{
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-keyword">typedef</span> Key                                      key_type;
+    <span class="hljs-keyword">typedef</span> Tp                                       mapped_type;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-built_in">std</span>::pair&lt;<span class="hljs-keyword">const</span> Key, Tp&gt;                 value_type;
+    <span class="hljs-keyword">typedef</span> Compare                                  key_compare;
+    <span class="hljs-keyword">typedef</span> Alloc                                    allocator_type;
+
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-comment">// 对value_type进行比较的对象, 实际上比较规则和Key的比较规则相同</span>
+    <span class="hljs-comment">// 没有public constructor, 只有map的成员函数能生成其实例</span>
+    <span class="hljs-keyword">class</span> value_compare : <span class="hljs-keyword">public</span> <span class="hljs-built_in">std</span>::binary_function&lt;value_type, value_type, <span class="hljs-keyword">bool</span>&gt;
+    {
+        <span class="hljs-keyword">friend</span> <span class="hljs-keyword">class</span> <span class="hljs-stl_container"><span class="hljs-built_in">map</span>&lt;Key, Tp, Compare, Alloc&gt;</span>;
+    <span class="hljs-keyword">protected</span>:
+        Compare comp;
+        value_compare(Compare c) : comp(c) { }
+    <span class="hljs-keyword">public</span>:
+        <span class="hljs-keyword">bool</span> <span class="hljs-keyword">operator</span>()(<span class="hljs-keyword">const</span> value_type&amp; x, <span class="hljs-keyword">const</span> value_type&amp; y) <span class="hljs-keyword">const</span>
+        {
+            <span class="hljs-keyword">return</span> comp(x.first, y.first);
+        }
+    };
+
+<span class="hljs-keyword">private</span>:
+    <span class="hljs-comment">// _Select1st是一个函数对象, 调用它将返回pair的第一个元素</span>
+    <span class="hljs-keyword">typedef</span> _Rb_tree&lt;key_type, value_type, _Select1st&lt;value_type&gt;,
+            key_compare, allocator_type&gt; _Rep_type;
+    <span class="hljs-comment">// The actual tree structure.</span>
+    _Rep_type _M_t;
+
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-comment">// 可能与ISO不同, 但功能等价</span>
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> allocator_type::pointer         pointer;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> allocator_type::const_pointer   const_pointer;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> allocator_type::reference       reference;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> allocator_type::const_reference const_reference;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::iterator               iterator;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::const_iterator         const_iterator;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::reverse_iterator       reverse_iterator;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::const_reverse_iterator const_reverse_iterator;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::size_type              size_type;
+    <span class="hljs-keyword">typedef</span> <span class="hljs-keyword">typename</span> _Rep_type::difference_type        difference_type;
+
+
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-comment">// 构造</span>
+    <span class="hljs-keyword">explicit</span> <span class="hljs-built_in">map</span>(<span class="hljs-keyword">const</span> key_compare&amp; comp = key_compare(),
+                 <span class="hljs-keyword">const</span> allocator_type&amp; alloc = allocator_type());
+
+    <span class="hljs-built_in">map</span>(<span class="hljs-keyword">const</span> <span class="hljs-built_in">map</span>&amp; x) : _M_t(x._M_t) { }
+
+    <span class="hljs-comment">// 创建一个包含[first,last)元素拷贝的map.</span>
+    <span class="hljs-comment">// 如果序列有序, O(N)复杂度;否则, O(NlogN)复杂度.N=distance(first,last)</span>
+    <span class="hljs-keyword">template</span> &lt;<span class="hljs-keyword">class</span> InputIterator&gt;
+    <span class="hljs-built_in">map</span>(InputIterator first, InputIterator last,
+        <span class="hljs-keyword">const</span> key_compare&amp; comp = key_compare(),
+        <span class="hljs-keyword">const</span> allocator_type&amp; alloc = allocator_type());
+
+
+    <span class="hljs-comment">// 赋值</span>
+    <span class="hljs-built_in">map</span>&amp; <span class="hljs-keyword">operator</span>=(<span class="hljs-keyword">const</span> <span class="hljs-built_in">map</span>&amp; x)
+    {
+        _M_t = x._M_t;
+        <span class="hljs-keyword">return</span> *<span class="hljs-keyword">this</span>;
+    }
+
+
+    <span class="hljs-comment">// get</span>
+    allocator_type get_allocator() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> allocator_type(_M_t.get_allocator());
+    }
+
+    key_compare key_comp() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.key_comp();
+    }
+
+    value_compare value_comp() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> value_compare(_M_t.key_comp());
+    }
+
+
+    <span class="hljs-comment">// Iterators</span>
+    iterator begin()
+    {
+        <span class="hljs-keyword">return</span> _M_t.begin();
+    }
+
+    const_iterator begin() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.begin();
+    }
+
+    iterator end()
+    {
+        <span class="hljs-keyword">return</span> _M_t.end();
+    }
+
+    const_iterator end() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.end();
+    }
+
+    reverse_iterator rbegin()
+    {
+        <span class="hljs-keyword">return</span> _M_t.rbegin();
+    }
+
+    const_reverse_iterator rbegin() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.rbegin();
+    }
+
+    reverse_iterator rend()
+    {
+        <span class="hljs-keyword">return</span> _M_t.rend();
+    }
+
+    const_reverse_iterator rend() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.rend();
+    }
+
+
+    <span class="hljs-comment">// Capacity</span>
+    <span class="hljs-keyword">bool</span> empty() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.empty();
+    }
+
+    size_type size() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.size();
+    }
+
+    size_type max_size() <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.max_size();
+    }
+
+
+    <span class="hljs-comment">// Element access</span>
+    <span class="hljs-comment">// 如果map中不存在k, 就执行插入; 如果不存在, 找到正确位置. 返回mapped_type</span>
+    mapped_type&amp; <span class="hljs-keyword">operator</span>[](<span class="hljs-keyword">const</span> key_type&amp; k)
+    {
+        iterator i = lower_bound(k);
+        <span class="hljs-comment">// i-&gt;first is greater than or equivalent to k.</span>
+        <span class="hljs-keyword">if</span> (i == end() || key_comp()(k, (*i).first))
+            i = insert(i, value_type(k, mapped_type()));
+        <span class="hljs-keyword">return</span> (*i).second;
+    }
+
+
+    <span class="hljs-comment">// modifiers</span>
+    <span class="hljs-comment">/**
+    此函数尝试将一个(key, value)对插入map.
+    由于key值唯一, 只有当key值不存在于map中时, 才会执行插入动作.
+    插入成功与否存储于返回pair的第二个元素里;
+    如果成功插入, pair第一个元素存储指向插入元素的迭代器, 否则, 存储指向已存在元素的迭代器.
+    需要对数时间.
+    */</span>
+    <span class="hljs-built_in">std</span>::pair&lt;iterator, <span class="hljs-keyword">bool</span>&gt;
+    insert(<span class="hljs-keyword">const</span> value_type&amp; __x)
+    {
+        <span class="hljs-keyword">return</span> _M_t._M_insert_unique(__x);
+    }
+
+    <span class="hljs-comment">//c++98里, 如果position指向被插入元素之前, 函数会优化插入时间</span>
+    <span class="hljs-comment">//c++11里, 如果position指向被插入元素之后, 函数会优化插入时间</span>
+    iterator insert(iterator position, <span class="hljs-keyword">const</span> value_type&amp; val);
+
+    <span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">typename</span> InputIterator&gt;
+    <span class="hljs-keyword">void</span> insert(InputIterator first, InputIterator last)
+    {
+        _M_t._M_insert_unique(first, last);
+    }
+
+    iterator  erase(const_iterator position);
+
+    <span class="hljs-comment">/**
+    返回擦除元素的个数
+    *  Note that this function only erases the element, and that if
+    *  the element is itself a pointer, the pointed-to memory is not touched
+    *  in any way.  Managing the pointer is the user's responsibility.
+    */</span>
+    size_type erase(<span class="hljs-keyword">const</span> key_type&amp; __x)
+    {
+        <span class="hljs-keyword">return</span> _M_t.erase(__x);
+    }
+
+    <span class="hljs-keyword">void</span> erase(iterator first, iterator last)
+    {
+        _M_t.erase(first, last);
+    }
+
+    <span class="hljs-keyword">void</span> swap(<span class="hljs-built_in">map</span>&amp; x)
+    {
+        _M_t.swap(x._M_t);
+    }
+
+    <span class="hljs-keyword">void</span> clear()
+    {
+        _M_t.clear();
+    }
+
+
+    <span class="hljs-comment">// operations</span>
+    iterator find(<span class="hljs-keyword">const</span> key_type&amp; x)
+    {
+        <span class="hljs-keyword">return</span> _M_t.find(x);
+    }
+
+    const_iterator find(<span class="hljs-keyword">const</span> key_type&amp; x) <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.find(x);
+    }
+
+    size_type count(<span class="hljs-keyword">const</span> key_type&amp; x) <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.find(x) == _M_t.end() ? <span class="hljs-number">0</span> : <span class="hljs-number">1</span>;
+    }
+
+    <span class="hljs-comment">// 返回指向第一个equal to or greater than key的元素的迭代器或end().</span>
+    iterator lower_bound(<span class="hljs-keyword">const</span> key_type&amp; x)
+    {
+        <span class="hljs-keyword">return</span> _M_t.lower_bound(x);
+    }
+
+    const_iterator lower_bound(<span class="hljs-keyword">const</span> key_type&amp; x) <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.lower_bound(x);
+    }
+
+    <span class="hljs-comment">// 返回指向第一个greater than key的元素的迭代器或end().</span>
+    iterator upper_bound(<span class="hljs-keyword">const</span> key_type&amp; x)
+    {
+        <span class="hljs-keyword">return</span> _M_t.upper_bound(x);
+    }
+
+    const_iterator upper_bound(<span class="hljs-keyword">const</span> key_type&amp; x) <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.upper_bound(x);
+    }
+
+    <span class="hljs-comment">/**
+    Finds a subsequence matching given key.
+    返回可能符合要求的子序列的迭代器对.
+    此函数等价于std::make_pair(c.lower_bound(val),  c.upper_bound(val)),
+    但是比单独调用快.
+    此函数对multimap比较有意义.
+    */</span>
+    <span class="hljs-built_in">std</span>::pair&lt;iterator, iterator&gt;
+    equal_range(<span class="hljs-keyword">const</span> key_type&amp; x)
+    {
+        <span class="hljs-keyword">return</span> _M_t.equal_range(x);
+    }
+
+    <span class="hljs-built_in">std</span>::pair&lt;const_iterator, const_iterator&gt;
+    equal_range(<span class="hljs-keyword">const</span> key_type&amp; x) <span class="hljs-keyword">const</span>
+    {
+        <span class="hljs-keyword">return</span> _M_t.equal_range(x);
+    }
+    <span class="hljs-comment">/**
+    以上两个函数看起来调用同样的函数?
+    仅返回值不同, 但是返回值不是函数标的一部分,
+    然而, 后者有个const, 看红黑树里的函数声明:
+    pair&lt;iterator, iterator&gt;
+    equal_range(const key_type&amp; k);
+    pair&lt;const_iterator, const_iterator&gt;
+    equal_range(const key_type&amp; k) const;
+    */</span>
+}</code></pre></div></body>
+</html>

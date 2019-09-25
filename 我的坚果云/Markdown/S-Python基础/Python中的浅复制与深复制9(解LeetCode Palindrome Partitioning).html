@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python中的浅复制与深复制9(解LeetCode Palindrome Partitioning)</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><p>LeetCode 131：Palindrome Partitioning</p>
+
+<blockquote>
+  <p>Given a string s, partition s such that every substring of the partition is a palindrome.</p>
+  
+  <p>Return all possible palindrome partitioning of s.</p>
+  
+  <p>For example, given s = “aab”</p>
+  
+  <p>Return</p>
+
+<pre><code>[
+    ["aa","b"],
+    ["a","a","b"]
+]
+</code></pre>
+</blockquote>
+
+<p>该问题简单来说就是给定一个字符串，将字符串分成多个部分，满足每一部分都是回文串，输出所有可能的情况。 <br>
+思路是：首先通过动态规划的方法获得字符串中每两个字符之间确定的子串是否为回文，然后用深度优先搜索的方法获得所有可能解。</p>
+
+<p>可以通过的Python代码为：</p>
+
+
+
+<pre class="prettyprint"><code class="language-Python hljs python"><span class="hljs-keyword">import</span> copy
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Solution</span>:</span>
+    <span class="hljs-comment"># 得到回文关系图</span>
+    <span class="hljs-comment"># @param {string} s</span>
+    <span class="hljs-comment"># @return {string[]}</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">getmap</span><span class="hljs-params">(self, s)</span>:</span>
+        arr=[]
+        <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> range(len(s)):
+            arr.append([<span class="hljs-keyword">False</span>]*len(s)) <span class="hljs-comment"># attention 1</span>
+        <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> range(len(s)-<span class="hljs-number">1</span>,-<span class="hljs-number">1</span>,-<span class="hljs-number">1</span>):
+            <span class="hljs-keyword">for</span> j <span class="hljs-keyword">in</span> range(i,len(s)):
+                <span class="hljs-keyword">if</span> i==j:
+                    arr[i][j]=<span class="hljs-keyword">True</span>
+                <span class="hljs-keyword">elif</span> s[i]==s[j]:
+                    <span class="hljs-keyword">if</span> j==i+<span class="hljs-number">1</span> <span class="hljs-keyword">or</span> arr[i+<span class="hljs-number">1</span>][j-<span class="hljs-number">1</span>]==<span class="hljs-keyword">True</span>:
+                        arr[i][j]=<span class="hljs-keyword">True</span>
+        <span class="hljs-keyword">return</span> arr
+
+    <span class="hljs-comment"># 深度优先搜索</span>
+    <span class="hljs-comment"># @param {string,int,int[],string[],string[][]} s,i,arr,once,result</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">dfs</span><span class="hljs-params">(self,s,i,arr,once,result)</span>:</span>
+        <span class="hljs-keyword">for</span> j <span class="hljs-keyword">in</span> range(i,len(s)):
+            <span class="hljs-keyword">if</span> arr[i][j]==<span class="hljs-keyword">True</span>:
+                once.append(s[i:j+<span class="hljs-number">1</span>])
+                <span class="hljs-keyword">if</span> j+<span class="hljs-number">1</span>==len(s):
+                    result.append(copy.copy(once)) <span class="hljs-comment"># attention 2</span>
+                self.dfs(s,j+<span class="hljs-number">1</span>,arr,once,result)
+                once.pop()
+
+    <span class="hljs-comment"># @param {string} s</span>
+    <span class="hljs-comment"># @return {string[][]}</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">partition</span><span class="hljs-params">(self, s)</span>:</span>
+        <span class="hljs-comment"># 获得s的回文关系图</span>
+        arr = self.getmap(s)
+        <span class="hljs-comment"># result保存最终结果, once保存每个分割, 也就是result的元素</span>
+        once = []
+        result = []
+        self.dfs(s,<span class="hljs-number">0</span>,arr,once,result)
+        <span class="hljs-keyword">return</span> result</code></pre>
+
+<p>用dp[i][j]（j≥i）为True表示从i到j之间（包括i和j）的子串是回文序列，生成dp的递推公式为： <br>
+<span class="MathJax_Preview"></span><div class="MathJax_Display" role="textbox" aria-readonly="true" style="text-align: center;"><span class="MathJax" id="MathJax-Element-1-Frame" style=""><nobr><span class="math" id="MathJax-Span-1" style="width: 30.776em; display: inline-block;"><span style="display: inline-block; position: relative; width: 24.589em; height: 0px; font-size: 125%;"><span style="position: absolute; clip: rect(2.456em 1000em 6.296em -0.424em); top: -4.637em; left: 0.003em;"><span class="mrow" id="MathJax-Span-2"><span class="mi" id="MathJax-Span-3" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-4" style="font-family: MathJax_Math-italic;">p</span><span class="mo" id="MathJax-Span-5" style="font-family: MathJax_Main;">[</span><span class="mi" id="MathJax-Span-6" style="font-family: MathJax_Math-italic;">i</span><span class="mo" id="MathJax-Span-7" style="font-family: MathJax_Main;">]</span><span class="mo" id="MathJax-Span-8" style="font-family: MathJax_Main;">[</span><span class="mi" id="MathJax-Span-9" style="font-family: MathJax_Math-italic;">j</span><span class="mo" id="MathJax-Span-10" style="font-family: MathJax_Main;">]</span><span class="mo" id="MathJax-Span-11" style="font-family: MathJax_Main; padding-left: 0.269em;">=</span><span class="mrow" id="MathJax-Span-12" style="padding-left: 0.269em;"><span class="mo" id="MathJax-Span-13" style="vertical-align: 2.029em; padding-left: 0.269em;"><span style="display: inline-block; position: relative; width: 0.909em; height: 0px;"><span style="position: absolute; font-family: MathJax_Size4; top: -3.091em; left: 0.003em;">⎧<span style="display: inline-block; width: 0px; height: 4.003em;"></span></span><span style="position: absolute; font-family: MathJax_Size4; top: -1.384em; left: 0.003em;">⎩<span style="display: inline-block; width: 0px; height: 4.003em;"></span></span><span style="position: absolute; font-family: MathJax_Size4; top: -1.971em; left: 0.003em;">⎨<span style="display: inline-block; width: 0px; height: 4.003em;"></span></span></span></span><span class="mtable" id="MathJax-Span-14" style="padding-right: 0.163em; padding-left: 0.163em;"><span style="display: inline-block; position: relative; width: 18.883em; height: 0px;"><span style="position: absolute; clip: rect(2.349em 1000em 6.136em -0.477em); top: -4.477em; left: 0.003em;"><span style="display: inline-block; position: relative; width: 13.336em; height: 0px;"><span style="position: absolute; clip: rect(1.816em 1000em 3.149em -0.424em); top: -3.944em; left: 0.003em;"><span class="mtd" id="MathJax-Span-15"><span class="mrow" id="MathJax-Span-16"><span class="mi" id="MathJax-Span-17" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-18" style="font-family: MathJax_Math-italic;">p</span><span class="mo" id="MathJax-Span-19" style="font-family: MathJax_Main;">[</span><span class="mi" id="MathJax-Span-20" style="font-family: MathJax_Math-italic;">i</span><span class="mo" id="MathJax-Span-21" style="font-family: MathJax_Main; padding-left: 0.216em;">+</span><span class="mn" id="MathJax-Span-22" style="font-family: MathJax_Main; padding-left: 0.216em;">1</span><span class="mo" id="MathJax-Span-23" style="font-family: MathJax_Main;">]</span><span class="mo" id="MathJax-Span-24" style="font-family: MathJax_Main;">[</span><span class="mi" id="MathJax-Span-25" style="font-family: MathJax_Math-italic;">j</span><span class="mo" id="MathJax-Span-26" style="font-family: MathJax_Main; padding-left: 0.216em;">−</span><span class="mn" id="MathJax-Span-27" style="font-family: MathJax_Main; padding-left: 0.216em;">1</span><span class="mo" id="MathJax-Span-28" style="font-family: MathJax_Main;">]</span><span class="mtext" id="MathJax-Span-29" style="font-family: MathJax_Main;">&nbsp;</span><span class="mi" id="MathJax-Span-30" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-31" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-32" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mtext" id="MathJax-Span-33" style="font-family: MathJax_Main;">&nbsp;</span><span class="mi" id="MathJax-Span-34" style="font-family: MathJax_Math-italic;">s</span><span class="mo" id="MathJax-Span-35" style="font-family: MathJax_Main;">[</span><span class="mi" id="MathJax-Span-36" style="font-family: MathJax_Math-italic;">i</span><span class="mo" id="MathJax-Span-37" style="font-family: MathJax_Main;">]</span><span class="mo" id="MathJax-Span-38" style="font-family: MathJax_Main; padding-left: 0.269em;">=<span style="font-family: MathJax_Main;">=</span></span><span class="mi" id="MathJax-Span-39" style="font-family: MathJax_Math-italic; padding-left: 0.269em;">s</span><span class="mo" id="MathJax-Span-40" style="font-family: MathJax_Main;">[</span><span class="mi" id="MathJax-Span-41" style="font-family: MathJax_Math-italic;">j</span><span class="mo" id="MathJax-Span-42" style="font-family: MathJax_Main;">]</span></span></span><span style="display: inline-block; width: 0px; height: 2.723em;"></span></span><span style="position: absolute; clip: rect(1.763em 1000em 2.723em -0.477em); top: -2.504em; left: 0.003em;"><span class="mtd" id="MathJax-Span-52"><span class="mrow" id="MathJax-Span-53"><span class="mi" id="MathJax-Span-54" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-55" style="font-family: MathJax_Math-italic;">u</span><span class="mi" id="MathJax-Span-56" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-57" style="font-family: MathJax_Math-italic;">e</span></span></span><span style="display: inline-block; width: 0px; height: 2.563em;"></span></span><span style="position: absolute; clip: rect(1.816em 1000em 3.149em -0.424em); top: -1.491em; left: 0.003em;"><span class="mtd" id="MathJax-Span-65"><span class="mrow" id="MathJax-Span-66"><span class="mi" id="MathJax-Span-67" style="font-family: MathJax_Math-italic;">s</span><span class="mo" id="MathJax-Span-68" style="font-family: MathJax_Main;">[</span><span class="mi" id="MathJax-Span-69" style="font-family: MathJax_Math-italic;">i</span><span class="mo" id="MathJax-Span-70" style="font-family: MathJax_Main;">]</span><span class="mo" id="MathJax-Span-71" style="font-family: MathJax_Main; padding-left: 0.269em;">=<span style="font-family: MathJax_Main;">=</span></span><span class="mi" id="MathJax-Span-72" style="font-family: MathJax_Math-italic; padding-left: 0.269em;">s</span><span class="mo" id="MathJax-Span-73" style="font-family: MathJax_Main;">[</span><span class="mi" id="MathJax-Span-74" style="font-family: MathJax_Math-italic;">j</span><span class="mo" id="MathJax-Span-75" style="font-family: MathJax_Main;">]</span></span></span><span style="display: inline-block; width: 0px; height: 2.723em;"></span></span></span><span style="display: inline-block; width: 0px; height: 4.483em;"></span></span><span style="position: absolute; clip: rect(2.296em 1000em 5.923em -0.477em); top: -4.317em; left: 14.349em;"><span style="display: inline-block; position: relative; width: 4.536em; height: 0px;"><span style="position: absolute; clip: rect(1.923em 1000em 3.096em -0.477em); top: -3.944em; left: 0.003em;"><span class="mtd" id="MathJax-Span-43"><span class="mrow" id="MathJax-Span-44"><span class="texatom" id="MathJax-Span-45"><span class="mrow" id="MathJax-Span-46"><span class="mi" id="MathJax-Span-47" style="font-family: MathJax_Math-italic;">j</span><span class="mo" id="MathJax-Span-48" style="font-family: MathJax_Main; padding-left: 0.216em;">−</span><span class="mi" id="MathJax-Span-49" style="font-family: MathJax_Math-italic; padding-left: 0.216em;">i</span><span class="mo" id="MathJax-Span-50" style="font-family: MathJax_Main; padding-left: 0.269em;">&gt;</span><span class="mn" id="MathJax-Span-51" style="font-family: MathJax_Main; padding-left: 0.269em;">1</span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.723em;"></span></span><span style="position: absolute; clip: rect(1.923em 1000em 3.096em -0.477em); top: -2.664em; left: 0.003em;"><span class="mtd" id="MathJax-Span-58"><span class="mrow" id="MathJax-Span-59"><span class="texatom" id="MathJax-Span-60"><span class="mrow" id="MathJax-Span-61"><span class="mi" id="MathJax-Span-62" style="font-family: MathJax_Math-italic;">i</span><span class="mo" id="MathJax-Span-63" style="font-family: MathJax_Main; padding-left: 0.269em;">=<span style="font-family: MathJax_Main;">=</span></span><span class="mi" id="MathJax-Span-64" style="font-family: MathJax_Math-italic; padding-left: 0.269em;">j</span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.723em;"></span></span><span style="position: absolute; clip: rect(1.923em 1000em 3.096em -0.477em); top: -1.491em; left: 0.003em;"><span class="mtd" id="MathJax-Span-76"><span class="mrow" id="MathJax-Span-77"><span class="texatom" id="MathJax-Span-78"><span class="mrow" id="MathJax-Span-79"><span class="mi" id="MathJax-Span-80" style="font-family: MathJax_Math-italic;">j</span><span class="mo" id="MathJax-Span-81" style="font-family: MathJax_Main; padding-left: 0.216em;">−</span><span class="mi" id="MathJax-Span-82" style="font-family: MathJax_Math-italic; padding-left: 0.216em;">i</span><span class="mo" id="MathJax-Span-83" style="font-family: MathJax_Main; padding-left: 0.269em;">=<span style="font-family: MathJax_Main;">=</span></span><span class="mn" id="MathJax-Span-84" style="font-family: MathJax_Main; padding-left: 0.269em;">1</span></span></span></span></span><span style="display: inline-block; width: 0px; height: 2.723em;"></span></span></span><span style="display: inline-block; width: 0px; height: 4.323em;"></span></span></span></span></span></span><span style="display: inline-block; width: 0px; height: 4.643em;"></span></span></span><span style="border-left: 0.003em solid; display: inline-block; overflow: hidden; width: 0px; height: 4.537em; vertical-align: -1.93em;"></span></span></nobr></span></div><script type="math/tex; mode=display" id="MathJax-Element-1">
+dp[i][j] = \begin{cases}
+dp[i+1][j-1]\ and\ s[i]==s[j] &\text{$j-i>1$}
+\\ture &\text{$i==j$}
+\\s[i]==s[j] &\text{$j-i==1$}
+\end{cases}
+</script></p>
+
+<p>此题结束，但有两个地方需要说明。</p>
+
+
+
+<h2 id="attention-1">attention 1</h2>
+
+<p>生成那个二维数组的时候，用的是：</p>
+
+<pre><code>arr=[]
+for i in range(len(s)):
+    arr.append([False]*len(s))
+</code></pre>
+
+<p>而没用</p>
+
+<pre><code>arr=[[False]*len(s)]*len(s)
+</code></pre>
+
+<p>例如：</p>
+
+<pre><code>arr=[[0]*3]*3
+arr[0][0]=1
+print(arr)
+# 输出是[[1, 0, 0], [1, 0, 0], [1, 0, 0]]
+</code></pre>
+
+<p>因为这样初始化，arr的三个元素都指向同一个变量，是同一变量的3个引用，变一个另外两个也会变，更明显的例子是：<code>arr=[[0,1,2]]*3</code>。</p>
+
+
+
+<h2 id="attention-2">attention 2</h2>
+
+<pre><code>result.append(copy.copy(once))
+</code></pre>
+
+<p>这里先对once进行了拷贝再加到result尾部，如果不先进行拷贝，result的每个元素都将是最后一次append中once的引用。简单的例子：</p>
+
+<pre><code>a=[]
+b=[]
+a.append(1)
+b.append(a)
+a.append(1)
+b.append(a)
+print(b)
+# 输出是[[1, 1], [1, 1]]
+</code></pre>
+
+<p>因为append执行的就是实际操作是<strong>增加引用计数</strong>，所以最后b的每个元素都是相同的。</p>
+
+<blockquote>
+  <p>copy.copy( )：浅拷贝，而不是增加引用计数，只拷贝父对象，不会拷贝对象的内部的子对象 <br>
+  copy.deepcopy( )：深拷贝，拷贝对象及其子对象</p>
+</blockquote>
+
+<p>一个很好的例子：</p>
+
+
+
+<pre class="prettyprint"><code class=" hljs go"><span class="hljs-keyword">import</span> <span class="hljs-built_in">copy</span>
+a = <span class="hljs-number">[1</span>,<span class="hljs-number"> 2</span>,<span class="hljs-number"> 3</span>,<span class="hljs-number"> 4</span>, [<span class="hljs-string">'a'</span>, <span class="hljs-string">'b'</span>]]
+
+b = a  # 赋值, 传对象的引用
+c = <span class="hljs-built_in">copy</span>.<span class="hljs-built_in">copy</span>(a)  # 对象拷贝, 浅拷贝
+d = <span class="hljs-built_in">copy</span>.deepcopy(a)  # 对象拷贝, 深拷贝
+
+a.<span class="hljs-built_in">append</span><span class="hljs-number">(5</span>)  # 修改对象a
+a<span class="hljs-number">[4</span>].<span class="hljs-built_in">append</span>(<span class="hljs-string">'c'</span>)  # 修改对象a中的[<span class="hljs-string">'a'</span>, <span class="hljs-string">'b'</span>]数组对象
+
+<span class="hljs-built_in">print</span>(<span class="hljs-string">'a ='</span>, a)
+<span class="hljs-built_in">print</span>(<span class="hljs-string">'b ='</span>, b)
+<span class="hljs-built_in">print</span>(<span class="hljs-string">'c ='</span>, c)
+<span class="hljs-built_in">print</span>(<span class="hljs-string">'d ='</span>, d)</code></pre>
+
+<p>输出结果：</p>
+
+<pre><code>a = [1, 2, 3, 4, ['a', 'b', 'c'], 5]
+b = [1, 2, 3, 4, ['a', 'b', 'c'], 5]
+c = [1, 2, 3, 4, ['a', 'b', 'c']]
+d = [1, 2, 3, 4, ['a', 'b']]
+</code></pre>
+
+<p><br>
+现在看来，attention 1中的*也可以看作是增加引用计数：</p>
+
+<pre><code>b = [(1,2)]*2
+print(b)
+print(id(b[0]), id(b[1]))
+</code></pre>
+
+<p>其输出是：</p>
+
+<pre><code>[(1, 2), (1, 2)]
+37936520 37936520
+</code></pre>
+
+<p>果然如此。</p>
+
+
+
+<h2 id="其他">其他</h2>
+
+<p>1）几乎所有的赋值（=）都是增加引用计数，包括函数的默认参数。（切片赋值不是） <br>
+2）切片取得的是原序列的浅复制副本。 <br>
+3）不可变对象的复制没什么意义的，反正它的值又不会变，单纯的增加引用计数也就够了。str是不可变对象。 <br>
+4）x = x + y，x 出现两次，必须执行两次，性能不好 <br>
+x += y，x 只出现一次，也只会计算一次，性能好 <br>
+当 x、y 为list时， += 会自动调用 extend 方法进行合并运算，in-place change，而第一种方式会生成新的 x，然后进行拷贝。 <br>
+6）有些内置函数，例如 list，能够生成拷贝 list(L)。 <br>
+7）deepcopy 本质上是递归 copy。 <br>
+8）字典的 copy 方法，D.copy() 能够复制字典，但此法只能浅层复制。</p>
+
+
+
+<h2 id="参考">参考</h2>
+
+<p><a href="http://blog.csdn.net/yutianzuijin/article/details/16850031" target="_blank">leetcode之 Palindrome Partitioning I&amp;II</a> <br>
+<a href="http://www.jb51.net/article/15714.htm" target="_blank">Python 拷贝对象（深拷贝deepcopy与浅拷贝copy）</a> <br>
+<a href="http://my.oschina.net/leejun2005/blog/145911#OSC_h3_3" target="_blank">python基础（5）：深入理解 python 中的赋值、引用、拷贝、作用域</a></p></div></body>
+</html>
