@@ -1,7 +1,0 @@
-static void run_command() throws Exception
-{
-    String cmd = "touch new";
-    Process ps = Runtime.getRuntime().exec(new String[] { "sh", "-c", cmd });
-    ps.waitFor();
-    System.out.println("over");
-}
