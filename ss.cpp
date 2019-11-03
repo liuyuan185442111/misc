@@ -7,8 +7,8 @@
 
 static const int kItemRepositorySize = 5; // Item buffer size
 static const int kItemsToProducePerThread = 1000;
-static const int M = 40; //Éú²úÏß³ÌÊıÁ¿
-static const int N = 20; //Ïû·ÑÏß³ÌÊıÁ¿
+static const int M = 40; //ç”Ÿäº§çº¿ç¨‹æ•°é‡
+static const int N = 20; //æ¶ˆè´¹çº¿ç¨‹æ•°é‡
 
 std::mt19937 gen;
 
@@ -17,8 +17,8 @@ struct ItemRepository
 	int nextid = 1;
 	std::queue<int> item_buffer;
 	std::mutex mtx;
-	std::condition_variable repo_not_full; // Ìõ¼ş±äÁ¿, Ö¸Ê¾²úÆ·»º³åÇø²»ÎªÂú
-	std::condition_variable repo_not_empty; // Ìõ¼ş±äÁ¿, Ö¸Ê¾²úÆ·»º³åÇø²»Îª¿Õ
+	std::condition_variable repo_not_full; // æ¡ä»¶å˜é‡, æŒ‡ç¤ºäº§å“ç¼“å†²åŒºä¸ä¸ºæ»¡
+	std::condition_variable repo_not_empty; // æ¡ä»¶å˜é‡, æŒ‡ç¤ºäº§å“ç¼“å†²åŒºä¸ä¸ºç©º
 } gItemRepository;
 
 void ProduceItem(int taskid, ItemRepository *ir)
@@ -27,12 +27,12 @@ void ProduceItem(int taskid, ItemRepository *ir)
 	while(ir->item_buffer.size() >= kItemRepositorySize)
 	{
 		std::cout << "Producer " << taskid << " is waiting for an empty slot...\n";
-		ir->repo_not_full.wait(lock); // Éú²úÕßµÈ´ı"²úÆ·¿â²»ÎªÂú"ÕâÒ»Ìõ¼ş·¢Éú
+		ir->repo_not_full.wait(lock); // ç”Ÿäº§è€…ç­‰å¾…"äº§å“åº“ä¸ä¸ºæ»¡"è¿™ä¸€æ¡ä»¶å‘ç”Ÿ
 	}
 	std::cout << taskid << " produce the " << ir->nextid << "th item\n";
 	ir->item_buffer.push(ir->nextid);
 	++ir->nextid;
-	ir->repo_not_empty.notify_all(); // Í¨ÖªÏû·ÑÕß²úÆ·¿â²»Îª¿Õ
+	ir->repo_not_empty.notify_all(); // é€šçŸ¥æ¶ˆè´¹è€…äº§å“åº“ä¸ä¸ºç©º
 }
 
 bool ConsumeItem(int taskid, ItemRepository *ir)
@@ -41,13 +41,13 @@ bool ConsumeItem(int taskid, ItemRepository *ir)
 	while(ir->item_buffer.empty())
 	{
 		std::cout << "Consumer " << taskid << " is waiting for items...\n";
-		// Ïû·ÑÕßµÈ´ı"²úÆ·¿â²»Îª¿Õ"ÕâÒ»Ìõ¼ş·¢Éú, ³¬Ê±±íÊ¾Ã»ÓĞÉú²úÕßÁË
+		// æ¶ˆè´¹è€…ç­‰å¾…"äº§å“åº“ä¸ä¸ºç©º"è¿™ä¸€æ¡ä»¶å‘ç”Ÿ, è¶…æ—¶è¡¨ç¤ºæ²¡æœ‰ç”Ÿäº§è€…äº†
 		if(ir->repo_not_empty.wait_for(lock, std::chrono::seconds(2)) == std::cv_status::timeout)
 			return false;
 	}
 	std::cout << taskid << " consume the " << ir->item_buffer.front() << "th item\n";
 	ir->item_buffer.pop();
-	ir->repo_not_full.notify_all(); // Í¨ÖªÉú²úÕß²úÆ·¿â²»ÎªÂú
+	ir->repo_not_full.notify_all(); // é€šçŸ¥ç”Ÿäº§è€…äº§å“åº“ä¸ä¸ºæ»¡
 	return true;
 }
 
