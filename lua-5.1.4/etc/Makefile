@@ -17,7 +17,7 @@ RM= rm -f
 default:
 	@echo 'Please choose a target: min noparser one strict clean'
 
-min:	min.c
+min: min.c
 	$(CC) $(CFLAGS) $@.c -L$(LIB) -llua $(MYLIBS)
 	echo 'print"Hello there!"' | ./a.out
 
@@ -27,7 +27,6 @@ noparser: noparser.o
 
 one:
 	$(CC) $(CFLAGS) all.c $(MYLIBS)
-	./a.out $(TST)/hello.lua
 
 strict:
 	-$(BIN)/lua -e 'print(a);b=2'
