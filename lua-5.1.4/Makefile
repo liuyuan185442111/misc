@@ -61,9 +61,9 @@ local:
 
 strict:
 	-lua -e 'print(a);b=2'
-	-cd tool && lua -lstrict -e 'print(a)'
+	-lua -lstrict -e 'print(a)'
 	-lua -e 'function f() b=2 end f()'
-	-cd tool && lua -lstrict -e 'function f() b=2 end f()'
+	-lua -lstrict -e 'function f() b=2 end f()'
 
 none:
 	@echo "Please do"
