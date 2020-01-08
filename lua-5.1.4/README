@@ -1,5 +1,0 @@
-factorial.lua	factorial without recursion
-fibfor.lua		fibonacci numbers with coroutines and generators
-sieve.lua		the sieve of of Eratosthenes programmed with coroutines
-trace-calls.lua	trace calls
-trace-globals.lua	trace assigments to global variables
