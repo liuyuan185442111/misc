@@ -17,10 +17,6 @@ RM= rm -f
 default:
 	@echo 'Please choose a target: min noparser one strict clean'
 
-min: min.c
-	$(CC) $(CFLAGS) $@.c -L$(LIB) -llua $(MYLIBS)
-	echo 'print"Hello there!"' | ./a.out
-
 noparser: noparser.o
 	$(CC) noparser.o $(SRC)/lua.o -L$(LIB) -llua $(MYLIBS)
 	-./a.out -e'a=1'
@@ -37,4 +33,4 @@ strict:
 clean:
 	$(RM) a.out core core.* *.o luac.out
 
-.PHONY:	default min noparser one strict clean
+.PHONY:	default noparser one strict clean

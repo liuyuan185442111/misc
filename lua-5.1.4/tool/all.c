@@ -4,8 +4,8 @@
 
 #define luaall_c
 
-//stdio.h中有个getline ldebug.h中也有一个getline宏
-//先包含stdio.h 让宏生效
+//stdio.h中有个getline函数, ldebug.h中也有一个getline宏
+//先包含stdio.h, 让宏生效
 #include <stdio.h>
 
 #include "lapi.c"
