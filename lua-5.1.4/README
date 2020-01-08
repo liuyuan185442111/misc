@@ -1,16 +1,3 @@
-all.c
-	Full Lua interpreter in a single file.
-
-min.c
-	A minimal Lua interpreter.
-	Good for learning and for starting your own.
-
-noparser.c
-	Linking with noparser.o avoids loading the parsing modules in lualib.a.
-
-strict.lua
-	Traps uses of undeclared global variables.
-
 factorial.lua	factorial without recursion
 fibfor.lua		fibonacci numbers with coroutines and generators
 sieve.lua		the sieve of of Eratosthenes programmed with coroutines
