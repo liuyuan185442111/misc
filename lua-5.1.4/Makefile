@@ -31,7 +31,7 @@ RANLIB= ranlib
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =====
 
 # Convenience platforms targets.
-PLATS= aix ansi bsd freebsd generic linux macosx mingw posix solaris
+PLATS= aix ansi bsd freebsd generic linux macosx mingw posix solaris one noparser
 
 # What to install.
 TO_BIN= lua luac
@@ -58,6 +58,12 @@ ranlib:
 
 local:
 	$(MAKE) install INSTALL_TOP=..
+
+strict:
+	-lua -e 'print(a);b=2'
+	-cd tool && lua -lstrict -e 'print(a)'
+	-lua -e 'function f() b=2 end f()'
+	-cd tool && lua -lstrict -e 'function f() b=2 end f()'
 
 none:
 	@echo "Please do"

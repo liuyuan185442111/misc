@@ -1,5 +1,4 @@
 # makefile for building Lua
-# see ../INSTALL for installation instructions
 # see ../Makefile and luaconf.h for further customization
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
@@ -114,6 +113,12 @@ posix:
 
 solaris:
 	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl"
+
+noparser: noparser.o
+	$(CC) noparser.o lua.o -L. -llua $(MYLIBS) -lm
+	-./a.out -e'a=1'
+one:
+	$(CC) $(CFLAGS) all.c -L. -llua -lm
 
 # list targets that do not create files (but not all makes understand .PHONY)
 .PHONY: all $(PLATS) default o a clean depend echo none
