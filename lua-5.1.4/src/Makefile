@@ -19,7 +19,7 @@ MYLIBS=
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
-PLATS= aix ansi bsd freebsd generic linux macosx mingw posix solaris
+PLATS= ansi bsd freebsd generic linux macosx mingw posix solaris
 
 LUA_A=	liblua.a
 CORE_O=	lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
@@ -57,7 +57,7 @@ $(LUAC_T): $(LUAC_O) $(LUA_A)
 	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(LUA_A) $(LIBS)
 
 clean:
-	$(RM) $(ALL_T) $(ALL_O)
+	$(RM) $(ALL_T) $(ALL_O) noparser.o a.out
 
 depend:
 	@$(CC) $(CFLAGS) -MM l*.c print.c
@@ -78,9 +78,7 @@ echo:
 none:
 	@echo "Please choose a platform:"
 	@echo "   $(PLATS)"
-
-aix:
-	$(MAKE) all CC="xlc" CFLAGS="-O2 -DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl" MYLDFLAGS="-brtl -bexpall"
+	@echo "Maybe you want to try all or noparser"
 
 ansi:
 	$(MAKE) all MYCFLAGS=-DLUA_ANSI
@@ -115,10 +113,11 @@ solaris:
 	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl"
 
 noparser: noparser.o
-	$(CC) noparser.o lua.o -L. -llua $(MYLIBS) -lm
-	-./a.out -e'a=1'
+	$(CC) noparser.o $(LUA_O) $(LUA_A) $(LIBS)
+	./a.out -e'a=1'
+
 one:
-	$(CC) $(CFLAGS) all.c -L. -llua -lm
+	$(CC) $(CFLAGS) all.c -lm
 
 # list targets that do not create files (but not all makes understand .PHONY)
 .PHONY: all $(PLATS) default o a clean depend echo none

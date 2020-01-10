@@ -31,7 +31,7 @@ RANLIB= ranlib
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =====
 
 # Convenience platforms targets.
-PLATS= aix ansi bsd freebsd generic linux macosx mingw posix solaris one noparser
+PLATS= ansi bsd freebsd generic linux macosx mingw posix solaris one noparser
 
 # What to install.
 TO_BIN= lua luac
@@ -64,7 +64,7 @@ none:
 	@echo "   make PLATFORM"
 	@echo "where PLATFORM is one of these:"
 	@echo "   $(PLATS)"
-	@echo "such as:"
+	@echo "try"
 	@echo "   make posix"
 	@echo "   make local"
 
