@@ -59,12 +59,6 @@ ranlib:
 local:
 	$(MAKE) install INSTALL_TOP=..
 
-strict:
-	-lua -e 'print(a);b=2'
-	-lua -lstrict -e 'print(a)'
-	-lua -e 'function f() b=2 end f()'
-	-lua -lstrict -e 'function f() b=2 end f()'
-
 none:
 	@echo "Please do"
 	@echo "   make PLATFORM"
