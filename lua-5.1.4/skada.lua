@@ -1,6 +1,6 @@
 #! /usr/bin/env lua
 
-function formatnum0(n)
+local function format_number_base(n)
 	if math.type(n) == 'integer' then
 		return tostring(n)
 	else
@@ -8,15 +8,44 @@ function formatnum0(n)
 	end
 end
 
-function formatnum(n)
-	if type(n) ~= 'number' then return '' end
+local function format_number(n)
+	if type(n) ~= 'number' then return 'x' end
 	if n<10000 then
-		return formatnum0(n)
+		return format_number_base(n)
 	elseif n<100000000 then
-		return formatnum0(n/10000)..'w'
+		return format_number_base(n/10000)..'w'
 	else
-		return formatnum0(n/100000000)..'y'
+		return format_number_base(n/100000000)..'y'
 	end
 end
 
-print(formatnum(tonumber(arg[1]) or 5))
+local function serialize(o, prefix, header, tailer)
+	if header then io.write(header) end
+	local t = type(o)
+	if t=='number' or t=='string' or t=='boolean' or t=='nil' then
+		io.write(string.format('%q', o))
+	elseif t=='table' then
+		io.write('{\n')
+		for k,v in pairs(o) do
+			local newprefix = prefix..'\t'
+			io.write(newprefix, k, ' = ')
+			serialize(v, newprefix)
+			io.write(',\n')
+		end
+		io.write(prefix, '}')
+	else
+		error('cannot serialize a '..t)
+	end
+	if tailer then io.write(tailer) end
+end
+
+local function pack(o, header)
+	serialize(o, '', header, '\n')
+end
+
+
+
+t={t1=1,t2={y1=3,y2={z1=4,z2=5}}}
+y=5
+pack(y, 'y = ')
+pack(t, 't = ')
