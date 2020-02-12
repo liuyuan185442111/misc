@@ -13,6 +13,7 @@ curr.overheal = 34
 curr.overdamage = 456
 curr.flag = 1
 
-function pushback()
-table.insert()
+function pushback(sourceid,targetid,sourcecamp,targetcamp,damage,heal,overdamage,overheal,skillid,flag)
+	local item = {}
+	table.insert(curr,item)
 end
