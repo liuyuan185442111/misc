@@ -1,19 +1,28 @@
 #! /bin/env lua
-battle = {}
-curr = {}
-curr.source = 1
-curr.target = 2
-curr.sourcecamp = 1
-curr.targetcamp = 2
-curr.value = 10
-curr.skill = 2
-curr.heal = 34
-curr.damage = 456
-curr.overheal = 34
-curr.overdamage = 456
-curr.flag = 1
+allbattle = {}
+currbattle = {}
 
-function pushback(sourceid,targetid,sourcecamp,targetcamp,damage,heal,overdamage,overheal,skillid,flag)
-	local item = {}
-	table.insert(curr,item)
+function add_damage_or_heal(sourceid,targetid,sourcecamp,targetcamp,damage,heal,overdamage,overheal,skillid,flag)
+	local item = {sourceid=sourceid,targetid=targetid,sourcecamp=sourcecamp,targetcamp=targetcamp,
+	damage=damage,heal=heal,overdamage=overdamage,overheal=overheal,skillid=skillid,flag=flag}
+	table.insert(currbattle,item)
 end
+
+function begin_battle()
+	if #currbattle ~= 0 then
+		finish_battle()
+	end
+end
+function finish_battle()
+	table.insert(allbattle,currbattle)
+	currbattle = {}
+end
+
+dofile('skada.lua')
+begin_battle()
+add_damage_or_heal(1,2,3,4,5,6,7,8,9,0)
+add_damage_or_heal(1,2,3,4,5,6,7,8,9,0)
+begin_battle()
+add_damage_or_heal(1,2,3,4,5,6,7,8,9,0)
+finish_battle()
+pack(allbattle, 'allbattle = ')

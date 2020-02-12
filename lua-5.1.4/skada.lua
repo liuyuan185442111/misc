@@ -44,12 +44,14 @@ local function serialize(o, prefix, header, tailer)
   if tailer then io.write(tailer) end
 end
 
-local function pack(o, header)
+function pack(o, header)
   serialize(o, '', header, '\n')
 end
 
+--[[
 t={v=1,[2]={y1=3,y2={z1=4,z2=5}}}
 t[1]='hello world'
 y=1/3
 pack(y, 'y = ')
 pack(t, 't = ')
+]]
