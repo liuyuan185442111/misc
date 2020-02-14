@@ -30,33 +30,37 @@ end
 --hostile_recv_damage:敌方承受伤害
 --hostile_heal:敌方造成有效治疗 敌方承受有效治疗
 
-local function newitem()
-	return {team_wrong_damage={},friend_send_damage={},friend_recv_damage={},
-	friend_heal={},hostile_send_damage={},hostile_recv_damage={},hostile_heal={}}
+local function newbattle()
+	return {count=0,begintime=nowtime(),team_wrong_damage={},
+	friend_send_damage={},friend_recv_damage={},friend_heal={},
+	hostile_send_damage={},hostile_recv_damage={},hostile_heal={},
+	total_send_damage=0,total_recv_damage=0,total_heal=0}
 end
 
 local function clonetable(org)
 	return {table.unpack(org)}
 end
 
-totalbattle = {}
-currbattle = newitem()
-allbattle = newitem()
+allbattle = {}
+sumbattle = newbattle()
+currbattle = newbattle()
 
 function begin_battle()
-	if #currbattle ~= 0 then
-		finish_battle()
+	if currbattle.count ~= 0 then
+		if not currbattle.endtime then
+			finish_battle()
+		end
+		currbattle = newbattle()
 	end
 end
 function finish_battle()
-	table.insert(allbattle,currbattle)
-	currbattle = {}
+	currbattle.endtime = nowtime()
+	table.insert(allbattle, currbattle)
 end
 
 function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage,value,overvalue,skillid,flag)
 	local item = {source_xid=source_xid,target_xid=target_xid,source_tid=source_tid,target_tid=target_tid,
-	isdamage=isdamage,value=value,overvalue=overvalue,skillid=skillid,flag=flag,
-	time=nowtime(),total_send_damage=0,total_recv_damage=0,total_heal=0}
+	isdamage=isdamage,value=value,overvalue=overvalue,skillid=skillid,flag=flag,time=nowtime()}
 	if isdamage and isteammate(source_xid) and isteammate(target_xid) then
 		if isfriend(source_xid) or isfriend(target_xid) then
 			table.insert(currbattle.team_wrong_damage, item)
@@ -127,7 +131,7 @@ function friend_damage(battle)
 		totol_damage = totol_damage + v.damage
 	end
 	table.sort(battle,function(a,b) return a.damage < b.damage end)
-	pack(battle)
+	dump(battle)
 end
 
 ----------------------------------------test
@@ -135,7 +139,8 @@ dofile('skada.lua')
 begin_battle()
 add_damage_or_heal(1,2,3,4,35,6,7,8,9)
 add_damage_or_heal(1,2,3,4,25,6,7,8,9)
-pack(currbattle)
 begin_battle()
 add_damage_or_heal(1,2,3,4,5,6,7,8,9)
 finish_battle()
+dump(currbattle, 'curr=')
+dump(allbattle, 'all=')

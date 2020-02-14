@@ -27,7 +27,7 @@ local function serialize(o, prefix, header, tailer)
     io.write(string.format('%q', o))
   elseif t=='table' then
     io.write('{\n')
-    local newprefix = prefix..'\t'
+    local newprefix = prefix..'  '
     for k,v in pairs(o) do
       if type(k) == 'number' then
         io.write(newprefix, '[', k, '] = ')
@@ -44,14 +44,6 @@ local function serialize(o, prefix, header, tailer)
   if tailer then io.write(tailer) end
 end
 
-function pack(o, header)
+function dump(o, header)
   serialize(o, '', header, '\n')
 end
-
---[[
-t={v=1,[2]={y1=3,y2={z1=4,z2=5}}}
-t[1]='hello world'
-y=1/3
-pack(y, 'y = ')
-pack(t, 't = ')
-]]
