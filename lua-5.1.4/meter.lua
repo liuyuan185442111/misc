@@ -1,5 +1,7 @@
 #! /bin/env lua
 
+dofile('common.lua')
+
 math.randomseed(1001086)
 --3 friendly  2 neutral  1 hostile  0 none
 local function campinfo(xid)
@@ -8,13 +10,13 @@ local function campinfo(xid)
 	return math.random(4)
 end
 local function isplayer(xid)
-	return math.random(2)==1
+	return true
 end
 local function isteammate(xid)
 	if not isplayer(xid) then
 		return false
 	end
-	return math.random(2)==1
+	return false
 end
 
 local function nowtime()
@@ -35,10 +37,6 @@ local function newbattle()
 	friend_send_damage={},friend_recv_damage={},friend_heal={},
 	hostile_send_damage={},hostile_recv_damage={},hostile_heal={},
 	total_send_damage=0,total_recv_damage=0,total_heal=0}
-end
-
-local function clonetable(org)
-	return {table.unpack(org)}
 end
 
 --current raw   减少一些计算
@@ -118,40 +116,49 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 end
 
 --friend_send_damage:友方造成伤害 友方造成伤害速率
-function friend_damage(battle)
-	battle = clonetable(battle)
+function friend_damage(battle, total_damage)
+	battle = meter.clonetable(battle)
 	table.sort(battle, function(a, b) return a.source_tid < b.source_tid end)
 	local alldata = {}
 	local currid = 0
+	local currdamage = 0
 	local item
 	for _,v in ipairs(battle) do
 		if v.source_tid ~= currid then
-			alldata[currid] = item
-			item = {rawdata={},skillset={},targetset={}}
+			if currid ~= 0 then
+				item.summary.damage = currdamage
+				item.summary.rate = currdamage / total_damage * 100
+				alldata[currid] = item
+			end
+			item = {summary={},skillset={},targetset={}}
 			currid = v.source_xid
+			currdamage = 0
 		end
-		table.insert(item.rawdata, v)
+		currdamage = currdamage + v.value
 	end
-	if currid>0 then
+	if currid ~= 0 then
+		item.summary.damage = currdamage
+		item.summary.rate = currdamage / total_damage * 100
+		print(item.summary.rate)
 		alldata[currid] = item
 	end
 	currid = nil
 	item = nil
-	dump(alldata, 'alldata=')
+	meter.dump(alldata, 'alldata=')
 
 	--伤害 比例 最大 最小 平均 暴击 命中
 	local skillset
 	--伤害 比例
 	local targetset
-
 end
 
 ----------------------------------------test
-dofile('skada.lua')
 begin_battle()
-add_damage_or_heal(1,102,3,4,5,6,7,8,9)
-add_damage_or_heal(101,2,13,14,15,16,17,18,19)
-add_damage_or_heal(121,22,23,24,25,26,27,28,29)
+add_damage_or_heal(1,101,11,4,true,5,0,7,8)
+add_damage_or_heal(2,102,12,4,true,10,0,7,8)
+add_damage_or_heal(101,2,13,4,true,15,0,17,18)
+add_damage_or_heal(121,22,23,4,true,25,0,27,28)
 finish_battle()
 
-friend_damage(currbattle)
+--dump(currbattle)
+friend_damage(currbattle.friend_send_damage, currbattle.total_send_damage)

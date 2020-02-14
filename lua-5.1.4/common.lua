@@ -1,6 +1,6 @@
 #! /usr/bin/env lua
 
-local function format_number_base(n)
+local function num2str_inner(n)
   if math.type(n) == 'integer' then
     return tostring(n)
   else
@@ -8,15 +8,20 @@ local function format_number_base(n)
   end
 end
 
-local function format_number(n)
+local function num2str(n)
   if type(n) ~= 'number' then return 'x' end
   if n<10000 then
-    return format_number_base(n)
+    return num2str_inner(n)
   elseif n<100000000 then
-    return format_number_base(n/10000)..'w'
+    return num2str_inner(n/10000)..'w'
   else
-    return format_number_base(n/100000000)..'y'
+    return num2str_inner(n/100000000)..'y'
   end
+end
+
+local function per2str(n)
+  if type(n) ~= 'number' then return 'x' end
+  return string.format('%.1f%%', n*100.0)
 end
 
 local function serialize(o, prefix, header, tailer)
@@ -44,6 +49,17 @@ local function serialize(o, prefix, header, tailer)
   if tailer then io.write(tailer) end
 end
 
-function dump(o, header)
-  serialize(o, '', header, '\n')
+local function dump(o, header)
+  serialize(o, '', header, '\n\n')
 end
+
+local function clonetable(org)
+	return {table.unpack(org)}
+end
+
+meter = {
+  num2str = num2str,
+  per2str = per2str,
+  dump = dump,
+  clonetable = clonetable,
+}
