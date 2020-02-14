@@ -1,4 +1,4 @@
 #! /bin/env lua
-dofile('skada.lua')
+dofile('common.lua')
 dofile()
-dump(allbattle)
+meter.dump(all)

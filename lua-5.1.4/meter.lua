@@ -3,6 +3,7 @@
 dofile('common.lua')
 
 math.randomseed(1001086)
+
 --3 friendly  2 neutral  1 hostile  0 none
 local function campinfo(xid)
 	if xid < 100 then return 3 end
@@ -39,6 +40,7 @@ local function newbattle()
 	total_send_damage=0,total_recv_damage=0,total_heal=0}
 end
 
+--职业和名字放到一个表里
 --current raw   减少一些计算
 --current
 --finished
@@ -115,50 +117,56 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 	end
 end
 
+--要支持从头构建 逐条合并 两的成品合并
 --friend_send_damage:友方造成伤害 友方造成伤害速率
-function friend_damage(battle, total_damage)
-	battle = meter.clonetable(battle)
-	table.sort(battle, function(a, b) return a.source_tid < b.source_tid end)
+function friend_damage(battle)
+	allitems = meter.clonetable(battle.friend_send_damage)
+	table.sort(allitems, function(a, b) return a.source_tid < b.source_tid end)
 	local alldata = {}
 	local currid = 0
-	local currdamage = 0
+	local currdamage
+	local firsttime
+	local lasttime
 	local item
-	for _,v in ipairs(battle) do
+	for _,v in ipairs(allitems) do
 		if v.source_tid ~= currid then
 			if currid ~= 0 then
-				item.summary.damage = currdamage
-				item.summary.rate = currdamage / total_damage * 100
+				item.occu = 1
+				item.name = 'what'
+				item.damage = currdamage
+				item.damage_ratio = currdamage / battle.total_send_damage * 100
+				item.active_seconds = lasttime - firsttime
+				item.period_seconds = nowtime() - battle.begintime
+				item.active_ratio = item.period_seconds<=0 and 0 or item.active_seconds / item.period_seconds
+				item.damage_rate = item.active_seconds<=0 and 0 or currdamage / item.active_seconds
 				alldata[currid] = item
 			end
-			item = {summary={},skillset={},targetset={}}
-			currid = v.source_xid
+			currid = v.source_tid
 			currdamage = 0
+			firsttime = 7952313600000
+			lasttime = 0
+			item = {skillset={},targetset={}}
 		end
 		currdamage = currdamage + v.value
+		if firsttime>v.time then firsttime = v.time end
+		if lasttime<v.time then lasttime = v.time end
 	end
 	if currid ~= 0 then
-		item.summary.damage = currdamage
-		item.summary.rate = currdamage / total_damage * 100
-		print(item.summary.rate)
+		item.occu = 1
+		item.name = 'what'
+		item.damage = currdamage
+		item.damage_ratio = currdamage / battle.total_send_damage * 100
+		item.active_seconds = lasttime - firsttime
+		item.period_seconds = nowtime() - battle.begintime
+		item.active_ratio = item.period_seconds<=0 and 0 or item.active_seconds / item.period_seconds
+		item.damage_rate = item.active_seconds<=0 and 0 or currdamage / item.active_seconds
 		alldata[currid] = item
 	end
-	currid = nil
-	item = nil
-	meter.dump(alldata, 'alldata=')
 
 	--伤害 比例 最大 最小 平均 暴击 命中
 	local skillset
 	--伤害 比例
 	local targetset
+
+	meter.dump(alldata, 'alldata=')
 end
-
-----------------------------------------test
-begin_battle()
-add_damage_or_heal(1,101,11,4,true,5,0,7,8)
-add_damage_or_heal(2,102,12,4,true,10,0,7,8)
-add_damage_or_heal(101,2,13,4,true,15,0,17,18)
-add_damage_or_heal(121,22,23,4,true,25,0,27,28)
-finish_battle()
-
---dump(currbattle)
-friend_damage(currbattle.friend_send_damage, currbattle.total_send_damage)
