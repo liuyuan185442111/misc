@@ -22,12 +22,12 @@ end
 local function serialize(o, prefix, header, tailer)
   if header then io.write(header) end
   local t = type(o)
-  --from lua 5.3.3
   if t=='number' or t=='string' or t=='boolean' or t=='nil' then
+    --o will change to string before Lua 5.3.3
     io.write(string.format('%q', o))
   elseif t=='table' then
     io.write('{\n')
-    local newprefix = prefix..'  '
+    local newprefix = prefix..'\t'
     for k,v in pairs(o) do
       if type(k) == 'number' then
         io.write(newprefix, '[', k, '] = ')
