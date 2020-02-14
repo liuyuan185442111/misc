@@ -154,5 +154,4 @@ add_damage_or_heal(101,2,13,14,15,16,17,18,19)
 add_damage_or_heal(121,22,23,24,25,26,27,28,29)
 finish_battle()
 
-print(currbattle)
 friend_damage(currbattle)
