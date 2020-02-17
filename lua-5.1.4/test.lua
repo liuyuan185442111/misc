@@ -1,5 +1,6 @@
 #! /bin/env lua
 
+math.randomseed(1001086)
 dofile('meter.lua')
 
 local function sleep(n)
@@ -23,5 +24,4 @@ add_damage_or_heal(121,22,23,4,true,25,0,27,28)
 sleep(1)
 finish_battle()
 
---meter.dump(currbattle)
 cal_fsd(currbattle)

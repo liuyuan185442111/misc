@@ -54,12 +54,10 @@ local function dump(o, header)
 end
 
 local function clonetable(org)
-	return {table.unpack(org)}
+  return {table.unpack(org)}
 end
 
-meter = {
-  num2str = num2str,
-  per2str = per2str,
-  dump = dump,
-  clonetable = clonetable,
-}
+meter.num2str = num2str
+meter.per2str = per2str
+meter.dump = dump
+meter.clonetable = clonetable
