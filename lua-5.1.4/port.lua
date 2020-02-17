@@ -21,3 +21,9 @@ end
 function nowtime()
 	return os.time()
 end
+
+function isbaoji()
+	return true
+end
+
+--职业 玩家名字 怪物名字查询机制

@@ -24,33 +24,43 @@ local function per2str(n)
   return string.format('%.1f%%', n*100.0)
 end
 
+local outstrtab = {}
+local function outputstr(...)
+  for _,str in ipairs{...} do
+    table.insert(outstrtab, str)
+  end
+end
+
 local function serialize(o, prefix, header, tailer)
-  if header then io.write(header) end
+  if header then outputstr(header) end
   local t = type(o)
   if t=='number' or t=='string' or t=='boolean' or t=='nil' then
     --o will change to string before Lua 5.3.3
-    io.write(string.format('%q', o))
+    outputstr(string.format('%q', o))
   elseif t=='table' then
-    io.write('{\n')
+    outputstr('{\n')
     local newprefix = prefix..'\t'
     for k,v in pairs(o) do
       if type(k) == 'number' then
-        io.write(newprefix, '[', k, '] = ')
+        outputstr(newprefix, '[', k, '] = ')
       else
-        io.write(newprefix, k, ' = ')
+        outputstr(newprefix, k, ' = ')
       end
       serialize(v, newprefix)
-      io.write(',\n')
+      outputstr(',\n')
     end
-    io.write(prefix, '}')
+    outputstr(prefix, '}')
   else
     error('cannot serialize a '..t)
   end
-  if tailer then io.write(tailer) end
+  if tailer then outputstr(tailer) end
 end
 
 local function dump(o, header)
+  outstrtab = {}
   serialize(o, '', header, '\n\n')
+  print(table.concat(outstrtab))
+  return table.concat(outstrtab)
 end
 
 local function clonetable(org)
