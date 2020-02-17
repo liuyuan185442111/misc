@@ -24,4 +24,4 @@ sleep(1)
 finish_battle()
 
 --meter.dump(currbattle)
-friend_damage(currbattle)
+cal_fsd(currbattle)
