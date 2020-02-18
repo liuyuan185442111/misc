@@ -143,8 +143,7 @@ function pre_fsd(battle)
 	if #allitems == 0 then return nil end
 	table.sort(allitems, function(a,b) return a.source_tid<b.source_tid end)
 	table.insert(allitems, {source_tid=-1})
-	local currid, currdamage, firsttime, lasttime = 0
-	local skillset, targetset
+	local currid, currdamage, firsttime, lasttime, skillset, targetset = 0
 	for _,v in ipairs(allitems) do
 		if v.source_tid ~= currid then
 			if currid ~= 0 then
@@ -154,19 +153,17 @@ function pre_fsd(battle)
 					firsttime = firsttime,
 					lasttime = lasttime,
 					skillset = skillset,
-					targetset = targetset
+					targetset = targetset,
 				}
 				if v.source_tid == -1 then break end
 			end
-			currid = v.source_tid
-			currdamage = 0
-			firsttime = 7952313600000
-			lasttime = 0
+			currid, currdamage = v.source_tid, 0
+			firsttime, lasttime = 7952313600000, 0
 			skillset, targetset = {}, {}
 		end
 		currdamage = currdamage + v.value
-		if firsttime>v.time then firsttime = v.time end
-		if lasttime<v.time then lasttime = v.time end
+		if firsttime > v.time then firsttime = v.time end
+		if lasttime < v.time then lasttime = v.time end
 		do
 			local temp = skillset[v.skillid]
 			local value = v.value
@@ -183,7 +180,7 @@ function pre_fsd(battle)
 		do
 			local temp = targetset[v.target_tid]
 			if temp == nil then
-				--TODO 如果npc的tid和角色的roleid出现重复呢?
+				--TODO 如果npc的tid和角色的roleid重复呢?
 				targetset[v.target_tid] = {id=v.target_tid, damage=v.value, isplayer=isplayer(v.target_xid)}
 			else
 				temp.damage = temp.damage + v.value
@@ -194,64 +191,58 @@ function pre_fsd(battle)
 	return semidata
 end
 
-local function merge_fsd_summary(v, endtime, total_damage)
-	v.occu = getroleoccu(tid)
-	v.name = getrolename(tid)
-	v.active_time = v.lasttime - v.firsttime
-	v.period_time = endtime - v.firsttime
-	v.active_ratio = v.active_time / v.period_time * 100
-	v.damage_ratio = v.damage / total_damage * 100
-	v.damage_rate = v.damage / v.active_time
+local function local_fsd_summarize(t, endtime, total_damage)
+	t.occu = getroleoccu(tid)
+	t.name = getrolename(tid)
+	t.active_time = t.lasttime - t.firsttime
+	t.period_time = endtime - t.firsttime
+	t.active_ratio = t.active_time / t.period_time * 100
+	t.damage_ratio = t.damage / total_damage * 100
+	t.damage_rate = t.damage / t.active_time
 end
-local function merge_fsd_updateskillandtarget(v)
-	local tmpskill, tmptarget = {}, {}
-	for _,v in pairs(v.skillset) do
+local function local_fsd_complete(t)
+	for _,v in pairs(t.skillset) do
 		v.occu = getskilloccu(v.id)
 		v.name = getskillname(v.skillid)
-		table.insert(tmpskill, v)
 	end
-	for _,v in pairs(v.targetset) do
+	for _,v in pairs(t.targetset) do
 		v.occu = v.isplayer and getroleoccu(v.id) or 0
 		v.name = v.isplayer and getrolename(v.id) or getnpcname(v.id)
-		table.insert(tmptarget, v)
 	end
-	table.sort(tmpskill, function(a,b) return a.damage>b.damage end)
-	table.sort(tmptarget, function(a,b) return a.damage>b.damage end)
-	v.skillset = tmpskill
-	v.targetset = tmptarget
 end
-local function merge_fsd_skill(dest, src, sumdmg)
-	for _,v in ipairs(dest) do
-		local t = src[v.id]
-		src[v.id] = nil
-		v.count = v.count + t.count
-		v.baoji = v.baoji + t.baoji
-		v.damage = v.damage + t.damage
-		if v.maxdmg < t.maxdmg then
-			v.maxdmg = t.maxdmg
+local function local_fsd_merge_skill(dest, src, sumdmg)
+	for k,v in pairs(src) do
+		local t = src[k]
+		if t then
+			t.count = t.count + v.count
+			t.baoji = t.baoji + v.baoji
+			t.damage = t.damage + v.damage
+			if t.maxdmg < v.maxdmg then
+				t.maxdmg = v.maxdmg
+			end
+			if t.mindmg > v.mindmg then
+				t.mindmg = v.mindmg
+			end
+			t.averdmg = t.damage / t.count
+			t.ratio = t.damage / sumdmg * 100
+		else
+			v.averdmg = v.damage / v.count
+			v.ratio = v.damage / sumdmg * 100
+			dest[k] = v
 		end
-		if v.mindmg > t.mindmg then
-			v.mindmg = t.mindmg
-		end
-		v.averdmg = v.damage / v.count
-		v.ratio = v.damage / sumdmg * 100
 	end
-	for _,v in pairs(src) do
-		table.insert(dest, v)
-	end
-	table.sort(dest, function(a,b) return a.damage>b.damage end)
 end
-local function merge_fsd_target(dest, src, sumdmg)
-	for _,v in ipairs(dest) do
-		local t = src[v.id]
-		src[v.id] = nil
-		v.damage = v.damage + t.damage
-		v.ratio = v.damage / sumdmg * 100
+local function local_fsd_merge_target(dest, src, sumdmg)
+	for k,v in pairs(src) do
+		local t = dest[k]
+		if t then
+			t.damage = t.damage + v.damage
+			t.ratio = t.damage / sumdmg * 100
+		else
+			v.ratio = v.damage / sumdmg * 100
+			dest[k] = v
+		end
 	end
-	for _,v in pairs(src) do
-		table.insert(dest, v)
-	end
-	table.sort(dest, function(a,b) return a.damage>b.damage end)
 end
 
 function merge_fsd(semidata, endtime, battle)
@@ -259,24 +250,32 @@ function merge_fsd(semidata, endtime, battle)
 		return false
 	end
 	battle = battle or currbattle
-	local fsd_summary = battle.fsd_summary
+	local summary = battle.fsd_summary
 	for k,v in pairs(semidata) do
-		local t = fsd_summary[k]
+		local t = summary[k]
 		if t then
 			t.lasttime = v.lasttime
 			t.damage = t.damage + v.damage
-			merge_fsd_summary(t, endtime, battle.total_send_damage)
-			merge_fsd_skill(t.skillset, v.skillset, t.damage)
-			merge_fsd_target(t.targetset, v.targetset, t.damage)
+			local_fsd_summarize(t, endtime, battle.total_send_damage)
+			local_fsd_merge_skill(t.skillset, v.skillset, t.damage)
+			t.skillsort = meter.clonetable(t.skillset)
+			table.sort(t.skillsort, function(a,b) return a.damage>b.damage end)
+			local_fsd_merge_target(t.targetset, v.targetset, t.damage)
+			t.targetsort = meter.clonetable(t.targetset)
+			table.sort(t.targetsort, function(a,b) return a.damage>b.damage end)
 		else
-			merge_fsd_summary(v, endtime, battle.total_send_damage)
-			merge_fsd_updateskillandtarget(v)
-			fsd_summary[k] = v
+			local_fsd_summarize(v, endtime, battle.total_send_damage)
+			local_fsd_complete(v)
+			v.skillsort = meter.clonetable(v.skillset)
+			table.sort(v.skillsort, function(a,b) return a.damage>b.damage end)
+			v.targetsort = meter.clonetable(v.targetset)
+			table.sort(v.targetsort, function(a,b) return a.damage>b.damage end)
+			summary[k] = v
 		end
 	end
-	battle.fsd_sort1 = meter.clonetable(fsd_summary)
+	battle.fsd_sort1 = meter.clonetable(summary)
+	battle.fsd_sort2 = meter.clonevector(battle.fsd_sort1)
 	table.sort(battle.fsd_sort1, function(a,b) return a.damage>b.damage end)
-	battle.fsd_sort2 = meter.clonetable(fsd_summary)
 	table.sort(battle.fsd_sort2, function(a,b) return a.damage_rate>b.damage_rate end)
 	return true
 end
