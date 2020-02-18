@@ -75,11 +75,19 @@ local function dump(o, header)
   return table.concat(outstrtab)
 end
 
-local function clonetable(org)
+local function clonevector(org)
   return {table.unpack(org)}
+end
+local function clonetable(org)
+  local t = {}
+  for _,v in pairs(org) do
+    table.insert(t, v)
+  end
+  return t
 end
 
 meter.num2str = num2str
 meter.per2str = per2str
 meter.dump = dump
+meter.clonevector = clonevector
 meter.clonetable = clonetable

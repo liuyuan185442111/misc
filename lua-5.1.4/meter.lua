@@ -47,6 +47,8 @@ function export_data()
 		t.hostile_heal = nil
 		t.hh_sort1 = nil
 		t.hh_sort2 = nil
+		t.fsd_sort1 = v.fsd_sort1
+		t.fsd_sort2 = v.fsd_sort2
 		table.insert(temp, t)
 	end
 	meter.dump(temp, 'data=')

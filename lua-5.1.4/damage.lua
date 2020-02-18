@@ -259,26 +259,25 @@ function merge_fsd(semidata, endtime, battle)
 		return false
 	end
 	battle = battle or currbattle
-	local count = 0
 	local fsd_summary = battle.fsd_summary
-	for _,v in ipairs(fsd_summary) do
-		local t = semidata[v.tid]
-		semidata[v.tid] = nil
-		v.lasttime = t.lasttime
-		v.damage = v.damage + t.damage
-		merge_fsd_summary(v, endtime, battle.total_send_damage)
-		merge_fsd_skill(v.skillset, t.skillset, v.damage)
-		merge_fsd_target(v.targetset, t.targetset, v.damage)
-		count = count + 1
+	for k,v in pairs(semidata) do
+		local t = fsd_summary[k]
+		if t then
+			t.lasttime = v.lasttime
+			t.damage = t.damage + v.damage
+			merge_fsd_summary(t, endtime, battle.total_send_damage)
+			merge_fsd_skill(t.skillset, v.skillset, t.damage)
+			merge_fsd_target(t.targetset, v.targetset, t.damage)
+		else
+			merge_fsd_summary(v, endtime, battle.total_send_damage)
+			merge_fsd_updateskillandtarget(v)
+			fsd_summary[k] = v
+		end
 	end
-	for _,v in pairs(semidata) do
-		merge_fsd_summary(v, endtime, battle.total_send_damage)
-		merge_fsd_updateskillandtarget(v)
-		table.insert(battle.fsd_summary, v)
-		count = count + 1
-	end
-	--TODO 最好根据count采用不同排序方法
-	table.sort(battle.fsd_summary, function(a,b) return a.damage>b.damage end)
+	battle.fsd_sort1 = meter.clonetable(fsd_summary)
+	table.sort(battle.fsd_sort1, function(a,b) return a.damage>b.damage end)
+	battle.fsd_sort2 = meter.clonetable(fsd_summary)
+	table.sort(battle.fsd_sort2, function(a,b) return a.damage_rate>b.damage_rate end)
 	return true
 end
 
