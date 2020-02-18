@@ -22,8 +22,29 @@ function nowtime()
 	return os.time()
 end
 
-function isbaoji()
-	return true
+function isbaoji(flag)
+	return flag & 1
 end
 
---职业 玩家名字 怪物名字查询机制
+--职业 角色名字 npc名字 技能名字 可以考虑做缓存
+--但角色名字职业变化时要对应更新 实现复杂一些
+function getoccu()
+	return 1
+end
+function getrolename()
+	return 'what'
+end
+
+function getnpcname()
+	return 'npc'
+end
+function getskillname()
+	return 'attack'
+end
+
+function getentryinfo(tid, isplayer)
+	if isplayer==false then
+		return 0, getnpcname(tid)
+	end
+	return getoccu(tid), getrolename(tid)
+end

@@ -136,9 +136,8 @@ function pre_fsd(battle)
 				table.sort(tmptarget, function(a,b) return a.damage>b.damage end)
 				semidata[currid] = {
 					tid = currid,
-	--TODO
-					name = 'what',
-					occu = 1,
+					occu = getoccu(tid),
+					name = getrolename(tid),
 					damage = currdamage,
 					firsttime = firsttime,
 					lasttime = lasttime,
@@ -165,9 +164,7 @@ function pre_fsd(battle)
 				temp.damage = temp.damage + value
 				if value > temp.maxdmg then temp.maxdmg = value end
 				if value < temp.mindmg then temp.mindmg = value end
-	--TODO
-				if 1 then temp.baoji = temp.baoji + 1 end
-				if 1 then temp.mingzhong = temp.mingzhong + 1 end
+				if isbaoji(v.flag) then temp.baoji = temp.baoji + 1 end
 			end
 		end
 		do
@@ -196,17 +193,22 @@ function merge_fsd(semidata, endtime, battle)
 		semidata[v.tid] = nil
 		count = count + 1
 	end
-	for k,v in pairs(semidata) do
-		--move v to fsd_summary
+	for _,v in pairs(semidata) do
+		v.active_time = v.lasttime - v.firsttime
+		v.period_time = endtime - v.firsttime
+		v.active_ratio = v.active_time / v.period_time * 100
+		v.damage_ratio = v.damage / battle.total_send_damage
+		v.damage_rate = v.damage / v.active_time
 		table.insert(battle.fsd_summary, v)
 		count = count + 1
 	end
-	--最好根据count大小采用不同排序方法
+	--最好根据count采用不同排序方法
 	table.sort(battle.fsd_summary, function(a,b) return a.damage>b.damage end)
 	return true
 end
 
 function cal_fsd(endtime)
+	endtime = endtime or nowtime()
 	return merge_fsd(pre_fsd(), endtime)
 end
 
