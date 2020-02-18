@@ -12,10 +12,10 @@
 local function newbattle()
 	return {
 		count=0,begintime=nowtime(),
-		team_wrong_damage={},twd_summary={},
-		total_send_damage=0,total_recv_damage=0,total_heal=0,
-		friend_send_damage={},friend_recv_damage={},friend_heal={},
-		fsd_summary={},frd_summary={},fh_summary={},
+		team_wrong_damage={}, twd_summary={},
+		total_send_damage=0, friend_send_damage={}, fsd_summary={},
+		total_recv_damage=0, friend_recv_damage={}, frd_summary={},
+		total_heal=0, friend_heal={}, fh_summary={},
 		hostile_send_damage={},hostile_recv_damage={},hostile_heal={},
 		hsd_summary={},hrd_summary={},hh_summary={},
 	}
@@ -114,6 +114,7 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 	end
 end
 
+------------------------------------------------------------
 function pre_fsd(battle)
 	battle = battle or currbattle
 	local semidata, allitems = {}, battle.friend_send_damage
@@ -121,28 +122,17 @@ function pre_fsd(battle)
 	table.sort(allitems, function(a,b) return a.source_tid<b.source_tid end)
 	table.insert(allitems, {source_tid=-1})
 	local currid, currdamage, firsttime, lasttime = 0
-	local skillset, targetset = {},{}
+	local skillset, targetset
 	for _,v in ipairs(allitems) do
 		if v.source_tid ~= currid then
 			if currid ~= 0 then
-				local tmpskill, tmptarget = {}, {}
-				for k,v in pairs(skillset) do
-					table.insert(tmpskill, v)
-				end
-				for k,v in pairs(targetset) do
-					table.insert(tmptarget, v)
-				end
-				table.sort(tmpskill, function(a,b) return a.damage>b.damage end)
-				table.sort(tmptarget, function(a,b) return a.damage>b.damage end)
 				semidata[currid] = {
 					tid = currid,
-					occu = getoccu(tid),
-					name = getrolename(tid),
 					damage = currdamage,
 					firsttime = firsttime,
 					lasttime = lasttime,
-					skillset = tmpskill,
-					targetset = tmptarget
+					skillset = skillset,
+					targetset = targetset
 				}
 				if v.source_tid == -1 then break end
 			end
@@ -159,18 +149,20 @@ function pre_fsd(battle)
 			local temp = skillset[v.skillid]
 			local value = v.value
 			if temp == nil then
-				skillset[v.skillid] = {id=v.skillid,damage=value, maxdmg=value, mindmg=value, baoji=0, mingzhong=0}
+				skillset[v.skillid] = {id=v.skillid, damage=value, maxdmg=value, mindmg=value, count=1, baoji=isbaoji(v.flag)}
 			else
 				temp.damage = temp.damage + value
 				if value > temp.maxdmg then temp.maxdmg = value end
 				if value < temp.mindmg then temp.mindmg = value end
 				if isbaoji(v.flag) then temp.baoji = temp.baoji + 1 end
+				temp.count = temp.count + 1
 			end
 		end
 		do
 			local temp = targetset[v.target_tid]
 			if temp == nil then
-				targetset[v.target_tid] = {id=v.target_tid,damage=v.value}
+				--TODO 如果npc的tid和角色的roleid出现重复呢?
+				targetset[v.target_tid] = {id=v.target_tid, damage=v.value, isplayer=isplayer(v.target_xid)}
 			else
 				temp.damage = temp.damage + v.value
 			end
@@ -180,29 +172,90 @@ function pre_fsd(battle)
 	return semidata
 end
 
+local function merge_fsd_summary(v, endtime, total_damage)
+	v.occu = getroleoccu(tid)
+	v.name = getrolename(tid)
+	v.active_time = v.lasttime - v.firsttime
+	v.period_time = endtime - v.firsttime
+	v.active_ratio = v.active_time / v.period_time * 100
+	v.damage_ratio = v.damage / total_damage
+	v.damage_rate = v.damage / v.active_time
+end
+local function merge_fsd_updateskillandtarget(v)
+	local tmpskill, tmptarget = {}, {}
+	for _,v in pairs(v.skillset) do
+		v.occu = getskilloccu(v.id)
+		v.name = getskillname(v.skillid)
+		table.insert(tmpskill, v)
+	end
+	for _,v in pairs(v.targetset) do
+		v.occu = v.isplayer and getroleoccu(v.id) or 0
+		v.name = v.isplayer and getrolename(v.id) or getnpcname(v.id)
+		table.insert(tmptarget, v)
+	end
+	table.sort(tmpskill, function(a,b) return a.damage>b.damage end)
+	table.sort(tmptarget, function(a,b) return a.damage>b.damage end)
+	v.skillset = tmpskill
+	v.targetset = tmptarget
+end
+local function merge_fsd_skill(dest, src, sumdmg)
+	for _,v in ipairs(dest) do
+		local t = src[v.id]
+		src[v.id] = nil
+		v.count = v.count + t.count
+		v.baoji = v.baoji + t.baoji
+		v.damage = v.damage + t.damage
+		if v.maxdmg < t.maxdmg then
+			v.maxdmg = t.maxdmg
+		end
+		if v.mindmg > t.mindmg then
+			v.mindmg = t.mindmg
+		end
+		v.averdmg = v.damage / v.count
+		v.ratio = v.damage / sumdmg * 100
+	end
+	for _,v in pairs(src) do
+		table.insert(dest, v)
+	end
+	table.sort(dest, function(a,b) return a.damage>b.damage end)
+end
+local function merge_fsd_target(dest, src, sumdmg)
+	for _,v in ipairs(dest) do
+		local t = src[v.id]
+		src[v.id] = nil
+		v.damage = v.damage + t.damage
+		v.ratio = v.damage / sumdmg * 100
+	end
+	for _,v in pairs(src) do
+		table.insert(dest, v)
+	end
+	table.sort(dest, function(a,b) return a.damage>b.damage end)
+end
+
 function merge_fsd(semidata, endtime, battle)
 	if not semidata then
 		return false
 	end
-	--TODO
 	battle = battle or currbattle
 	local count = 0
 	local fsd_summary = battle.fsd_summary
 	for _,v in ipairs(fsd_summary) do
-		--semidata[v.tid] merge v
+		local t = semidata[v.tid]
 		semidata[v.tid] = nil
+		v.lasttime = t.lasttime
+		v.damage = v.damage + t.damage
+		merge_fsd_summary(v, endtime, battle.total_send_damage)
+		merge_fsd_skill(v.skillset, t.skillset, v.damage)
+		merge_fsd_target(v.targetset, t.targetset, v.damage)
 		count = count + 1
 	end
 	for _,v in pairs(semidata) do
-		v.active_time = v.lasttime - v.firsttime
-		v.period_time = endtime - v.firsttime
-		v.active_ratio = v.active_time / v.period_time * 100
-		v.damage_ratio = v.damage / battle.total_send_damage
-		v.damage_rate = v.damage / v.active_time
+		merge_fsd_summary(v, endtime, battle.total_send_damage)
+		merge_fsd_updateskillandtarget(v)
 		table.insert(battle.fsd_summary, v)
 		count = count + 1
 	end
-	--最好根据count采用不同排序方法
+	--TODO 最好根据count采用不同排序方法
 	table.sort(battle.fsd_summary, function(a,b) return a.damage>b.damage end)
 	return true
 end
@@ -211,6 +264,7 @@ function cal_fsd(endtime)
 	endtime = endtime or nowtime()
 	return merge_fsd(pre_fsd(), endtime)
 end
+------------------------------------------------------------
 
 function cal_all(endtime)
 	endtime = endtime or nowtime()
