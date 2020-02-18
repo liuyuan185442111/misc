@@ -1,23 +1,46 @@
 #! /bin/env lua
 
 --认为友方只能是玩家
---team_wrong_damage:队友误伤
---friend_send_damage:友方造成伤害 友方造成伤害速率
---friend_recv_damage:友方承受伤害 友方承受伤害技能
---friend_heal:友方造成有效治疗总量及速率 友方造成过量治疗 友方造成总计治疗 友方获得有效治疗
---hostile_send_damage:敌方造成伤害
---hostile_recv_damage:敌方承受伤害
---hostile_heal:敌方造成有效治疗 敌方承受有效治疗
-
 local function newbattle()
 	return {
-		count=0,begintime=nowtime(),
-		team_wrong_damage={}, twd_summary={},
-		total_send_damage=0, friend_send_damage={}, fsd_summary={},
-		total_recv_damage=0, friend_recv_damage={}, frd_summary={},
-		total_heal=0, friend_heal={}, fh_summary={},
-		hostile_send_damage={},hostile_recv_damage={},hostile_heal={},
-		hsd_summary={},hrd_summary={},hh_summary={},
+		count=0, begintime=nowtime(),
+
+		team_wrong_damage={}, --队友误伤
+		twd_summary={}, --以tid分组
+		twd_sort={}, --队友误伤排序
+
+		total_send_damage=0, friend_send_damage={}, --友方造成伤害
+		fsd_summary={}, --以tid分组
+		fsd_sort1={}, --造成伤害排序
+		fsd_sort2={}, --每秒伤害排序
+
+		total_recv_damage=0, friend_recv_damage={}, --友方受到伤害
+		frd_summary1={}, --以tid分组
+		frd_sort1={}, --受到伤害排序
+		frd_summary2={}, --以skillid分组
+		frd_sort2={}, --承受法术伤害排序
+
+		total_heal=0, friend_heal={}, --友方治疗
+		fh_summary1={}, --以治疗者tid分组
+		fh_sort1={}, --有效治疗排序
+		fh_sort2={}, --过量治疗排序
+		fh_sort3={}, --总计治疗排序
+		fh_summary2={}, --以被治疗者tid分组
+		fh_sort4={}, --获得治疗排序
+
+		hostile_send_damage={}, --敌对造成伤害
+		hsd_summary={}, --以tid分组
+		hsd_sort={}, --敌对造成伤害排序
+
+		hostile_recv_damage={}, --敌对受到伤害
+		hrd_summary={}, --以tid分组
+		hrd_sort={}, --敌对受到伤害排序
+
+		hostile_heal={}, --敌对治疗
+		hh_summary1={}, --以治疗者tid分组
+		hh_sort1={}, --敌方治疗排序
+		hh_summary2={}, --以被治疗者tid分组
+		hh_sort2={}, --敌方获得治疗排序
 	}
 end
 
@@ -33,8 +56,7 @@ function begin_battle()
 		finish_battle()
 	end
 	currbattle = newbattle()
-	--TODO
-	--try del 多余的 更新sumbattle
+	--TODO 数目过多时需要重新计算sumbattle
 end
 function finish_battle()
 	if currbattle.count == 0 then
@@ -178,7 +200,7 @@ local function merge_fsd_summary(v, endtime, total_damage)
 	v.active_time = v.lasttime - v.firsttime
 	v.period_time = endtime - v.firsttime
 	v.active_ratio = v.active_time / v.period_time * 100
-	v.damage_ratio = v.damage / total_damage
+	v.damage_ratio = v.damage / total_damage * 100
 	v.damage_rate = v.damage / v.active_time
 end
 local function merge_fsd_updateskillandtarget(v)

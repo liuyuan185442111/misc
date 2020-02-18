@@ -25,6 +25,8 @@ finish_battle()
 --sleep(1)
 --add_damage_or_heal(121,22,23,4,true,25,0,27,28)
 
-local str = meter.dump(allbattle, 'halo=')
+--local str = meter.dump(allbattle, 'halo=')
 --load(str)()
 --meter.dump(halo)
+
+export_data()

@@ -30,17 +30,28 @@ local function outputstr(...)
     table.insert(outstrtab, str)
   end
 end
+local function outputnumstr(str)
+	if str=='inf' or str=='nan' or str=='-inf' or str=='-nan' then
+		str = '0'
+	end
+	table.insert(outstrtab, str)
+end
 
 local function serialize(o, prefix, header, tailer)
   if header then outputstr(header) end
   local t = type(o)
-  if t=='number' or t=='string' or t=='boolean' or t=='nil' then
+  if t=='number' then
+	outputnumstr(tostring(o))
+    --outputnumstr(string.format('%q', o))
+  elseif t=='string' or t=='boolean' or t=='nil' then
     --o will change to string before Lua 5.3.3
     outputstr(string.format('%q', o))
   elseif t=='table' then
     outputstr('{\n')
     local newprefix = prefix..'\t'
     for k,v in pairs(o) do
+		--do not save items whose key contains '_NS'
+		if not string.find(k, '_NS', 2, true) then
       if type(k) == 'number' then
         outputstr(newprefix, '[', k, '] = ')
       else
@@ -48,6 +59,7 @@ local function serialize(o, prefix, header, tailer)
       end
       serialize(v, newprefix)
       outputstr(',\n')
+		end
     end
     outputstr(prefix, '}')
   else
