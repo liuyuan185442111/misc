@@ -1,5 +1,7 @@
 #! /bin/env lua
 
+local LONG_TIME_LATER = 7952313600000
+
 --认为友方只能是玩家
 local function newbattle()
 	return {
@@ -49,7 +51,7 @@ currbattle = newbattle()
 sumbattle = newbattle()
 
 local function update_sumbattle_easy_data()
-	local begintime,endtime,count,total_send_damage,total_recv_damage,total_heal = 7952313600000,0,0,0,0,0
+	local begintime,endtime,count,total_send_damage,total_recv_damage,total_heal = LONG_TIME_LATER,0,0,0,0,0
 	for _,v in ipairs(allbattle) do
 		begintime = math.min(begintime, v.begintime)
 		endtime = math.max(endtime, v.endtime)
@@ -83,7 +85,7 @@ function finish_battle()
 		return
 	end
 	currbattle.endtime = nowtime()
-	cal_all()
+	cal_currbattle()
 	table.insert(allbattle, currbattle)
 	if #allbattle > 10 then
 		table.remove(allbattle, 1)
@@ -180,7 +182,7 @@ function pre_fsd(battle)
 				if v.source_tid == -1 then break end
 			end
 			currid, currdamage = v.source_tid, 0
-			firsttime, lasttime = 7952313600000, 0
+			firsttime, lasttime = LONG_TIME_LATER, 0
 			skillset, targetset = {}, {}
 		end
 		currdamage = currdamage + v.value
@@ -316,7 +318,7 @@ function merge_fsd(srcdata, endtime, battle, flag)
 					occu = v.occu,
 					name = v.name,
 					damage = 0,
-					firsttime = 7952313600000,
+					firsttime = LONG_TIME_LATER,
 					lasttime = 0,
 					skillset = {},
 					targetset = {},
@@ -356,13 +358,22 @@ function cal_fsd(endtime)
 end
 
 function cal_fsd_sum()
-	for _,v in ipairs(allbattle) do
-		merge_fsd(v.fsd_summary, nil, sumbattle, 0)
+	for k,v in ipairs(allbattle) do
+		merge_fsd(v.fsd_summary, nil, sumbattle, k == #allbattle and 2 or 0)
 	end
+	sumbattle.fsd_summary.OK = true
 end
 ------------------------------------------------------------
 
-function cal_all(endtime)
+function cal_currbattle(endtime)
 	endtime = endtime or nowtime()
 	cal_fsd(endtime)
+end
+
+function cal_sumbattle()
+	for k,v in ipairs(allbattle) do
+		local flag = k == #allbattle and 2 or 0
+		merge_fsd(v.fsd_summary, nil, sumbattle, flag)
+	end
+	sumbattle.fsd_summary.OK = true
 end
