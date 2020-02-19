@@ -45,8 +45,30 @@ local function newbattle()
 end
 
 allbattle = {}
-sumbattle = newbattle()
 currbattle = newbattle()
+currbattle_update_time = 0
+
+finishedbattle = newbattle()
+local finishedbattle_broken = true
+sumbattle = newbattle()
+sumbattle_update_time = 0
+
+function sssss()
+	local begintime,count,total_send_damage,total_recv_damage,total_heal = 0,0,0,0,0
+	for _,v in ipairs(allbattle) do
+		begintime = math.min(begintime, v.begintime)
+		count = count + v.count
+		total_send_damage = total_send_damage + v.total_send_damage
+		total_recv_damage = total_recv_damage + v.total_recv_damage
+		total_heal = total_heal + v.total_heal
+	end
+	finishedbattle.begintime = begintime
+	finishedbattle.count = count
+	finishedbattle.total_send_damage = total_send_damage
+	finishedbattle.total_recv_damage = total_recv_damage
+	finishedbattle.total_heal = total_heal
+end
+
 
 function begin_battle()
 	if currbattle.count == 0 then
@@ -56,7 +78,6 @@ function begin_battle()
 		finish_battle()
 	end
 	currbattle = newbattle()
-	--TODO 数目过多时需要重新计算sumbattle
 end
 function finish_battle()
 	if currbattle.count == 0 then
@@ -68,6 +89,10 @@ function finish_battle()
 	currbattle.endtime = nowtime()
 	cal_all()
 	table.insert(allbattle, currbattle)
+	if #allbattle > 10 then
+		table.remove(allbattle, 1)
+		sumbattle_expire = true
+	end
 end
 
 function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage,value,overvalue,skillid,flag)
@@ -82,10 +107,10 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 	end
 	local discard_record = true
 	if isdamage then
-		local source_friend = campinfo(source_xid) > 1
-		local source_hostile = campinfo(source_xid) == 1
-		local target_friend = campinfo(target_xid) > 1
-		local target_hostile = campinfo(target_xid) == 1
+		local source_friend = getcampinfo(source_xid) > 1
+		local source_hostile = getcampinfo(source_xid) == 1
+		local target_friend = getcampinfo(target_xid) > 1
+		local target_hostile = getcampinfo(target_xid) == 1
 		if source_friend and target_hostile then
 			if isplayer(source_xid) then
 				table.insert(currbattle.friend_send_damage, item)
@@ -119,7 +144,7 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 		end
 		]]
 	else
-		local camp = campinfo(source_xid)
+		local camp = getcampinfo(source_xid)
 		if camp>1 then --friend
 			if isplayer(source_xid) and isplayer(target_xid) then
 				table.insert(currbattle.friend_heal, item)
@@ -162,8 +187,8 @@ function pre_fsd(battle)
 			skillset, targetset = {}, {}
 		end
 		currdamage = currdamage + v.value
-		if firsttime > v.time then firsttime = v.time end
-		if lasttime < v.time then lasttime = v.time end
+		firsttime = math.min(firsttime, v.time)
+		lasttime = math.max(lasttime, v.time)
 		do
 			local temp = skillset[v.skillid]
 			local value = v.value
@@ -192,23 +217,11 @@ function pre_fsd(battle)
 end
 
 local function local_fsd_summarize(t, endtime, total_damage)
-	t.occu = getroleoccu(tid)
-	t.name = getrolename(tid)
 	t.active_time = t.lasttime - t.firsttime
 	t.period_time = endtime - t.firsttime
 	t.active_ratio = t.active_time / t.period_time * 100
 	t.damage_ratio = t.damage / total_damage * 100
 	t.damage_rate = t.damage / t.active_time
-end
-local function local_fsd_complete(t)
-	for _,v in pairs(t.skillset) do
-		v.occu = getskilloccu(v.id)
-		v.name = getskillname(v.skillid)
-	end
-	for _,v in pairs(t.targetset) do
-		v.occu = v.isplayer and getroleoccu(v.id) or 0
-		v.name = v.isplayer and getrolename(v.id) or getnpcname(v.id)
-	end
 end
 local function local_fsd_merge_skill(dest, src, sumdmg)
 	for k,v in pairs(src) do
@@ -245,7 +258,7 @@ local function local_fsd_merge_target(dest, src, sumdmg)
 	end
 end
 
-function merge_fsd(semidata, endtime, battle)
+function merge_fsd(semidata, endtime, battle, notcal)
 	if not semidata then
 		return false
 	end
@@ -254,29 +267,49 @@ function merge_fsd(semidata, endtime, battle)
 	for k,v in pairs(semidata) do
 		local t = summary[k]
 		if t then
-			t.lasttime = v.lasttime
+			t.lasttime = math.max(t.lasttime, v.lasttime)
+			t.firsttime = math.min(t.firsttime, v.firsttime)
 			t.damage = t.damage + v.damage
-			local_fsd_summarize(t, endtime, battle.total_send_damage)
+			if not notcal then
+				local_fsd_summarize(t, endtime, battle.total_send_damage)
+			end
 			local_fsd_merge_skill(t.skillset, v.skillset, t.damage)
-			t.skillsort = meter.clonetable(t.skillset)
-			table.sort(t.skillsort, function(a,b) return a.damage>b.damage end)
 			local_fsd_merge_target(t.targetset, v.targetset, t.damage)
-			t.targetsort = meter.clonetable(t.targetset)
-			table.sort(t.targetsort, function(a,b) return a.damage>b.damage end)
+			if not notcal then
+				t.skillsort = skada.clonetable(t.skillset)
+				table.sort(t.skillsort, function(a,b) return a.damage>b.damage end)
+				t.targetsort = skada.clonetable(t.targetset)
+				table.sort(t.targetsort, function(a,b) return a.damage>b.damage end)
+			end
 		else
-			local_fsd_summarize(v, endtime, battle.total_send_damage)
-			local_fsd_complete(v)
-			v.skillsort = meter.clonetable(v.skillset)
-			table.sort(v.skillsort, function(a,b) return a.damage>b.damage end)
-			v.targetsort = meter.clonetable(v.targetset)
-			table.sort(v.targetsort, function(a,b) return a.damage>b.damage end)
+			v.occu = getroleoccu(k)
+			v.name = getrolename(k)
+			if not notcal then
+				local_fsd_summarize(v, endtime, battle.total_send_damage)
+			end
+			for _,v in pairs(v.skillset) do
+				v.occu = getskilloccu(v.id)
+				v.name = getskillname(v.skillid)
+			end
+			for _,v in pairs(v.targetset) do
+				v.occu = v.isplayer and getroleoccu(v.id) or 0
+				v.name = v.isplayer and getrolename(v.id) or getnpcname(v.id)
+			end
+			if not notcal then
+				v.skillsort = skada.clonetable(v.skillset)
+				table.sort(v.skillsort, function(a,b) return a.damage>b.damage end)
+				v.targetsort = skada.clonetable(v.targetset)
+				table.sort(v.targetsort, function(a,b) return a.damage>b.damage end)
+			end
 			summary[k] = v
 		end
 	end
-	battle.fsd_sort1 = meter.clonetable(summary)
-	battle.fsd_sort2 = meter.clonevector(battle.fsd_sort1)
-	table.sort(battle.fsd_sort1, function(a,b) return a.damage>b.damage end)
-	table.sort(battle.fsd_sort2, function(a,b) return a.damage_rate>b.damage_rate end)
+	if not notcal then
+		battle.fsd_sort1 = skada.clonetable(summary)
+		battle.fsd_sort2 = skada.clonevector(battle.fsd_sort1)
+		table.sort(battle.fsd_sort1, function(a,b) return a.damage>b.damage end)
+		table.sort(battle.fsd_sort2, function(a,b) return a.damage_rate>b.damage_rate end)
+	end
 	return true
 end
 

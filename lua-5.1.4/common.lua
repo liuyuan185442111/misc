@@ -31,17 +31,17 @@ local function outputstr(...)
   end
 end
 local function outputnumstr(str)
-	if str=='inf' or str=='nan' or str=='-inf' or str=='-nan' then
-		str = '0'
-	end
-	table.insert(outstrtab, str)
+  if str=='inf' or str=='nan' or str=='-inf' or str=='-nan' then
+    str = '0'
+  end
+  table.insert(outstrtab, str)
 end
 
 local function serialize(o, prefix, header, tailer)
   if header then outputstr(header) end
   local t = type(o)
   if t=='number' then
-	outputnumstr(tostring(o))
+	  outputnumstr(tostring(o))
     --outputnumstr(string.format('%q', o))
   elseif t=='string' or t=='boolean' or t=='nil' then
     --o will change to string before Lua 5.3.3
@@ -50,8 +50,8 @@ local function serialize(o, prefix, header, tailer)
     outputstr('{\n')
     local newprefix = prefix..'\t'
     for k,v in pairs(o) do
-		--do not save items whose key contains '_NS'
-		if not string.find(k, '_NS', 2, true) then
+		--do not save items whose key ends with 'NS'
+		if not(type(k)=='string' and #k>3 and k[-2]=='N' and k[-1]=='S') then
       if type(k) == 'number' then
         outputstr(newprefix, '[', k, '] = ')
       else
@@ -71,7 +71,6 @@ end
 local function dump(o, header)
   outstrtab = {}
   serialize(o, '', header, '\n\n')
-  print(table.concat(outstrtab))
   return table.concat(outstrtab)
 end
 
@@ -86,8 +85,8 @@ local function clonetable(org)
   return t
 end
 
-meter.num2str = num2str
-meter.per2str = per2str
-meter.dump = dump
-meter.clonevector = clonevector
-meter.clonetable = clonetable
+skada.num2str = num2str
+skada.per2str = per2str
+skada.dump = dump
+skada.clonevector = clonevector
+skada.clonetable = clonetable
