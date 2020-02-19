@@ -79,6 +79,13 @@ local function clonevector(org)
 end
 local function clonetable(org)
   local t = {}
+  for k,v in pairs(org) do
+    t[k] = v
+  end
+  return t
+end
+local function transtable(org)
+  local t = {}
   for _,v in pairs(org) do
     table.insert(t, v)
   end
@@ -90,3 +97,4 @@ skada.per2str = per2str
 skada.dump = dump
 skada.clonevector = clonevector
 skada.clonetable = clonetable
+skada.transtable = transtable

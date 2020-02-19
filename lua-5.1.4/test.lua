@@ -25,7 +25,9 @@ sleep(1)
 add_damage_or_heal(2,102,12,4,true,16,0,7,8)
 finish_battle()
 
-merge_fsd(currbattle.fsd_summary, nowtime(), sumbattle, true)
+cal_fsd_sum()
+--export_data()
 table.remove(allbattle)
 table.insert(allbattle, sumbattle)
 export_data()
+
