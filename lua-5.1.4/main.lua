@@ -4,7 +4,6 @@ skada = {}
 
 --所有初始数据和排序后的数据都不导出
 function export_data()
-	finish_battle()
 	local temp = {}
 	for _,v in ipairs(allbattle) do
 		local t = {}
@@ -33,11 +32,9 @@ function export_data()
 end
 
 --for debug
-function export_sumbattle()
-	cal_fsd_sum()
-
+function export_battle(battle)
 	local t = {}
-	local v = sumbattle
+	local v = battle
 	t.count = v.count
 	t.begintime = v.begintime
 	t.endtime = v.endtime
@@ -58,7 +55,7 @@ function export_sumbattle()
 	--t.hh_summary1 = v.hh_summary1
 	--t.hh_summary2 = v.hh_summary2
 
-	print(skada.dump(t, 'sumbattle='))
+	print(skada.dump(t, 'battle='))
 end
 
 --load(str)()
