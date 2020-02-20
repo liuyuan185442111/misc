@@ -25,8 +25,8 @@ function export_data()
 		--t.hh_summary1 = v.hh_summary1
 		--t.hh_summary2 = v.hh_summary2
 
-		t.fsd_sort1 = v.fsd_sort1
-		t.fsd_sort2 = v.fsd_sort2
+		--t.fsd_sort1 = v.fsd_sort1
+		--t.fsd_sort2 = v.fsd_sort2
 		table.insert(temp, t)
 	end
 	print(skada.dump(temp, 'allbattle='))
@@ -34,7 +34,8 @@ end
 
 --for debug
 function export_sumbattle()
-	cal_sumbattle()
+	cal_fsd_sum()
+
 	local t = {}
 	local v = sumbattle
 	t.count = v.count
@@ -46,8 +47,8 @@ function export_sumbattle()
 
 	--t.twd_summary = v.twd_summary
 	t.fsd_summary = v.fsd_summary
-	t.fsd_sort1 = v.fsd_sort1
-	t.fsd_sort2 = v.fsd_sort2
+	--t.fsd_sort1 = v.fsd_sort1
+	--t.fsd_sort2 = v.fsd_sort2
 	--t.frd_summary1 = v.frd_summary1
 	--t.frd_summary2 = v.frd_summary2
 	--t.fh_summary1 = v.fh_summary1

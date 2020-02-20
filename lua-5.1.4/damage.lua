@@ -85,7 +85,7 @@ function finish_battle()
 		return
 	end
 	currbattle.endtime = nowtime()
-	cal_currbattle()
+	cal_currbattle(currbattle.endtime)
 	table.insert(allbattle, currbattle)
 	if #allbattle > 10 then
 		table.remove(allbattle, 1)
@@ -223,9 +223,8 @@ function pre_fsd(battle)
 end
 
 local function local_fsd_summarize(t, endtime, total_damage)
-	endtime = endtime or t.lasttime
 	t.active_time = t.lasttime - t.firsttime
-	t.period_time = endtime - t.firsttime
+	t.period_time = endtime or t.lasttime - t.firsttime
 	t.active_ratio = t.active_time / t.period_time
 	t.damage_ratio = t.damage / total_damage
 	t.damage_rate = t.damage / t.active_time
@@ -299,18 +298,22 @@ function merge_fsd(srcdata, endtime, battle, flag)
 				v.occu = getroleoccu(k)
 				v.name = getrolename(k)
 				local_fsd_summarize(v, endtime, battle.total_send_damage)
+				local sumdmg = v.damage
 				for _,v in pairs(v.skillset) do
 					v.occu = getskilloccu(v.id)
 					v.name = getskillname(v.skillid)
+					v.averdmg = v.damage / v.count
+					v.ratio = v.damage / sumdmg
 				end
 				for _,v in pairs(v.targetset) do
 					v.occu = v.isplayer and getroleoccu(v.id) or 0
 					v.name = v.isplayer and getrolename(v.id) or getnpcname(v.id)
+					v.ratio = v.damage / sumdmg
 				end
-				v.skillsort = skada.transtable(v.skillset)
-				table.sort(v.skillsort, function(a,b) return a.damage>b.damage end)
-				v.targetsort = skada.transtable(v.targetset)
-				table.sort(v.targetsort, function(a,b) return a.damage>b.damage end)
+				v.skillsort_NS = skada.transtable(v.skillset)
+				table.sort(v.skillsort_NS, function(a,b) return a.damage>b.damage end)
+				v.targetsort_NS = skada.transtable(v.targetset)
+				table.sort(v.targetsort_NS, function(a,b) return a.damage>b.damage end)
 				summary[k] = v
 			else
 				t = {
@@ -325,21 +328,21 @@ function merge_fsd(srcdata, endtime, battle, flag)
 				}
 				summary[k] = t
 			end
-			if t then
-				t.lasttime = math.max(t.lasttime, v.lasttime)
-				t.firsttime = math.min(t.firsttime, v.firsttime)
-				t.damage = t.damage + v.damage
-				if need_cal then
-					local_fsd_summarize(t, endtime, battle.total_send_damage)
-				end
-				local_fsd_merge_skill(t.skillset, v.skillset, t.damage, adopt_data)
-				local_fsd_merge_target(t.targetset, v.targetset, t.damage, adopt_data)
-				if need_cal then
-					t.skillsort = skada.transtable(t.skillset)
-					table.sort(t.skillsort, function(a,b) return a.damage>b.damage end)
-					t.targetsort = skada.transtable(t.targetset)
-					table.sort(t.targetsort, function(a,b) return a.damage>b.damage end)
-				end
+		end
+		if t then
+			t.lasttime = math.max(t.lasttime, v.lasttime)
+			t.firsttime = math.min(t.firsttime, v.firsttime)
+			t.damage = t.damage + v.damage
+			if need_cal then
+				local_fsd_summarize(t, endtime, battle.total_send_damage)
+			end
+			local_fsd_merge_skill(t.skillset, v.skillset, t.damage, adopt_data)
+			local_fsd_merge_target(t.targetset, v.targetset, t.damage, adopt_data)
+			if need_cal then
+				t.skillsort_NS = skada.transtable(t.skillset)
+				table.sort(t.skillsort_NS, function(a,b) return a.damage>b.damage end)
+				t.targetsort_NS = skada.transtable(t.targetset)
+				table.sort(t.targetsort_NS, function(a,b) return a.damage>b.damage end)
 			end
 		end
 	end
@@ -352,28 +355,40 @@ function merge_fsd(srcdata, endtime, battle, flag)
 	return true
 end
 
+function merge_fsd_repair(battle)
+	local summary = battle.fsd_summary
+	for _,t in pairs(summary) do
+		local_fsd_summarize(t, nil, battle.total_send_damage)
+		t.skillsort_NS = skada.transtable(t.skillset)
+		table.sort(t.skillsort_NS, function(a,b) return a.damage>b.damage end)
+		t.targetsort_NS = skada.transtable(t.targetset)
+		table.sort(t.targetsort_NS, function(a,b) return a.damage>b.damage end)
+	end
+	battle.fsd_sort1 = skada.transtable(summary)
+	battle.fsd_sort2 = skada.clonevector(battle.fsd_sort1)
+	table.sort(battle.fsd_sort1, function(a,b) return a.damage>b.damage end)
+	table.sort(battle.fsd_sort2, function(a,b) return a.damage_rate>b.damage_rate end)
+end
+
 function cal_fsd(endtime)
 	endtime = endtime or nowtime()
 	return merge_fsd(pre_fsd(), endtime)
 end
 
 function cal_fsd_sum()
-	for k,v in ipairs(allbattle) do
-		merge_fsd(v.fsd_summary, nil, sumbattle, k == #allbattle and 2 or 0)
+	if sumbattle.fsd_summary.OK then
+		return false
 	end
+	for k,v in ipairs(allbattle) do
+		merge_fsd(v.fsd_summary, nil, sumbattle, 0)
+	end
+	merge_fsd_repair(sumbattle)
 	sumbattle.fsd_summary.OK = true
+	return true
 end
 ------------------------------------------------------------
 
 function cal_currbattle(endtime)
 	endtime = endtime or nowtime()
 	cal_fsd(endtime)
-end
-
-function cal_sumbattle()
-	for k,v in ipairs(allbattle) do
-		local flag = k == #allbattle and 2 or 0
-		merge_fsd(v.fsd_summary, nil, sumbattle, flag)
-	end
-	sumbattle.fsd_summary.OK = true
 end

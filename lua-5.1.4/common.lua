@@ -51,7 +51,7 @@ local function serialize(o, prefix, header, tailer)
     local newprefix = prefix..'\t'
     for k,v in pairs(o) do
 		--do not save items whose key ends with 'NS'
-		if not(type(k)=='string' and #k>3 and k[-2]=='N' and k[-1]=='S') then
+		if not(type(k)=='string' and #k>3 and string.byte(k,-2)==78 and string.byte(k,-1)==83) then
       if type(k) == 'number' then
         outputstr(newprefix, '[', k, '] = ')
       else

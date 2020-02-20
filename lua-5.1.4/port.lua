@@ -24,7 +24,7 @@ function nowtime()
 end
 
 function isbaoji(flag)
-	return (flag & 1) == 0
+	return (flag & 1) ~= 0
 end
 
 --TODO 角色/npc/技能信息 可以考虑做缓存
