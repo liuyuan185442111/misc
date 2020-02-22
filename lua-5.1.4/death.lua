@@ -1,5 +1,5 @@
 #! /bin/env lua
-dofile('main.lua')
+dofile('export.lua')
 dofile('common.lua')
 dofile('port.lua')
 

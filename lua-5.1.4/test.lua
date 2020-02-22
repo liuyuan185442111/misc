@@ -1,7 +1,7 @@
 #! /bin/env lua
 
 require('strict')
-dofile('main.lua')
+dofile('export.lua')
 dofile('common.lua')
 dofile('port.lua')
 dofile('damage.lua')

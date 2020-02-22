@@ -93,7 +93,7 @@ local function transtable(org)
 end
 
 local queue = {}
-local function queue.new(maxsize)
+function queue.new(maxsize)
   --if setmetatable not permitted
   local q = {
     left = 1,
@@ -108,10 +108,10 @@ local function queue.new(maxsize)
   }
   return q
 end
-local function queue:size()
+function queue:size()
   return self.right + 1 - self.left
 end
-local function queue:push(val)
+function queue:push(val)
   self.right = self.right + 1
   self[self.right] = val
   if self.right + 1 - self.left > self.maxsize then
@@ -119,17 +119,17 @@ local function queue:push(val)
     self.left = self.left + 1
   end
 end
-local function queue:pop()
+function queue:pop()
   self[self.left] = nil
   self.left = self.left + 1
 end
 function queue:back()
   return self[self.right]
 end
-local function queue:front()
+function queue:front()
   return self[self.left]
 end
-local function queue:clear()
+function queue:clear()
   self = queue.new(self.maxsize)
 end
 
@@ -142,6 +142,7 @@ local function reverse(seq)
   end
 end
 
+skada = {}
 skada.num2str = num2str
 skada.per2str = per2str
 skada.dump = dump
