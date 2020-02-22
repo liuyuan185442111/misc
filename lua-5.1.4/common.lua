@@ -41,7 +41,7 @@ local function serialize(o, prefix, header, tailer)
   if header then outputstr(header) end
   local t = type(o)
   if t=='number' then
-	  outputnumstr(tostring(o))
+    outputnumstr(tostring(o))
     --outputnumstr(string.format('%q', o))
   elseif t=='string' or t=='boolean' or t=='nil' then
     --o will change to string before Lua 5.3.3
@@ -50,8 +50,8 @@ local function serialize(o, prefix, header, tailer)
     outputstr('{\n')
     local newprefix = prefix..'\t'
     for k,v in pairs(o) do
-		--do not save items whose key ends with 'NS'
-		if not(type(k)=='string' and #k>3 and string.byte(k,-2)==78 and string.byte(k,-1)==83) then
+    --do not save items whose key ends with 'NS'
+    if not(type(k)=='string' and #k>3 and string.byte(k,-2)==78 and string.byte(k,-1)==83) then
       if type(k) == 'number' then
         outputstr(newprefix, '[', k, '] = ')
       else
@@ -59,7 +59,7 @@ local function serialize(o, prefix, header, tailer)
       end
       serialize(v, newprefix)
       outputstr(',\n')
-		end
+    end
     end
     outputstr(prefix, '}')
   else
@@ -92,9 +92,61 @@ local function transtable(org)
   return t
 end
 
+local queue = {}
+local function queue.new(maxsize)
+  --if setmetatable not permitted
+  local q = {
+    left = 1,
+    right = 0,
+    maxsize = maxsize or 99999999,
+    size = queue.size,
+    push = queue.push,
+    pop = queue.pop,
+    front = queue.front,
+    back = queue.back,
+    clear = queue.clear,
+  }
+  return q
+end
+local function queue:size()
+  return self.right + 1 - self.left
+end
+local function queue:push(val)
+  self.right = self.right + 1
+  self[self.right] = val
+  if self.right + 1 - self.left > self.maxsize then
+    self[self.left] = nil
+    self.left = self.left + 1
+  end
+end
+local function queue:pop()
+  self[self.left] = nil
+  self.left = self.left + 1
+end
+function queue:back()
+  return self[self.right]
+end
+local function queue:front()
+  return self[self.left]
+end
+local function queue:clear()
+  self = queue.new(self.maxsize)
+end
+
+local function reverse(seq)
+  local n = #seq
+  for i=1,n//2 do
+    local tmp = seq[i]
+    seq[i] = seq[n+1-i]
+    seq[n+1-i] = tmp
+  end
+end
+
 skada.num2str = num2str
 skada.per2str = per2str
 skada.dump = dump
 skada.clonevector = clonevector
 skada.clonetable = clonetable
 skada.transtable = transtable
+skada.queue = queue
+skada.reverse = reverse

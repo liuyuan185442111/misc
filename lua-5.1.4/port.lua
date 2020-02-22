@@ -19,8 +19,33 @@ function isteammate(xid)
 	return false
 end
 
+--boss*0x1000 玩家*0x0100 精英*0x0010 普通*0x0000
+function getrivalinfo(curr_tid, curr_level, target_tid)
+	if curr_tid == target_tid then
+		return nil
+	end
+	local target_type, target_level = 'boss', 0
+	if target_type == 'role' then
+	else
+		if target_type == 'boss' then
+		elseif target_type == 'jing' then
+		else
+		end
+	end
+	if target_level > curr_level then
+		return target_tid, target_level,
+		target_type=='role' and getrolename(target_tid) or getnpcname(target_tid)
+	end
+end
+
+local lasttime = 0
 function nowtime()
-	return os.time()
+	if os.time() <= lasttime then
+		lasttime = lasttime + 1
+	else
+		lasttime = os.time()
+	end
+	return lasttime
 end
 
 function isbaoji(flag)
@@ -43,4 +68,13 @@ function getskilloccu(skillid)
 end
 function getskillname(skillid)
 	return 'attack'
+end
+
+--根据属性广播消息 维护所有人的maxhp信息 因为c2s_damage里不包含maxhp信息
+local role_maxhp_map = {}
+function updaterolemaxhp(tid, maxhp)
+	role_maxhp_map[tid] = maxhp
+end
+function getrolemaxhp(tid)
+	return role_maxhp_map[tid] or 0
 end
