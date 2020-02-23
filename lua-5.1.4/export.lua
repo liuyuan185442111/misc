@@ -23,7 +23,7 @@ local not_save_field = {
 	hh_sort1 = true,
 	hh_sort2 = true,
 }
-local function copy_battle_for_output(battle)
+local function sieve_battle_fields(battle)
 	local r = {}
 	for field,value in pairs(battle) do
 		if not not_save_field[field] then
@@ -37,14 +37,15 @@ end
 function export_data()
 	local temp = {}
 	for _,v in ipairs(allbattle) do
-		table.insert(temp, copy_battle_for_output(v))
+		table.insert(temp, sieve_battle_fields(v))
 	end
 	print(skada.dump(temp, 'allbattle='))
 end
 
---for debug
 function export_battle(battle)
-	print(skada.dump(copy_battle_for_output(battle), 'battle='))
+	print(skada.dump(sieve_battle_fields(battle), 'battle='))
 end
 
---load(str)()
+function import_data(data)
+	load(data)()
+end

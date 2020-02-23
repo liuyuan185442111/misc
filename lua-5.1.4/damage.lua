@@ -57,8 +57,7 @@ local function newbattle()
 		hh_summary2={}, --以被治疗者tid分组
 		hh_sort2={}, --敌方获得治疗排序
 
-		total_death_count=0,
-		death_record = {}, --以死人xid分组
+		death_record = {}, --参见death.lua
 	}
 end
 
@@ -103,7 +102,8 @@ function finish_battle()
 		return
 	end
 	currbattle.endtime = nowtime()
-	cal_currbattle(currbattle.endtime)
+	cal_currbattle()
+	death_record_finish_battle(currbattle.death_record)
 	table.insert(allbattle, 1, currbattle)
 	if #allbattle > 10 then
 		table.remove(allbattle)
@@ -119,6 +119,7 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 	if isdamage and isteammate(source_xid) and isteammate(target_xid) then
 		table.insert(currbattle.team_wrong_damage, item)
 		currbattle.total_wrong_damage = currbattle.total_wrong_damage + value
+		death_record_add_activity(currbattle.death_record, target_tid, true, source_tid, skillid, -value, targethp)
 		currbattle.count = currbattle.count + 1
 		return
 	end
@@ -154,6 +155,7 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 			if a then
 				currbattle.rival_tid,currbattle.rival_level,currbattle.rival_title = a,b,c
 			end
+			death_record_add_activity(currbattle.death_record, target_tid, isplayer(source_xid), source_tid, skillid, -value, targethp)
 			discard_record = false
 		end
 		--[[
@@ -181,6 +183,7 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 				currbattle.total_weover_heal = currbattle.total_weover_heal + overvalue
 				discard_record = false
 			end
+			death_record_add_activity(currbattle.death_record, target_tid, isplayer(source_xid), source_tid, skillid, value, targethp)
 		elseif camp==1 then --hostile
 			table.insert(currbattle.hostile_heal, item)
 			currbattle.total_herecv_damage = currbattle.total_herecv_damage + value
@@ -385,10 +388,12 @@ function merge_fsd_repair(battle)
 	return true
 end
 
+--返回false表示未有变化
 function cal_fsd()
 	return merge_fsd(pre_fsd()) and merge_fsd_repair() or false
 end
 
+--返回false表示未有变化
 function cal_fsd_sum()
 	if sumbattle.fsd_summary.OK then
 		return false
@@ -402,6 +407,6 @@ function cal_fsd_sum()
 end
 ------------------------------------------------------------
 
-function cal_currbattle(endtime)
-	cal_fsd(endtime)
+function cal_currbattle()
+	cal_fsd()
 end

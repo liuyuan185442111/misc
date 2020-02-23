@@ -7,7 +7,6 @@ local function num2str_inner(n)
     return string.format('%.2f', n)
   end
 end
-
 local function num2str(n)
   if type(n) ~= 'number' then return 'x' end
   if n<10000 then
@@ -36,7 +35,6 @@ local function outputnumstr(str)
   end
   table.insert(outstrtab, str)
 end
-
 local function serialize(o, prefix, header, tailer)
   if header then outputstr(header) end
   local t = type(o)
@@ -67,7 +65,6 @@ local function serialize(o, prefix, header, tailer)
   end
   if tailer then outputstr(tailer) end
 end
-
 local function dump(o, header)
   outstrtab = {}
   serialize(o, '', header, '\n\n')
