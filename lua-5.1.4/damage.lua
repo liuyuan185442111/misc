@@ -1,5 +1,3 @@
-#! /bin/env lua
-
 local LONG_TIME_LATER = 7952313600000
 
 --认为友方只能是玩家
@@ -116,7 +114,7 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 		source_xid=source_xid,target_xid=target_xid,source_tid=source_tid,target_tid=target_tid,
 		isdamage=isdamage,value=value,overvalue=overvalue,skillid=skillid,flag=flag,time=nowtime()
 	}
-	if isdamage and isteammate(source_xid) and isteammate(target_xid) then
+	if isdamage and isteammate(source_xid, source_tid) and isteammate(target_xid, target_tid) then
 		table.insert(currbattle.team_wrong_damage, item)
 		currbattle.total_wrong_damage = currbattle.total_wrong_damage + value
 		death_record_add_activity(currbattle.death_record, target_tid, true, source_tid, skillid, -value, targethp)
@@ -125,14 +123,14 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 	end
 	local discard_record = true
 	if isdamage then
-		local source_camp = getcampinfo(source_xid)
-		local target_camp = getcampinfo(target_xid)
+		local source_camp = skada.getcampinfo(source_xid)
+		local target_camp = skada.getcampinfo(target_xid)
 		local source_friend = source_camp>1
 		local source_hostile = source_camp==1
 		local target_friend = target_camp>1
 		local target_hostile = target_camp==1
 		if source_friend and target_hostile then
-			if isplayer(source_xid) then
+			if skada.isplayer(source_xid) then
 				table.insert(currbattle.friend_send_damage, item)
 				currbattle.total_wesend_damage = currbattle.total_wesend_damage + value
 			end
@@ -147,7 +145,7 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 		if source_hostile and target_friend then
 			table.insert(currbattle.hostile_send_damage, item)
 			currbattle.total_hesend_damage = currbattle.total_hesend_damage + value
-			if isplayer(target_xid) then
+			if skada.isplayer(target_xid) then
 				table.insert(currbattle.friend_recv_damage, item)
 				currbattle.total_werecv_damage = currbattle.total_werecv_damage + value
 			end
@@ -155,16 +153,16 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 			if a then
 				currbattle.rival_tid,currbattle.rival_level,currbattle.rival_title = a,b,c
 			end
-			death_record_add_activity(currbattle.death_record, target_tid, isplayer(source_xid), source_tid, skillid, -value, targethp)
+			death_record_add_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, -value, targethp)
 			discard_record = false
 		end
 		--[[
 		if source_friend and target_friend then
-			if isplayer(source_xid) then
+			if skada.isplayer(source_xid) then
 				table.insert(currbattle.friend_send_damage, item)
 				currbattle.total_wesend_damage = currbattle.total_wesend_damage + value
 			end
-			if isplayer(target_xid) then
+			if skada.isplayer(target_xid) then
 				table.insert(currbattle.friend_recv_damage, item)
 				currbattle.total_werecv_damage = currbattle.total_werecv_damage + value
 			end
@@ -175,15 +173,15 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 		end
 		]]
 	else
-		local camp = getcampinfo(target_xid)
+		local camp = skada.getcampinfo(target_xid)
 		if camp>1 then --friend
-			if isplayer(source_xid) and isplayer(target_xid) then
+			if skada.isplayer(source_xid) and skada.isplayer(target_xid) then
 				table.insert(currbattle.friend_heal, item)
 				currbattle.total_wereal_heal = currbattle.total_wereal_heal + value
 				currbattle.total_weover_heal = currbattle.total_weover_heal + overvalue
 				discard_record = false
 			end
-			death_record_add_activity(currbattle.death_record, target_tid, isplayer(source_xid), source_tid, skillid, value, targethp)
+			death_record_add_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, value, targethp)
 		elseif camp==1 then --hostile
 			table.insert(currbattle.hostile_heal, item)
 			currbattle.total_herecv_damage = currbattle.total_herecv_damage + value
@@ -247,7 +245,7 @@ function pre_fsd(battle)
 			local temp = targetset[v.target_tid]
 			if temp == nil then
 				--TODO 如果npc的tid和角色的roleid重复呢?
-				targetset[v.target_tid] = {id=v.target_tid, damage=v.value, isplayer=isplayer(v.target_xid)}
+				targetset[v.target_tid] = {id=v.target_tid, damage=v.value, isplayer=skada.isplayer(v.target_xid)}
 			else
 				temp.damage = temp.damage + v.value
 			end
@@ -327,7 +325,6 @@ function merge_fsd(srcdata, battle, adopt_data)
 				v.name = getrolename(k)
 				local sumdmg = v.damage
 				for _,v in pairs(v.skillset) do
-					v.occu = getskilloccu(v.id)
 					v.name = getskillname(v.skillid)
 				end
 				for _,v in pairs(v.targetset) do

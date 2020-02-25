@@ -1,18 +1,15 @@
-#! /usr/bin/env lua
-
 --3 friendly  2 neutral  1 hostile  0 none
-function getcampinfo(xid)
+local function getcampinfo(xid)
 	if xid < 100 then return 3 end
 	if xid > 100 then return 1 end
 	return math.random(4)
 end
 
-function isplayer(xid)
+local function isplayer(xid)
 	return true
-	--return #xid > 2 and xid[1] == '0' and x[2] == ':'
 end
 
-function isteammate(xid)
+function isteammate(xid, tid)
 	if not isplayer(xid) then
 		return false
 	end
@@ -63,9 +60,6 @@ end
 function getnpcname(tid)
 	return 'npc'
 end
-function getskilloccu(skillid)
-	return 2
-end
 function getskillname(skillid)
 	return 'attack'
 end
@@ -78,3 +72,6 @@ end
 function getrolemaxhp(tid)
 	return role_maxhp_map[tid] or 0
 end
+
+skada.getcampinfo = getcampinfo
+skada.isplayer = isplayer

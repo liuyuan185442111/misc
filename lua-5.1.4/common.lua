@@ -1,5 +1,3 @@
-#! /usr/bin/env lua
-
 local function num2str_inner(n)
   if math.type(n) == 'integer' then
     return tostring(n)

@@ -1,5 +1,3 @@
-#! /bin/env lua
-
 local not_save_field = {
 	team_wrong_damage = true,
 	twd_sort = true,

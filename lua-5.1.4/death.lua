@@ -1,5 +1,3 @@
-#! /bin/env lua
-
 function death_record_add_activity(death_record, tid, is_operator_player, operator, skillid, delta, hp)
 	local midresult = death_record.midresult
 	if midresult == nil then
