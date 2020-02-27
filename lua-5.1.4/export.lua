@@ -41,9 +41,12 @@ function export_data()
 end
 
 function export_battle(battle)
-	print(skada.dump(sieve_battle_fields(battle), 'battle='))
+	local s = skada.dump(sieve_battle_fields(battle), 'battle=')
+	savedata(1, s)
 end
 
 function import_data(data)
-	load(data)()
+	local code = load(data)
+	if not pcall(code()) then
+	end
 end

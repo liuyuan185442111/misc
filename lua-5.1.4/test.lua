@@ -5,7 +5,8 @@ dofile('export.lua')
 dofile('common.lua')
 dofile('port.lua')
 dofile('death.lua')
-dofile('damage.lua')
+dofile('base.lua')
+dofile('calc.lua')
 
 math.randomseed(1001086)
 

@@ -51,5 +51,13 @@ function getrolemaxhp(tid)
 	return 1
 end
 
+function loaddata(region)
+	return true
+end
+function savedata(region, data)
+	print(region, data)
+	return true
+end
+
 skada.getcampinfo = getcampinfo
 skada.isplayer = isplayer
