@@ -59,10 +59,6 @@ local function loaddata(region)
 	return ''
 end
 
-local function getdamagevalue(sid)
-	return true, 1, 2, 3
-end
-
 skada = skada or {}
 skada.getcampinfo = getcampinfo
 skada.isplayer = isplayer

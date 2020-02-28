@@ -7,14 +7,14 @@ function death_record_add_activity(death_record, tid, is_operator_player, operat
 	local record = midresult[tid]
 	if record == nil then
 		record = {
-			id=tid,count=0,occu=getroleoccu(tid),name=getrolename(tid),
+			id=tid,count=0,occu=skada.getroleoccu(tid),name=skada.getrolename(tid),
 			curr_activity_NS=skada.queue.new(2),death_activity={},
 		}
 		midresult[tid] = record
 	end
-	record.curr_activity_NS:push({time=nowtime(),
-		operator=is_operator_player and getrolename(operator) or getnpcname(operator),
-		skillid=skillid,delta=delta,ratio=hp/getrolemaxhp(tid)})
+	record.curr_activity_NS:push({time=skada.nowtime(),
+		operator=is_operator_player and skada.getrolename(operator) or skada.getnpcname(operator),
+		skillid=skillid,delta=delta,ratio=hp/skada.getrolemaxhp(tid)})
 	if hp <= 0 then
 		death_record.OK = nil
 		death_record.count = death_record.count == nil and 1 or death_record.count + 1
@@ -27,7 +27,7 @@ function death_record_add_activity(death_record, tid, is_operator_player, operat
 			temp.time = temp.time - basetime
 			table.insert(record.death_activity, temp)
 		end
-		table.insert(record.death_activity, {time=basetime,operator=getrolename(tid),skillid=0,delta=0,ratio=0})
+		table.insert(record.death_activity, {time=basetime,operator=skada.getrolename(tid),skillid=0,delta=0,ratio=0})
 	end
 end
 
@@ -65,8 +65,10 @@ end
 
 --debug
 local function test()
-	dofile('common.lua')
-	dofile('port.lua')
+	if dofile then
+		dofile('common.lua')
+		dofile('port.lua')
+	end
 	local death_record = {}
 	local n=8
 	death_record_add_activity(death_record,n,true,1,11,21,22)

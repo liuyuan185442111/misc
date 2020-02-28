@@ -127,9 +127,8 @@ function merge_fsd(srcdata, battle, adopt_data)
 			if adopt_data then
 				v.occu = skada.getroleoccu(k)
 				v.name = skada.getrolename(k)
-				local sumdmg = v.damage
 				for _,v in pairs(v.skillset) do
-					v.name = skada.getskillname(v.skillid)
+					v.name = skada.getskillname(v.id)
 				end
 				for _,v in pairs(v.targetset) do
 					v.occu = v.isplayer and skada.getroleoccu(v.id) or 0

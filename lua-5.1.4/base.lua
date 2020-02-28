@@ -83,7 +83,7 @@ allbattle = {}
 currbattle = newbattle()
 sumbattle = newsumbattle()
 
-function finish_battle()
+local function finish_battle()
 	if currbattle.count == 0 then
 		return
 	end
@@ -101,7 +101,7 @@ function finish_battle()
 	export_allbattle()
 end
 
-function begin_battle()
+local function begin_battle()
 	if currbattle.count == 0 then
 		return
 	end
@@ -111,7 +111,7 @@ function begin_battle()
 	currbattle = newbattle()
 end
 
-function loginlogout(login)
+local function loginlogout(login)
 	if login then
 		import_allbattle()
 	else
@@ -119,7 +119,7 @@ function loginlogout(login)
 	end
 end
 
-function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skillid, flag, isdamage, value, overvalue, targethp)
+local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skillid, flag, isdamage, value, overvalue, targethp)
 	local item = {
 		source_xid=source_xid,target_xid=target_xid,source_tid=source_tid,target_tid=target_tid,
 		isdamage=isdamage,value=value,overvalue=overvalue,skillid=skillid,flag=flag,time=skada.nowtime()
@@ -135,9 +135,9 @@ function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skil
 	if isdamage then
 		local source_camp = skada.getcampinfo(source_xid)
 		local target_camp = skada.getcampinfo(target_xid)
-		local source_friend = source_camp>1
+		local source_friend = source_camp~=1
 		local source_hostile = source_camp==1
-		local target_friend = target_camp>1
+		local target_friend = target_camp~=1
 		local target_hostile = target_camp==1
 		if source_friend and target_hostile then
 			if skada.isplayer(source_xid) then
@@ -146,7 +146,7 @@ function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skil
 			end
 			table.insert(currbattle.hostile_recv_damage, item)
 			currbattle.total_herecv_damage = currbattle.total_herecv_damage + value
-			local a,b,c = skada.getrivalinfo(currbattle.rival_tid, currbattle.rival_level)
+			local a,b,c = skada.getrivalinfo(currbattle.rival_tid, currbattle.rival_level, target_xid, target_tid)
 			if a then
 				currbattle.rival_tid,currbattle.rival_level,currbattle.rival_title = a,b,c
 			end
@@ -159,7 +159,7 @@ function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skil
 				table.insert(currbattle.friend_recv_damage, item)
 				currbattle.total_werecv_damage = currbattle.total_werecv_damage + value
 			end
-			local a,b,c = skada.getrivalinfo(currbattle.rival_tid, currbattle.rival_level)
+			local a,b,c = skada.getrivalinfo(currbattle.rival_tid, currbattle.rival_level, target_xid, target_tid)
 			if a then
 				currbattle.rival_tid,currbattle.rival_level,currbattle.rival_title = a,b,c
 			end
@@ -184,7 +184,7 @@ function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skil
 		]]
 	else
 		local camp = skada.getcampinfo(target_xid)
-		if camp>1 then --friend
+		if camp~=1 then --friend
 			if skada.isplayer(source_xid) and skada.isplayer(target_xid) then
 				table.insert(currbattle.friend_heal, item)
 				currbattle.total_wereal_heal = currbattle.total_wereal_heal + value
@@ -192,7 +192,7 @@ function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skil
 				discard_record = false
 			end
 			death_record_add_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, value, targethp)
-		elseif camp==1 then --hostile
+		else --hostile
 			table.insert(currbattle.hostile_heal, item)
 			currbattle.total_herecv_damage = currbattle.total_herecv_damage + value
 			discard_record = false
@@ -203,7 +203,7 @@ function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skil
 	end
 end
 
-function add_damage_or_heal2(sid, source_xid, target_xid, source_tid, target_tid, skillid, flag)
-	local isdamage, value, overvalue, lastvalue = skada.getdamagevalue(sid)
-	add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skillid, flag, isdamage, value, overvalue, lastvalue)
-end
+_G['loginlogout'] = loginlogout
+_G['begin_battle'] = begin_battle
+_G['finish_battle'] = finish_battle
+_G['add_damage_or_heal'] = add_damage_or_heal
