@@ -137,7 +137,7 @@ local function reverse(seq)
   end
 end
 
-skada = {}
+skada = skada or {}
 skada.num2str = num2str
 skada.per2str = per2str
 skada.dump = dump

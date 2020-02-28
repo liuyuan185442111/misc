@@ -16,10 +16,6 @@ function isteammate(xid, tid)
 	return false
 end
 
-function getrivalinfo(curr_tid, curr_level, target_xid, target_tid)
-	return target_tid, 10, 'what'
-end
-
 local lasttime = 0
 function nowtime()
 	if os.time() <= lasttime then
@@ -51,13 +47,18 @@ function getrolemaxhp(tid)
 	return 1
 end
 
-function loaddata(region)
-	return true
-end
-function savedata(region, data)
-	print(region, data)
-	return true
+function getrivalinfo(curr_tid, curr_level, target_xid, target_tid)
+	return target_tid, 10, 'what'
 end
 
+function savedata(region, data)
+	print('region '..region..'\n'..data)
+	return true
+end
+function loaddata(region)
+	return ''
+end
+
+skada = skada or {}
 skada.getcampinfo = getcampinfo
 skada.isplayer = isplayer

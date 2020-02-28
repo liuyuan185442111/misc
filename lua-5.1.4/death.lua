@@ -88,4 +88,8 @@ local function test()
 	death_record_finish_battle(death_record)
 	print(skada.dump(death_record))
 end
---test()
+
+local args = {...}
+if #args == 0 then
+	test()
+end

@@ -1,12 +1,13 @@
 #! /bin/env lua
 
+require('common')
+require('port')
 require('strict')
-dofile('export.lua')
-dofile('common.lua')
-dofile('port.lua')
-dofile('death.lua')
-dofile('base.lua')
-dofile('calc.lua')
+
+require('export')
+require('death')
+require('process')
+require('base')
 
 math.randomseed(1001086)
 
@@ -26,7 +27,7 @@ add_damage_or_heal(2,101,11,8,true,20,0,6,0)
 finish_battle()
 export_battle(currbattle)
 
-export_data()
+export_allbattle()
 
 cal_fsd_sum()
 export_battle(sumbattle)

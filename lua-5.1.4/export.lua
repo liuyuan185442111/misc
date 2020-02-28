@@ -31,22 +31,43 @@ local function sieve_battle_fields(battle)
 	return r
 end
 
---所有初始数据和排序后的数据都不导出
-function export_data()
+local function export(region, data)
+	if not savedata(region, data) then
+		error('保存'..region..'失败')
+	end
+end
+local function import(region)
+	local data = loaddata(region)
+	if not data then
+		error('读取'..region..'失败')
+	else
+		local code, info = load(data)
+		if not code then
+			print(info)
+			error('加载'..region..'失败')
+		else
+			local ret,info = pcall(code)
+			if not ret then
+				print(info)
+				error('执行'..region..'失败')
+			end
+		end
+	end
+end
+
+--所有初始数据和排序后的数据和标识为NS的数据都不导出
+function export_allbattle()
 	local temp = {}
 	for _,v in ipairs(allbattle) do
 		table.insert(temp, sieve_battle_fields(v))
 	end
-	print(skada.dump(temp, 'allbattle='))
+	export(0, skada.dump(temp, 'allbattle = '))
+end
+
+function import_allbattle()
+	import(0)
 end
 
 function export_battle(battle)
-	local s = skada.dump(sieve_battle_fields(battle), 'battle=')
-	savedata(1, s)
-end
-
-function import_data(data)
-	local code = load(data)
-	if not pcall(code()) then
-	end
+	export(1, skada.dump(sieve_battle_fields(battle), 'battle = '))
 end

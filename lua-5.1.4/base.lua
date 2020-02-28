@@ -60,10 +60,10 @@ local function newbattle()
 end
 
 local function newsumbattle()
-	local begintime,endtime,count,total_wesend_damage,total_werecv_damage,total_wereal_heal = LONG_TIME_LATER,0,0,0,0,0
+	local begintime,finishtime,count,total_wesend_damage,total_werecv_damage,total_wereal_heal = LONG_TIME_LATER,0,0,0,0,0
 	for _,v in ipairs(allbattle) do
 		begintime = math.min(begintime, v.begintime)
-		endtime = math.max(endtime, v.endtime)
+		finishtime = math.max(finishtime, v.finishtime)
 		count = count + v.count
 		total_wesend_damage = total_wesend_damage + v.total_wesend_damage
 		total_werecv_damage = total_werecv_damage + v.total_werecv_damage
@@ -71,7 +71,7 @@ local function newsumbattle()
 	end
 	local temp = newbattle()
 	temp.begintime = begintime
-	temp.endtime = endtime
+	temp.finishtime = finishtime
 	temp.count = count
 	temp.total_wesend_damage = total_wesend_damage
 	temp.total_werecv_damage = total_werecv_damage
@@ -83,24 +83,14 @@ allbattle = {}
 currbattle = newbattle()
 sumbattle = newsumbattle()
 
-function begin_battle()
-	if currbattle.count == 0 then
-		return
-	end
-	if not currbattle.endtime then
-		finish_battle()
-	end
-	currbattle = newbattle()
-end
-
 function finish_battle()
 	if currbattle.count == 0 then
 		return
 	end
-	if currbattle.endtime then
+	if currbattle.finishtime then
 		return
 	end
-	currbattle.endtime = nowtime()
+	currbattle.finishtime = nowtime()
 	cal_currbattle()
 	death_record_finish_battle(currbattle.death_record)
 	table.insert(allbattle, 1, currbattle)
@@ -108,6 +98,25 @@ function finish_battle()
 		table.remove(allbattle)
 	end
 	sumbattle = newsumbattle()
+	export_allbattle()
+end
+
+function begin_battle()
+	if currbattle.count == 0 then
+		return
+	end
+	if not currbattle.finishtime then
+		finish_battle()
+	end
+	currbattle = newbattle()
+end
+
+function loginlogout(login)
+	if login then
+		import_allbattle()
+	else
+		finish_battle()
+	end
 end
 
 function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage,value,overvalue,skillid,flag,targethp)
