@@ -1,13 +1,13 @@
 #! /bin/env lua
 
-require('common')
 require('port')
+require('common')
 require('strict')
 
-require('export')
-require('death')
-require('process')
 require('base')
+require('death')
+require('export')
+require('process')
 
 math.randomseed(1001086)
 

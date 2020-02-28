@@ -48,7 +48,7 @@ local function getrolemaxhp(tid)
 end
 
 local function getrivalinfo(curr_tid, curr_level, target_xid, target_tid)
-	return target_tid, 10, 'what'
+	return target_tid, 10, 'topic'
 end
 
 local function savedata(region, data)

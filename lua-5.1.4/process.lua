@@ -85,7 +85,7 @@ local function local_fsd_merge_skill(dest, src, sumdmg, adopt_data)
 				v.ratio = v.damage / sumdmg
 				dest[k] = v
 			else
-				local t = skada.clonetable(v)
+				local t = skada.clone_table(v)
 				t.averdmg = t.damage / t.count
 				t.ratio = t.damage / sumdmg
 				dest[k] = t
@@ -104,7 +104,7 @@ local function local_fsd_merge_target(dest, src, sumdmg, adopt_data)
 				v.ratio = v.damage / sumdmg
 				dest[k] = v
 			else
-				local t = skada.clonetable(v)
+				local t = skada.clone_table(v)
 				t.ratio = t.damage / sumdmg
 				dest[k] = t
 			end
@@ -134,9 +134,9 @@ function merge_fsd(srcdata, battle, adopt_data)
 					v.occu = v.isplayer and skada.getroleoccu(v.id) or 0
 					v.name = v.isplayer and skada.getrolename(v.id) or skada.getnpcname(v.id)
 				end
-				v.skillsort_NS = skada.transtable(v.skillset)
+				v.skillsort_NS = skada.trans_table(v.skillset)
 				table.sort(v.skillsort_NS, function(a,b) return a.damage>b.damage end)
-				v.targetsort_NS = skada.transtable(v.targetset)
+				v.targetsort_NS = skada.trans_table(v.targetset)
 				table.sort(v.targetsort_NS, function(a,b) return a.damage>b.damage end)
 				summary[k] = v
 			else
@@ -173,16 +173,16 @@ function merge_fsd_repair(battle)
 			v.averdmg = v.damage / v.count
 			v.ratio = v.damage / t.damage
 		end
-		t.skillsort_NS = skada.transtable(t.skillset)
+		t.skillsort_NS = skada.trans_table(t.skillset)
 		table.sort(t.skillsort_NS, function(a,b) return a.damage>b.damage end)
 		for _,v in pairs(t.targetset) do
 			v.ratio = v.damage / t.damage
 		end
-		t.targetsort_NS = skada.transtable(t.targetset)
+		t.targetsort_NS = skada.trans_table(t.targetset)
 		table.sort(t.targetsort_NS, function(a,b) return a.damage>b.damage end)
 	end
-	battle.fsd_sort1 = skada.transtable(summary)
-	battle.fsd_sort2 = skada.clonevector(battle.fsd_sort1)
+	battle.fsd_sort1 = skada.trans_table(summary)
+	battle.fsd_sort2 = skada.clone_array(battle.fsd_sort1)
 	table.sort(battle.fsd_sort1, function(a,b) return a.damage>b.damage end)
 	table.sort(battle.fsd_sort2, function(a,b) return a.damage_rate>b.damage_rate end)
 	return true

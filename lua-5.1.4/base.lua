@@ -7,8 +7,8 @@ local function newbattle()
 		begintime=skada.nowtime(),
 
 		rival_tid=0,
-		rival_level=0,
-		rival_title='我们',
+		rival_level=-999,
+		rival_title='战斗666',
 
 		total_wrong_damage=0,
 		team_wrong_damage={}, --队友误伤
@@ -92,8 +92,9 @@ local function finish_battle()
 	end
 	currbattle.finishtime = skada.nowtime()
 	cal_currbattle()
-	death_record_finish_battle(currbattle.death_record)
+	skada.finish_death_record(currbattle.death_record)
 	table.insert(allbattle, 1, currbattle)
+	currbattle = newbattle()
 	if #allbattle > 10 then
 		table.remove(allbattle)
 	end
@@ -127,7 +128,7 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 	if isdamage and skada.isteammate(source_xid, source_tid) and skada.isteammate(target_xid, target_tid) then
 		table.insert(currbattle.team_wrong_damage, item)
 		currbattle.total_wrong_damage = currbattle.total_wrong_damage + value
-		death_record_add_activity(currbattle.death_record, target_tid, true, source_tid, skillid, -value, targethp)
+		skada.add_death_activity(currbattle.death_record, target_tid, true, source_tid, skillid, -value, targethp)
 		currbattle.count = currbattle.count + 1
 		return
 	end
@@ -159,11 +160,11 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 				table.insert(currbattle.friend_recv_damage, item)
 				currbattle.total_werecv_damage = currbattle.total_werecv_damage + value
 			end
-			local a,b,c = skada.getrivalinfo(currbattle.rival_tid, currbattle.rival_level, target_xid, target_tid)
+			local a,b,c = skada.getrivalinfo(currbattle.rival_tid, currbattle.rival_level, source_xid, source_tid)
 			if a then
 				currbattle.rival_tid,currbattle.rival_level,currbattle.rival_title = a,b,c
 			end
-			death_record_add_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, -value, targethp)
+			skada.add_death_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, -value, targethp)
 			discard_record = false
 		end
 		--[[
@@ -191,7 +192,7 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 				currbattle.total_weover_heal = currbattle.total_weover_heal + overvalue
 				discard_record = false
 			end
-			death_record_add_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, value, targethp)
+			add_death_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, value, targethp)
 		else --hostile
 			table.insert(currbattle.hostile_heal, item)
 			currbattle.total_herecv_damage = currbattle.total_herecv_damage + value

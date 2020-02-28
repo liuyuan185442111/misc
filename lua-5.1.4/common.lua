@@ -21,17 +21,17 @@ local function per2str(n)
   return string.format('%.1f%%', n*100.0)
 end
 
-local outstrtab = {}
+local strtab
 local function outputstr(...)
   for _,str in ipairs{...} do
-    table.insert(outstrtab, str)
+    table.insert(strtab, str)
   end
 end
 local function outputnumstr(str)
   if str=='inf' or str=='nan' or str=='-inf' or str=='-nan' then
     str = '0'
   end
-  table.insert(outstrtab, str)
+  table.insert(strtab, str)
 end
 local function serialize(o, prefix, header, tailer)
   if header then outputstr(header) end
@@ -64,27 +64,38 @@ local function serialize(o, prefix, header, tailer)
   if tailer then outputstr(tailer) end
 end
 local function dump(o, header)
-  outstrtab = {}
+  strtab = {}
   serialize(o, '', header, '\n\n')
-  return table.concat(outstrtab)
+  return table.concat(strtab)
 end
 
-local function clonevector(org)
+local function clone_array(org)
   return {table.unpack(org)}
 end
-local function clonetable(org)
+
+local function clone_table(org)
   local t = {}
   for k,v in pairs(org) do
     t[k] = v
   end
   return t
 end
-local function transtable(org)
+
+local function trans_table(org)
   local t = {}
   for _,v in pairs(org) do
     table.insert(t, v)
   end
   return t
+end
+
+local function reverse_array(seq)
+  local n = #seq
+  for i=1,n//2 do
+    local tmp = seq[i]
+    seq[i] = seq[n+1-i]
+    seq[n+1-i] = tmp
+  end
 end
 
 local queue = {}
@@ -128,21 +139,12 @@ function queue:clear()
   self = queue.new(self.maxsize)
 end
 
-local function reverse(seq)
-  local n = #seq
-  for i=1,n//2 do
-    local tmp = seq[i]
-    seq[i] = seq[n+1-i]
-    seq[n+1-i] = tmp
-  end
-end
-
 skada = skada or {}
 skada.num2str = num2str
 skada.per2str = per2str
 skada.dump = dump
-skada.clonevector = clonevector
-skada.clonetable = clonetable
-skada.transtable = transtable
+skada.clone_array = clone_array
+skada.clone_table = clone_table
+skada.trans_table = trans_table
+skada.reverse_array = reverse_array
 skada.queue = queue
-skada.reverse = reverse
