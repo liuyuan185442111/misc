@@ -35,7 +35,7 @@ damage协议里子物体和最后一种情形的情况
 
 添加战斗未开始的状态 现在始终在接收数据的状态
 添加锁定战斗的功能
-优化各个细节 export base process test
+优化各个细节 base process
 
 ---
 common.lua serialize函数中格式化数字的时候为了方便调试用tostring将数字转换为字符串，正式版本中应使用'%q'转换。

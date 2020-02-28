@@ -99,7 +99,7 @@ local function finish_battle()
 		table.remove(allbattle)
 	end
 	sumbattle = newsumbattle()
-	export_allbattle()
+	skada.export_allbattle()
 end
 
 local function begin_battle()
@@ -203,6 +203,8 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 		currbattle.count = currbattle.count + 1
 	end
 end
+
+--------------------------------------------------------------
 
 _G['loginlogout'] = loginlogout
 _G['begin_battle'] = begin_battle

@@ -1,4 +1,4 @@
-local not_save_field = {
+local not_save_fields_of_battle = {
 	team_wrong_damage = true,
 	twd_sort = true,
 	friend_send_damage = true,
@@ -11,7 +11,6 @@ local not_save_field = {
 	fh_sort1 = true,
 	fh_sort2 = true,
 	fh_sort3 = true,
-	fh_sort2 = true,
 	fh_sort4 = true,
 	hostile_send_damage = true,
 	hsd_sort = true,
@@ -24,7 +23,7 @@ local not_save_field = {
 local function sieve_battle_fields(battle)
 	local r = {}
 	for field,value in pairs(battle) do
-		if not not_save_field[field] then
+		if not not_save_fields_of_battle[field] then
 			r[field] = value
 		end
 	end
@@ -41,7 +40,7 @@ local function import(region)
 	if not data then
 		error('读取'..region..'失败')
 	else
-		local code, info = load(data)
+		local code,info = load(data)
 		if not code then
 			print(info)
 			error('加载'..region..'失败')
@@ -55,8 +54,8 @@ local function import(region)
 	end
 end
 
---所有初始数据和排序后的数据和标识为NS的数据都不导出
-function export_allbattle()
+--所有初始数据、排序后的数据、标识为NS的数据都不导出
+local function export_allbattle()
 	local temp = {}
 	for _,v in ipairs(allbattle) do
 		table.insert(temp, sieve_battle_fields(v))
@@ -64,10 +63,14 @@ function export_allbattle()
 	export(0, skada.dump(temp, 'allbattle = '))
 end
 
-function import_allbattle()
+local function import_allbattle()
 	import(0)
 end
 
-function export_battle(battle)
+local function export_battle(battle)
 	export(1, skada.dump(sieve_battle_fields(battle), 'battle = '))
 end
+
+skada.export_allbattle = export_allbattle
+skada.import_allbattle = import_allbattle
+skada.export_battle = export_battle
