@@ -35,13 +35,13 @@ function pre_fsd(battle)
 					maxdmg = value,
 					mindmg = value,
 					count = 1,
-					baoji = isbaoji(v.flag) and 1 or 0,
+					baoji = skada.isbaoji(v.flag) and 1 or 0,
 				}
 			else
 				temp.damage = temp.damage + value
 				temp.maxdmg = math.max(temp.maxdmg, value)
 				temp.mindmg = math.min(temp.mindmg, value)
-				if isbaoji(v.flag) then temp.baoji = temp.baoji + 1 end
+				if skada.isbaoji(v.flag) then temp.baoji = temp.baoji + 1 end
 				temp.count = temp.count + 1
 			end
 		end
@@ -125,15 +125,15 @@ function merge_fsd(srcdata, battle, adopt_data)
 		local t = summary[k]
 		if not t then
 			if adopt_data then
-				v.occu = getroleoccu(k)
-				v.name = getrolename(k)
+				v.occu = skada.getroleoccu(k)
+				v.name = skada.getrolename(k)
 				local sumdmg = v.damage
 				for _,v in pairs(v.skillset) do
-					v.name = getskillname(v.skillid)
+					v.name = skada.getskillname(v.skillid)
 				end
 				for _,v in pairs(v.targetset) do
-					v.occu = v.isplayer and getroleoccu(v.id) or 0
-					v.name = v.isplayer and getrolename(v.id) or getnpcname(v.id)
+					v.occu = v.isplayer and skada.getroleoccu(v.id) or 0
+					v.name = v.isplayer and skada.getrolename(v.id) or skada.getnpcname(v.id)
 				end
 				v.skillsort_NS = skada.transtable(v.skillset)
 				table.sort(v.skillsort_NS, function(a,b) return a.damage>b.damage end)

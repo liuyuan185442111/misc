@@ -4,7 +4,7 @@ LONG_TIME_LATER = 7952313600000
 local function newbattle()
 	return {
 		count=0,
-		begintime=nowtime(),
+		begintime=skada.nowtime(),
 
 		rival_tid=0,
 		rival_level=0,
@@ -90,7 +90,7 @@ function finish_battle()
 	if currbattle.finishtime then
 		return
 	end
-	currbattle.finishtime = nowtime()
+	currbattle.finishtime = skada.nowtime()
 	cal_currbattle()
 	death_record_finish_battle(currbattle.death_record)
 	table.insert(allbattle, 1, currbattle)
@@ -119,12 +119,12 @@ function loginlogout(login)
 	end
 end
 
-function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage,value,overvalue,skillid,flag,targethp)
+function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skillid, flag, isdamage, value, overvalue, targethp)
 	local item = {
 		source_xid=source_xid,target_xid=target_xid,source_tid=source_tid,target_tid=target_tid,
-		isdamage=isdamage,value=value,overvalue=overvalue,skillid=skillid,flag=flag,time=nowtime()
+		isdamage=isdamage,value=value,overvalue=overvalue,skillid=skillid,flag=flag,time=skada.nowtime()
 	}
-	if isdamage and isteammate(source_xid, source_tid) and isteammate(target_xid, target_tid) then
+	if isdamage and skada.isteammate(source_xid, source_tid) and skada.isteammate(target_xid, target_tid) then
 		table.insert(currbattle.team_wrong_damage, item)
 		currbattle.total_wrong_damage = currbattle.total_wrong_damage + value
 		death_record_add_activity(currbattle.death_record, target_tid, true, source_tid, skillid, -value, targethp)
@@ -146,7 +146,7 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 			end
 			table.insert(currbattle.hostile_recv_damage, item)
 			currbattle.total_herecv_damage = currbattle.total_herecv_damage + value
-			local a,b,c = getrivalinfo(currbattle.rival_tid, currbattle.rival_level)
+			local a,b,c = skada.getrivalinfo(currbattle.rival_tid, currbattle.rival_level)
 			if a then
 				currbattle.rival_tid,currbattle.rival_level,currbattle.rival_title = a,b,c
 			end
@@ -159,7 +159,7 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 				table.insert(currbattle.friend_recv_damage, item)
 				currbattle.total_werecv_damage = currbattle.total_werecv_damage + value
 			end
-			local a,b,c = getrivalinfo(currbattle.rival_tid, currbattle.rival_level)
+			local a,b,c = skada.getrivalinfo(currbattle.rival_tid, currbattle.rival_level)
 			if a then
 				currbattle.rival_tid,currbattle.rival_level,currbattle.rival_title = a,b,c
 			end
@@ -201,4 +201,9 @@ function add_damage_or_heal(source_xid,target_xid,source_tid,target_tid,isdamage
 	if not discard_record then
 		currbattle.count = currbattle.count + 1
 	end
+end
+
+function add_damage_or_heal2(sid, source_xid, target_xid, source_tid, target_tid, skillid, flag)
+	local isdamage, value, overvalue, lastvalue = skada.getdamagevalue(sid)
+	add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skillid, flag, isdamage, value, overvalue, lastvalue)
 end

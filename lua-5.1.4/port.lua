@@ -9,7 +9,7 @@ local function isplayer(xid)
 	return true
 end
 
-function isteammate(xid, tid)
+local function isteammate(xid, tid)
 	if not isplayer(xid) then
 		return false
 	end
@@ -17,7 +17,7 @@ function isteammate(xid, tid)
 end
 
 local lasttime = 0
-function nowtime()
+local function nowtime()
 	if os.time() <= lasttime then
 		lasttime = lasttime + 1
 	else
@@ -26,39 +26,54 @@ function nowtime()
 	return lasttime
 end
 
-function isbaoji(flag)
+local function isbaoji(flag)
 	return (flag & 1) ~= 0
 end
 
-function getroleoccu(tid)
+local function getroleoccu(tid)
 	return 1
 end
-function getrolename(tid)
+local function getrolename(tid)
 	return 'what'
 end
-function getnpcname(tid)
+local function getnpcname(tid)
 	return 'npc'
 end
-function getskillname(skillid)
+local function getskillname(skillid)
 	return 'attack'
 end
 
-function getrolemaxhp(tid)
+local function getrolemaxhp(tid)
 	return 1
 end
 
-function getrivalinfo(curr_tid, curr_level, target_xid, target_tid)
+local function getrivalinfo(curr_tid, curr_level, target_xid, target_tid)
 	return target_tid, 10, 'what'
 end
 
-function savedata(region, data)
+local function savedata(region, data)
 	print('region '..region..'\n'..data)
 	return true
 end
-function loaddata(region)
+local function loaddata(region)
 	return ''
+end
+
+local function getdamagevalue(sid)
+	return true, 1, 2, 3
 end
 
 skada = skada or {}
 skada.getcampinfo = getcampinfo
 skada.isplayer = isplayer
+skada.isteammate = isteammate
+skada.nowtime = nowtime
+skada.isbaoji = isbaoji
+skada.getroleoccu = getroleoccu
+skada.getrolename = getrolename
+skada.getnpcname = getnpcname
+skada.getskillname = getskillname
+skada.getrolemaxhp = getrolemaxhp
+skada.getrivalinfo = getrivalinfo
+skada.savedata = savedata
+skada.loaddata = loaddata

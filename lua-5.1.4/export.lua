@@ -32,12 +32,12 @@ local function sieve_battle_fields(battle)
 end
 
 local function export(region, data)
-	if not savedata(region, data) then
+	if not skada.savedata(region, data) then
 		error('保存'..region..'失败')
 	end
 end
 local function import(region)
-	local data = loaddata(region)
+	local data = skada.loaddata(region)
 	if not data then
 		error('读取'..region..'失败')
 	else
