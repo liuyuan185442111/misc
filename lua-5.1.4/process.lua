@@ -1,118 +1,114 @@
-function pre_fsd(battle)
+--将新来的数据做成与fsd_summary相同的格式
+local function pre_fsd(battle)
 	battle = battle or currbattle
 	local semidata, allitems = {}, battle.friend_send_damage
 	if #allitems == 0 then return nil end
+	battle.friend_send_damage = {}
+
+	--先以tid排序，然后分组
 	table.sort(allitems, function(a,b) return a.source_tid<b.source_tid end)
 	table.insert(allitems, {source_tid=-1})
 	local currid, currdamage, firsttime, lasttime, skillset, targetset = 0
-	for _,v in ipairs(allitems) do
-		if v.source_tid ~= currid then
+	for _,item in ipairs(allitems) do
+		if item.source_tid ~= currid then
 			if currid ~= 0 then
+				--记录上一组
 				semidata[currid] = {
-					tid = currid,
+					id = currid,
 					damage = currdamage,
 					firsttime = firsttime,
 					lasttime = lasttime,
 					skillset = skillset,
 					targetset = targetset,
 				}
-				if v.source_tid == -1 then break end
+				if item.source_tid == -1 then break end
 			end
-			currid, currdamage = v.source_tid, 0
+			--开始新一组
+			currid, currdamage = item.source_tid, 0
 			firsttime, lasttime = LONG_TIME_LATER, 0
 			skillset, targetset = {}, {}
 		end
-		currdamage = currdamage + v.value
-		firsttime = math.min(firsttime, v.time)
-		lasttime = math.max(lasttime, v.time)
+
+		currdamage = currdamage + item.value
+		firsttime = math.min(firsttime, item.time)
+		lasttime = math.max(lasttime, item.time)
+
 		do
-			local temp = skillset[v.skillid]
-			local value = v.value
+			local temp = skillset[item.skillid]
+			local value = item.value --伤害量
 			if temp == nil then
-				skillset[v.skillid] = {
-					id = v.skillid,
+				skillset[item.skillid] = {
+					id = item.skillid,
 					damage = value,
 					maxdmg = value,
 					mindmg = value,
 					count = 1,
-					baoji = skada.isbaoji(v.flag) and 1 or 0,
+					baoji = skada.isbaoji(item.flags) and 1 or 0,
 				}
 			else
 				temp.damage = temp.damage + value
 				temp.maxdmg = math.max(temp.maxdmg, value)
 				temp.mindmg = math.min(temp.mindmg, value)
-				if skada.isbaoji(v.flag) then temp.baoji = temp.baoji + 1 end
+				if skada.isbaoji(item.flags) then temp.baoji = temp.baoji + 1 end
 				temp.count = temp.count + 1
 			end
 		end
+
 		do
-			local temp = targetset[v.target_tid]
+			--如果npc的tid和角色的roleid重复呢?
+			--我们的游戏里应该不存在这种情况
+			local temp = targetset[item.target_tid]
 			if temp == nil then
-				--TODO 如果npc的tid和角色的roleid重复呢?
-				targetset[v.target_tid] = {id=v.target_tid, damage=v.value, isplayer=skada.isplayer(v.target_xid)}
+				targetset[item.target_tid] = {
+					id = item.target_tid,
+					damage = item.value,
+					isplayer = skada.isplayer(item.target_xid), --将来用以获取职业和名字
+				}
 			else
-				temp.damage = temp.damage + v.value
+				temp.damage = temp.damage + item.value
 			end
 		end
 	end
-	battle.friend_send_damage = {}
+
 	return semidata
 end
 
-local function local_fsd_summarize(t, total_damage)
-	t.active_time = t.lasttime - t.firsttime
-	t.damage_ratio = t.damage / total_damage
-	t.damage_rate = t.damage / t.active_time
-end
-local function local_fsd_merge_skill(dest, src, sumdmg, adopt_data)
-	for k,v in pairs(src) do
-		local t = dest[k]
+local function in_fsd_merge_skill(dest, src, adopt_data)
+	for skillid,v in pairs(src) do
+		local t = dest[skillid]
 		if t then
 			t.count = t.count + v.count
 			t.baoji = t.baoji + v.baoji
 			t.damage = t.damage + v.damage
-			if t.maxdmg < v.maxdmg then
-				t.maxdmg = v.maxdmg
-			end
-			if t.mindmg > v.mindmg then
-				t.mindmg = v.mindmg
-			end
-			t.averdmg = t.damage / t.count
-			t.ratio = t.damage / sumdmg
+			if t.maxdmg < v.maxdmg then t.maxdmg = v.maxdmg end
+			if t.mindmg > v.mindmg then t.mindmg = v.mindmg end
 		else
 			if adopt_data then
-				v.averdmg = v.damage / v.count
-				v.ratio = v.damage / sumdmg
-				dest[k] = v
+				dest[skillid] = v
 			else
-				local t = skada.clone_table(v)
-				t.averdmg = t.damage / t.count
-				t.ratio = t.damage / sumdmg
-				dest[k] = t
+				dest[skillid] = skada.clone_table(v)
 			end
 		end
 	end
 end
-local function local_fsd_merge_target(dest, src, sumdmg, adopt_data)
-	for k,v in pairs(src) do
-		local t = dest[k]
+local function in_fsd_merge_target(dest, src, adopt_data)
+	for targettid,v in pairs(src) do
+		local t = dest[targettid]
 		if t then
 			t.damage = t.damage + v.damage
-			t.ratio = t.damage / sumdmg
 		else
 			if adopt_data then
-				v.ratio = v.damage / sumdmg
-				dest[k] = v
+				dest[targettid] = v
 			else
-				local t = skada.clone_table(v)
-				t.ratio = t.damage / sumdmg
-				dest[k] = t
+				dest[targettid] = skada.clone_table(v)
 			end
 		end
 	end
 end
 
-function merge_fsd(srcdata, battle, adopt_data)
+--将srcdata合并到fsd_summary
+--adopt_data: 是否能直接将数据拿过来 为false表示需要深拷贝
+local function merge_fsd(srcdata, battle, adopt_data)
 	if not srcdata then
 		return false
 	end
@@ -121,92 +117,128 @@ function merge_fsd(srcdata, battle, adopt_data)
 	end
 	battle = battle or currbattle
 	local summary = battle.fsd_summary
-	for k,v in pairs(srcdata) do
-		local t = summary[k]
-		if not t then
+	local srcdata_not_empty = false
+	for roleid,item in pairs(srcdata) do
+		srcdata_not_empty = true
+		local dest = summary[roleid]
+		if dest == nil then
 			if adopt_data then
-				v.occu = skada.getroleoccu(k)
-				v.name = skada.getrolename(k)
-				for _,v in pairs(v.skillset) do
+				item.occu = skada.getroleoccu(roleid)
+				item.name = skada.getrolename(roleid)
+				for _,v in pairs(item.skillset) do
 					v.name = skada.getskillname(v.id)
 				end
-				for _,v in pairs(v.targetset) do
+				for _,v in pairs(item.targetset) do
 					v.occu = v.isplayer and skada.getroleoccu(v.id) or 0
 					v.name = v.isplayer and skada.getrolename(v.id) or skada.getnpcname(v.id)
 				end
-				v.skillsort_NS = skada.trans_table(v.skillset)
-				table.sort(v.skillsort_NS, function(a,b) return a.damage>b.damage end)
-				v.targetsort_NS = skada.trans_table(v.targetset)
-				table.sort(v.targetsort_NS, function(a,b) return a.damage>b.damage end)
-				summary[k] = v
+				summary[roleid] = item
 			else
-				t = {
-					tid = k,
-					occu = v.occu,
-					name = v.name,
+				--插入一个空的项目
+				dest = {
+					id = roleid,
+					occu = item.occu,
+					name = item.name,
 					damage = 0,
 					firsttime = LONG_TIME_LATER,
 					lasttime = 0,
 					skillset = {},
 					targetset = {},
 				}
-				summary[k] = t
+				summary[roleid] = dest
 			end
 		end
-		if t then
-			t.lasttime = math.max(t.lasttime, v.lasttime)
-			t.firsttime = math.min(t.firsttime, v.firsttime)
-			t.damage = t.damage + v.damage
-			local_fsd_merge_skill(t.skillset, v.skillset, t.damage, adopt_data)
-			local_fsd_merge_target(t.targetset, v.targetset, t.damage, adopt_data)
+		if dest then
+			dest.damage = dest.damage + item.damage
+			dest.lasttime = math.max(dest.lasttime, item.lasttime)
+			dest.firsttime = math.min(dest.firsttime, item.firsttime)
+			in_fsd_merge_skill(dest.skillset, item.skillset, adopt_data)
+			in_fsd_merge_target(dest.targetset, item.targetset, adopt_data)
 		end
 	end
-	return true
+	return srcdata_not_empty
 end
 
-function merge_fsd_repair(battle)
+local function in_fsd_summarize_item(item, total_damage)
+	item.active_time = item.lasttime - item.firsttime
+	item.damage_ratio = item.damage / total_damage
+	item.damage_rate = item.damage / item.active_time
+end
+
+--对fsd_summary做一些统计计算
+--part: 是否执行部分计算
+local function repair_fsd(battle, part)
 	battle = battle or currbattle
 	local summary = battle.fsd_summary
-	for _,t in pairs(summary) do
-		local_fsd_summarize(t, battle.total_wesend_damage)
-		for _,v in pairs(t.skillset) do
-			v.averdmg = v.damage / v.count
-			v.ratio = v.damage / t.damage
+	for _,item in pairs(summary) do
+		if not part then
+			in_fsd_summarize_item(item, battle.total_wesend_damage)
+			for _,v in pairs(item.skillset) do
+				v.avgdmg = v.damage / v.count
+				v.ratio = v.damage / item.damage
+			end
+			for _,v in pairs(item.targetset) do
+				v.ratio = v.damage / item.damage
+			end
 		end
-		t.skillsort_NS = skada.trans_table(t.skillset)
-		table.sort(t.skillsort_NS, function(a,b) return a.damage>b.damage end)
-		for _,v in pairs(t.targetset) do
-			v.ratio = v.damage / t.damage
-		end
-		t.targetsort_NS = skada.trans_table(t.targetset)
-		table.sort(t.targetsort_NS, function(a,b) return a.damage>b.damage end)
+		item.skillsort_NS = skada.trans_table(item.skillset)
+		table.sort(item.skillsort_NS, function(a,b) return a.damage>b.damage end)
+		item.targetsort_NS = skada.trans_table(item.targetset)
+		table.sort(item.targetsort_NS, function(a,b) return a.damage>b.damage end)
 	end
 	battle.fsd_sort1 = skada.trans_table(summary)
-	battle.fsd_sort2 = skada.clone_array(battle.fsd_sort1)
+	--以伤害量排序
 	table.sort(battle.fsd_sort1, function(a,b) return a.damage>b.damage end)
+	battle.fsd_sort2 = skada.clone_array(battle.fsd_sort1)
+	--以伤害速度排序
 	table.sort(battle.fsd_sort2, function(a,b) return a.damage_rate>b.damage_rate end)
+end
+
+--将当前战斗的新的队友造成的伤害记录合并到currbattle中
+--返回false表示未有变化
+function cal_fsd_curr()
+	if merge_fsd(pre_fsd()) then
+		repair_fsd()
+		return true
+	else
+		return false
+	end
+end
+
+--计算已有战斗中队友造成的伤害统计
+--返回false表示未有变化
+function cal_fsd_old(battle)
+	if battle.sort_ok[2] then
+		return false
+	end
+	repair_fsd(battle, true)
+	battle.sort_ok[2] = true
 	return true
 end
 
---返回false表示未有变化
-function cal_fsd()
-	return merge_fsd(pre_fsd()) and merge_fsd_repair() or false
-end
-
+--计算sumbattle中队友造成的伤害统计
 --返回false表示未有变化
 function cal_fsd_sum()
 	if sumbattle.fsd_summary.OK then
 		return false
 	end
-	for _,v in ipairs(allbattle) do
-		merge_fsd(v.fsd_summary, sumbattle, false)
+	for _,battle in ipairs(allbattle) do
+		merge_fsd(battle.fsd_summary, sumbattle, false)
 	end
-	merge_fsd_repair(sumbattle)
+	repair_fsd(sumbattle)
 	sumbattle.fsd_summary.OK = true
 	return true
 end
 ------------------------------------------------------------
 
-function cal_currbattle()
-	cal_fsd()
+function skada.cal_currbattle()
+	cal_fsd_curr()
+	local sort_ok = currbattle.sort_ok
+	for i=1,7 do
+		table.insert(sort_ok, true)
+	end
 end
+
+skada.cal_fsd_curr = cal_fsd_curr
+skada.cal_fsd_old = cal_fsd_old
+skada.cal_fsd_sum = cal_fsd_sum

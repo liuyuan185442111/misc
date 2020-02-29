@@ -14,7 +14,7 @@ local function add_death_activity(death_record, tid, is_operator_player, operato
 			--count是死亡计数
 			id=tid, count=0, occu=skada.getroleoccu(tid), name=skada.getrolename(tid),
 			--curr_activity_NS临时记录事件，对象死亡时将其放入death_activity, 作为其死亡前的一些事件记录
-			curr_activity_NS=skada.queue.new(10), death_activity={}
+			curr_activity_NS=skada.queue.new(skada.MAX_DEATH_ACTIVITIES), death_activity={}
 		}
 		midresult[tid] = record
 	end
@@ -60,8 +60,8 @@ end
 local function finish_death_record(death_record)
 	cal_death_record(death_record)
 	death_record.midresult = nil
-	for _,v in ipairs(death_record.result) do
-		v.curr_activity_NS = nil
+	for _,deadman in ipairs(death_record.result) do
+		deadman.curr_activity_NS = nil
 	end
 end
 
@@ -100,5 +100,4 @@ end
 --end of test
 
 skada.add_death_activity = add_death_activity
-skada.cal_death_record = cal_death_record
 skada.finish_death_record = finish_death_record

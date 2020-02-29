@@ -9,7 +9,7 @@ local function isplayer(xid)
 	return true
 end
 
-local function isteammate(xid, tid)
+local function is_self_or_teammate(xid, tid)
 	if not isplayer(xid) then
 		return false
 	end
@@ -52,7 +52,7 @@ local function getrivalinfo(curr_tid, curr_level, target_xid, target_tid)
 end
 
 local function savedata(region, data)
-	print('region '..region..'\n'..data)
+	print(data)
 	return true
 end
 local function loaddata(region)
@@ -62,7 +62,7 @@ end
 skada = skada or {}
 skada.getcampinfo = getcampinfo
 skada.isplayer = isplayer
-skada.isteammate = isteammate
+skada.is_self_or_teammate = is_self_or_teammate
 skada.nowtime = nowtime
 skada.isbaoji = isbaoji
 skada.getroleoccu = getroleoccu
@@ -73,3 +73,5 @@ skada.getrolemaxhp = getrolemaxhp
 skada.getrivalinfo = getrivalinfo
 skada.savedata = savedata
 skada.loaddata = loaddata
+skada.MAX_BATTLES = 10
+skada.MAX_DEATH_ACTIVITIES = 10

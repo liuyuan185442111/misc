@@ -19,6 +19,7 @@ local not_save_fields_of_battle = {
 	hostile_heal = true,
 	hh_sort1 = true,
 	hh_sort2 = true,
+	sort_ok = true,
 }
 local function sieve_battle_fields(battle)
 	local r = {}
@@ -57,8 +58,8 @@ end
 --所有初始数据、排序后的数据、标识为NS的数据都不导出
 local function export_allbattle()
 	local temp = {}
-	for _,v in ipairs(allbattle) do
-		table.insert(temp, sieve_battle_fields(v))
+	for _,battle in ipairs(allbattle) do
+		table.insert(temp, sieve_battle_fields(battle))
 	end
 	export(0, skada.dump(temp, 'allbattle = '))
 end

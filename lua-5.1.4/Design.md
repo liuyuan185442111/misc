@@ -28,6 +28,9 @@ test.lua
 
 ---
 首先将代码拷贝到内服 除了port.lua
+	1.port.lua需要添加最后两行
+	2.port.lua总isteammate改名为is_self_or_teammate, 添加是不是自己的判断
+	3.base.lua需要做些修改
 damage协议里子物体和最后一种情形的情况
 人和人的阵营判断 问一下决斗是什么情况
 进入战斗状态和第一次伤害的顺序为什么不一致
@@ -35,7 +38,6 @@ damage协议里子物体和最后一种情形的情况
 
 添加战斗未开始的状态 现在始终在接收数据的状态
 添加锁定战斗的功能
-优化各个细节 base process
 
 ---
-common.lua serialize函数中格式化数字的时候为了方便调试用tostring将数字转换为字符串，正式版本中应使用'%q'转换。
+common.lua的serialize函数中格式化数字的时候为了方便调试用tostring将数字转换为字符串，正式版本中应使用'%q'转换，这会更精确。
