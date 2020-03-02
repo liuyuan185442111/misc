@@ -37,9 +37,9 @@ local function export(region, data)
 	end
 end
 local function import(region)
-	local data = skada.loaddata(region)
-	if not data then
-		error('读取'..region..'失败')
+	local data,success = skada.loaddata(region)
+	if not success then
+		print('读取'..region..'失败，可能是不存在对应文件')
 	else
 		local code,info = load(data)
 		if not code then

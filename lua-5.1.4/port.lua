@@ -56,7 +56,7 @@ local function savedata(region, data)
 	return true
 end
 local function loaddata(region)
-	return ''
+	return '', true
 end
 
 skada = skada or {}

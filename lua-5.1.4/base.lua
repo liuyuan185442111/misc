@@ -134,12 +134,10 @@ local function begin_battle()
 	currbattle = newbattle()
 end
 
-local function loginlogout(login)
-	if login then
-		import_allbattle()
-	else
-		finish_battle()
-	end
+local function onlogin()
+	import_allbattle()
+	currbattle = newbattle()
+	sumbattle = newsumbattle()
 end
 
 --lastvalue 受伤害者或被治疗者的当前血量
@@ -216,7 +214,7 @@ end
 
 --------------------------------------------------------------
 
-_G['loginlogout'] = loginlogout
+_G['onlogin'] = onlogin
 _G['begin_battle'] = begin_battle
 _G['finish_battle'] = finish_battle
 _G['add_damage_or_heal'] = add_damage_or_heal
