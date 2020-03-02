@@ -62,7 +62,7 @@ local function pre_fsd(battle)
 				targetset[item.target_tid] = {
 					id = item.target_tid,
 					damage = item.value,
-					isplayer = skada.isplayer(item.target_xid), --将来用以获取职业和名字
+					isplayer = skada.isplayer(item.target_xid), --将来用以获取名字
 				}
 			else
 				temp.damage = temp.damage + item.value
@@ -162,7 +162,7 @@ end
 local function in_fsd_summarize_item(item, total_damage)
 	item.active_time = item.lasttime - item.firsttime
 	item.damage_ratio = item.damage / total_damage
-	item.damage_rate = item.damage / item.active_time
+	item.damage_rate = item.damage / item.active_time * 1000 --if unit is ms
 end
 
 --对fsd_summary做一些统计计算

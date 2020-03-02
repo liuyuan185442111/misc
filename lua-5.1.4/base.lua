@@ -135,7 +135,7 @@ local function begin_battle()
 end
 
 local function onlogin()
-	import_allbattle()
+	skada.import_allbattle()
 	currbattle = newbattle()
 	sumbattle = newsumbattle()
 end
@@ -198,7 +198,7 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 				currbattle.total_weover_heal = currbattle.total_weover_heal + overvalue
 				discard_record = false
 			end
-			add_death_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, value, lastvalue)
+			skada.add_death_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, value, lastvalue)
 		else --hostile
 			table.insert(currbattle.hostile_heal, item)
 			currbattle.total_herecv_damage = currbattle.total_herecv_damage + value

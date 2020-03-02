@@ -110,7 +110,6 @@ function queue.new(maxsize)
     pop = queue.pop,
     front = queue.front,
     back = queue.back,
-    clear = queue.clear,
   }
   return q
 end
@@ -134,9 +133,6 @@ function queue:back()
 end
 function queue:front()
   return self[self.left]
-end
-function queue:clear()
-  self = queue.new(self.maxsize)
 end
 
 skada = skada or {}

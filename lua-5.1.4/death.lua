@@ -13,20 +13,20 @@ local function add_death_activity(death_record, tid, is_operator_player, operato
 		record = {
 			--count是死亡计数
 			id=tid, count=0, occu=skada.getroleoccu(tid), name=skada.getrolename(tid),
-			--curr_activity_NS临时记录事件，对象死亡时将其放入death_activity, 作为其死亡前的一些事件记录
-			curr_activity_NS=skada.queue.new(skada.MAX_DEATH_ACTIVITIES), death_activity={}
+			--临时记录事件，对象死亡时将其放入death_activity, 作为其死亡前的一些事件记录
+			temp_activities=skada.queue.new(skada.MAX_DEATH_ACTIVITIES), death_activity={}
 		}
 		midresult[tid] = record
 	end
-	record.curr_activity_NS:push({time=skada.nowtime(),
+	record.temp_activities:push({time=skada.nowtime(),
 		name=is_operator_player and skada.getrolename(operator) or skada.getnpcname(operator),
 		skillid=skillid, delta=delta, ratio=hp/skada.getrolemaxhp(tid)})
 	if hp <= 0 then --认为对象死亡
 		death_record.OK = nil
 		death_record.count = (death_record.count == nil) and 1 or (death_record.count + 1)
 		record.count = record.count + 1
-		local curr_activity = record.curr_activity_NS
-		record.curr_activity_NS:clear()
+		local curr_activity = record.temp_activities
+		record.temp_activities = skada.queue.new(skada.MAX_DEATH_ACTIVITIES)
 		local dietime = curr_activity:back().time
 		for i = curr_activity.left, curr_activity.right do
 			local temp = curr_activity[i]
@@ -61,7 +61,7 @@ local function finish_death_record(death_record)
 	cal_death_record(death_record)
 	death_record.midresult = nil
 	for _,deadman in ipairs(death_record.result) do
-		deadman.curr_activity_NS = nil
+		deadman.temp_activities = nil
 	end
 end
 
@@ -92,12 +92,8 @@ local function test()
 	finish_death_record(death_record)
 	print(skada.dump(death_record))
 end
-
-local args = {...}
-if #args == 0 then
-	test()
-end
---end of test
+--test()
 
 skada.add_death_activity = add_death_activity
+skada.cal_death_record = cal_death_record
 skada.finish_death_record = finish_death_record
