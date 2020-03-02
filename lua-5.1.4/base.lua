@@ -130,7 +130,6 @@ local function begin_battle()
 	if not currbattle.finishtime then
 		finish_battle()
 	end
-	--TODO 这个地方的处理是有问题的 应该分为非统计中 统计中
 	currbattle = newbattle()
 end
 
@@ -209,6 +208,42 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 		currbattle.count = currbattle.count + 1
 	else
 		print('discard_record: from '..source_tid..' using skill '..skillid)
+	end
+end
+
+function protect_battles(battle_ids)
+	for _,battle in ipairs(allbattle) do
+		battle.protected = nil
+	end
+	for _,id in ipairs(battle_ids) do
+		if id > 0 and id <= #allbattle then
+			allbattle[id].protected = true
+		end
+	end
+end
+--即使被保护也会被删除
+function rm_battle(battle_id)
+	if battle_id <= 0 or battle_id > #allbattle then
+		return false
+	end
+	table.remove(allbattle, battle_id)
+	sumbattle = newsumbattle()
+	--TODO 这里一般不用导出数据
+	skada.export_allbattle()
+	return true
+end
+--被保护的不会被删除
+function try_rm_all_battles()
+	local oldsize = #allbattle
+	local temp = {}
+	for _,battle in ipairs(allbattle) do
+		if battle.protected then
+			table.insert(temp, battle)
+		end
+	end
+	allbattle = temp
+	if #allbattle ~= oldsize then
+		sumbattle = newsumbattle()
 	end
 end
 

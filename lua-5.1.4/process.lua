@@ -129,7 +129,6 @@ local function merge_fsd(srcdata, battle, adopt_data)
 					v.name = skada.getskillname(v.id)
 				end
 				for _,v in pairs(item.targetset) do
-					v.occu = v.isplayer and skada.getroleoccu(v.id) or 0
 					v.name = v.isplayer and skada.getrolename(v.id) or skada.getnpcname(v.id)
 				end
 				summary[roleid] = item
