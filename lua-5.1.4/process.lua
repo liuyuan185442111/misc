@@ -161,7 +161,7 @@ end
 local function in_fsd_summarize_item(item, total_damage)
 	item.active_time = item.lasttime - item.firsttime
 	item.damage_ratio = item.damage / total_damage
-	item.damage_rate = item.damage / item.active_time * 1000 --if unit is ms
+	item.damage_rate = item.damage / item.active_time
 end
 
 --对fsd_summary做一些统计计算
