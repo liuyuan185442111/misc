@@ -10,15 +10,36 @@ local function num2str(n)
   if n<10000 then
     return num2str_inner(n)
   elseif n<100000000 then
-    return num2str_inner(n/10000)..'w'
+    return num2str_inner(n/10000)..'万'
   else
-    return num2str_inner(n/100000000)..'y'
+    return num2str_inner(n/100000000)..'亿'
   end
 end
 
 local function per2str(n)
   if type(n) ~= 'number' then return 'x' end
   return string.format('%.1f%%', n*100.0)
+end
+
+function second2str(n)
+  n = math.floor(n)
+  local hour = 0
+  local min = n//60
+  n = n%60
+  if min>0 then
+    hour = min//60
+    min = min%60
+  end
+  local s = ''
+  if hour>0 then
+    s = hour .. '小时'
+  end
+  if min>0 then
+    s = s .. min .. '分钟'
+  end
+  return s .. n .. '秒'
+end
+local function time2str(n)
 end
 
 local strtab

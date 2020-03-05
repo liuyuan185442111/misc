@@ -103,12 +103,8 @@ currbattle = newbattle()
 sumbattle = newsumbattle()
 
 local function finish_battle()
-	--当前战斗没数据
-	if currbattle.count == 0 then
-		return
-	end
-	--当前战斗已存过了
-	if currbattle.finishtime then
+	--当前战斗没数据或已保存过了
+	if currbattle.count == 0 or currbattle.finishtime then
 		return
 	end
 	currbattle.finishtime = skada.nowtime()
@@ -124,12 +120,7 @@ local function finish_battle()
 end
 
 local function begin_battle()
-	if currbattle.count == 0 then
-		return
-	end
-	if not currbattle.finishtime then
-		finish_battle()
-	end
+	finish_battle()
 	currbattle = newbattle()
 end
 
