@@ -1,8 +1,10 @@
---以下三个函数都对表death_record进行操作，初始状态death_record可以并且最好是一个空表
+--death_record的初始状态可以并且最好是一个空表
 
+--每次友方的活动(加血或掉血)都记入当前战斗的死亡管理里
 --tid 行为接受对象的tid  operator 行为发起者的tid  is_operator_player 行为发起者是否为玩家
 --delta 血量的变化，为正表示加血，为负表示掉血  hp 行为接受对象的最终血量
-local function add_death_activity(death_record, tid, is_operator_player, operator, skillid, delta, hp)
+local function add_death_activity(tid, is_operator_player, operator, skillid, delta, hp)
+	local death_record = currbattle.death_record
 	local midresult = death_record.midresult
 	if midresult == nil then
 		midresult = {}
@@ -40,7 +42,8 @@ end
 
 --结果存储在death_record.result中，结果按死亡次数排序
 --返回false表示上次调用后结果未发生变化
-local function cal_death_record(death_record)
+local function cal_death_record()
+	local death_record = currbattle.death_record
 	if death_record.OK then
 		return false
 	end
@@ -57,7 +60,8 @@ local function cal_death_record(death_record)
 end
 
 --一场战斗结束的时候调用
-local function finish_death_record(death_record)
+local function finish_death_record()
+	local death_record = currbattle.death_record
 	cal_death_record(death_record)
 	death_record.midresult = nil
 	for _,deadman in ipairs(death_record.result) do
@@ -65,35 +69,37 @@ local function finish_death_record(death_record)
 	end
 end
 
---begin of test
-local function test()
-	if dofile then
-		dofile('common.lua')
-		dofile('port.lua')
+--将所有战斗的数据做个合并，这里忽略了死前活动记录
+function cal_death_sum(death_record)
+	if death_record.OK then
+		return false
 	end
-	local death_record = {}
-	local n=8
-	add_death_activity(death_record,n,true,1,11,21,22)
-	add_death_activity(death_record,n,true,2,11,22,44)
-	add_death_activity(death_record,n,true,2,11,22,44)
-	add_death_activity(death_record,n,true,3,11,-23,21)
-	add_death_activity(death_record,n,true,4,11,24,45)
-	add_death_activity(death_record,n,true,5,11,-45,0)
-
-	n=4
-	add_death_activity(death_record,n,true,1,12,21,22)
-	add_death_activity(death_record,n,true,2,12,22,44)
-	add_death_activity(death_record,n,true,2,12,22,44)
-	add_death_activity(death_record,n,true,3,12,-23,21)
-	add_death_activity(death_record,n,true,4,12,24,45)
-	add_death_activity(death_record,n,true,5,11,-45,0)
-
-	cal_death_record(death_record)
-	finish_death_record(death_record)
-	print(skada.dump(death_record))
+	local count = 0
+	local result = {}
+	for _,battle in ipairs(allbattle) do
+		for _,v in ipairs(battle.death_record.result) do
+			if result[v.id] == nil then
+				result[v.id] = {id=v.id, count=v.count, occu=v.occu, name=v.name, death_activity={}}
+			else
+				result[v.id].count = result[v.id].count + v.count
+			end
+		end
+	end
+	death_record.count = count
+	death_record.result = result
+	death_record.OK = true
+	return true
 end
---test()
+
+local function cal_death(battle)
+	if battle == currbattle then
+		return cal_death_record(currbattle.death_record)
+	elseif battle == sumbattle then
+		return cal_death_sum(sumbattle.death_record)
+	end
+	return true
+end
 
 skada.add_death_activity = add_death_activity
-skada.cal_death_record = cal_death_record
 skada.finish_death_record = finish_death_record
+skada.cal_death = cal_death

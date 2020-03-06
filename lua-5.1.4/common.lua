@@ -39,8 +39,6 @@ function second2str(n)
   end
   return s .. n .. '秒'
 end
-local function time2str(n)
-end
 
 local strtab
 local function outputstr(...)
@@ -159,6 +157,7 @@ end
 skada = skada or {}
 skada.num2str = num2str
 skada.per2str = per2str
+skada.second2str = second2str
 skada.dump = dump
 skada.clone_array = clone_array
 skada.clone_table = clone_table

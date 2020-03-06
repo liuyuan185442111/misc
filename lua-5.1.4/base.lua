@@ -110,7 +110,7 @@ local function finish_battle()
 	end
 	currbattle.finishtime = skada.nowtime()
 	skada.cal_currbattle()
-	skada.finish_death_record(currbattle.death_record)
+	skada.finish_death_record()
 	table.insert(allbattle, 1, currbattle)
 	if #allbattle > skada.MAX_BATTLES then
 		table.remove(allbattle)
@@ -144,7 +144,7 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 	if isdamage and skada.is_self_or_teammate(source_xid, source_tid) and skada.is_self_or_teammate(target_xid, target_tid) then
 		table.insert(currbattle.team_wrong_damage, item)
 		currbattle.total_wrong_damage = currbattle.total_wrong_damage + value
-		skada.add_death_activity(currbattle.death_record, target_tid, true, source_tid, skillid, -value, lastvalue)
+		skada.add_death_activity(target_tid, true, source_tid, skillid, -value, lastvalue)
 		currbattle.count = currbattle.count + 1
 		return
 	end
@@ -180,7 +180,7 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 			if a then
 				currbattle.rival_tid,currbattle.rival_level,currbattle.rival_title = a,b,c
 			end
-			skada.add_death_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, -value, lastvalue)
+			skada.add_death_activity(target_tid, skada.isplayer(source_xid), source_tid, skillid, -value, lastvalue)
 			discard_record = false
 		end
 	else
@@ -191,7 +191,7 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 				currbattle.total_weover_heal = currbattle.total_weover_heal + overvalue
 				discard_record = false
 			end
-			skada.add_death_activity(currbattle.death_record, target_tid, skada.isplayer(source_xid), source_tid, skillid, value, lastvalue)
+			skada.add_death_activity(target_tid, skada.isplayer(source_xid), source_tid, skillid, value, lastvalue)
 		else --hostile
 			table.insert(currbattle.hostile_heal, item)
 			currbattle.total_herecv_damage = currbattle.total_herecv_damage + value
@@ -242,7 +242,7 @@ function try_rm_all_battles()
 end
 
 --------------------------------------------------------------
-
+--functions for c++
 _G['onlogin'] = onlogin
 _G['begin_battle'] = begin_battle
 _G['finish_battle'] = finish_battle
