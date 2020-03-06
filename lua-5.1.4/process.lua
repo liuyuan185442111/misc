@@ -160,6 +160,9 @@ end
 
 local function in_fsd_summarize_item(item, total_damage)
 	item.active_time = item.lasttime - item.firsttime
+	if item.active_time < 1 then
+		item.active_time = 1
+	end
 	item.damage_ratio = item.damage / total_damage
 	item.damage_rate = item.damage / item.active_time
 end
@@ -233,11 +236,16 @@ end
 function skada.cal_currbattle()
 	cal_fsd_curr()
 	local sort_ok = currbattle.sort_ok
-	for i=1,7 do
+	for i=1,skada.MODE_SIZE do
 		table.insert(sort_ok, true)
 	end
 end
 
-skada.cal_fsd_curr = cal_fsd_curr
-skada.cal_fsd_old = cal_fsd_old
-skada.cal_fsd_sum = cal_fsd_sum
+skada.cal_fsd = function(battle)
+	if battle == currbattle then
+		return cal_fsd_curr()
+	elseif battle == sumbattle then
+		return cal_fsd_sum()
+	end
+	return cal_fsd_old(battle)
+end

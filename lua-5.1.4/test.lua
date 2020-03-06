@@ -11,7 +11,6 @@ require('process')
 
 math.randomseed(1001086)
 
---[[
 begin_battle()
 add_damage_or_heal(1,101,11,4,1,1, true,5,0,7)
 add_damage_or_heal(2,102,12,8,8,0, true,10,0,8)
@@ -28,4 +27,3 @@ finish_battle()
 
 cal_fsd_sum()
 skada.export_battle(sumbattle)
---]]

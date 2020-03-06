@@ -9,7 +9,7 @@ local function newbattle()
 		--用来标识本场战斗
 		rival_tid=0,
 		rival_level=-1,
-		rival_title='总计',
+		rival_title='当前',
 
 		total_wrong_damage=0,
 		team_wrong_damage={}, --队友误伤
@@ -83,6 +83,7 @@ local function newsumbattle()
 		total_weover_heal = total_weover_heal + battle.total_weover_heal
 	end
 	local temp = newbattle()
+	temp.rival_title = '总计'
 	temp.begintime = begintime
 	temp.finishtime = finishtime
 	temp.count = count
@@ -111,7 +112,6 @@ local function finish_battle()
 	skada.cal_currbattle()
 	skada.finish_death_record(currbattle.death_record)
 	table.insert(allbattle, 1, currbattle)
-	currbattle = newbattle()
 	if #allbattle > skada.MAX_BATTLES then
 		table.remove(allbattle)
 	end
@@ -126,6 +126,9 @@ end
 
 local function onlogin()
 	skada.import_allbattle()
+	for _,battle in ipairs(allbattle) do
+		battle.sort_ok = {}
+	end
 	currbattle = newbattle()
 	sumbattle = newsumbattle()
 end
