@@ -33,7 +33,7 @@ end
 
 local function export(region, data)
 	if not skada.savedata(region, data) then
-		error('保存'..region..'失败')
+		print('保存'..region..'失败')
 	end
 end
 local function import(region)
@@ -72,6 +72,7 @@ local function export_battle(battle)
 	export(1, skada.dump(sieve_battle_fields(battle), 'battle = '))
 end
 
+------------------------------------------------------------
 skada.export_allbattle = export_allbattle
 skada.import_allbattle = import_allbattle
 skada.export_battle = export_battle

@@ -21,7 +21,7 @@ local function per2str(n)
   return string.format('%.1f%%', n*100.0)
 end
 
-function second2str(n)
+function seconds2str(n)
   n = math.floor(n)
   local hour = 0
   local min = n//60
@@ -56,6 +56,7 @@ local function serialize(o, prefix, header, tailer)
   if header then outputstr(header) end
   local t = type(o)
   if t=='number' then
+  --TODO 正式版本应该使用'%q'版本
     outputnumstr(tostring(o))
     --outputnumstr(string.format('%q', o))
   elseif t=='string' or t=='boolean' or t=='nil' then
@@ -154,10 +155,11 @@ function queue:front()
   return self[self.left]
 end
 
-skada = skada or {}
+------------------------------------------------------------
+skada = {}
 skada.num2str = num2str
 skada.per2str = per2str
-skada.second2str = second2str
+skada.seconds2str = seconds2str
 skada.dump = dump
 skada.clone_array = clone_array
 skada.clone_table = clone_table

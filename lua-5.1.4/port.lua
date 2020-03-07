@@ -59,7 +59,7 @@ local function loaddata(region)
 	return '', true
 end
 
-skada = skada or {}
+------------------------------------------------------------
 skada.getcampinfo = getcampinfo
 skada.isplayer = isplayer
 skada.is_self_or_teammate = is_self_or_teammate

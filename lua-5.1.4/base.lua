@@ -1,4 +1,6 @@
-LONG_TIME_LATER = 7952313600000
+allbattle = {}
+currbattle = nil
+sumbattle = nil
 
 --认为友方只能是玩家
 local function newbattle()
@@ -6,7 +8,7 @@ local function newbattle()
 		count=0, --有效记录数目
 		begintime=skada.nowtime(),
 
-		--用来标识本场战斗
+		--给用户的战斗的标识
 		rival_tid=0,
 		rival_level=-1,
 		rival_title='当前',
@@ -56,16 +58,16 @@ local function newbattle()
 		hh_summary2={}, --以被治疗者tid分组
 		hh_sort2={}, --以有效被治疗量排序
 
-		death_record = {}, --死亡及生前事件记录，参见death.lua
+		death_record={}, --死亡及生前事件记录
 
-		--如果_sort系列成员不存盘，重新加载后在会重新计算，用sort_ok来避免重复计算
-		--如果_sort系列成员存盘的话就不需要sort_ok了，但导出文件的大小可能会膨胀2倍
-		sort_ok = {},
+		--如果"_sort"系列成员不存盘，重新加载后会重新计算，用sort_ok来避免重复计算
+		--如果"_sort"系列成员存盘，就不需要sort_ok了，但导出文件的大小可能会膨胀2倍
+		sort_ok={},
 	}
 end
 
 local function newsumbattle()
-	local begintime,finishtime,count = LONG_TIME_LATER,0,0
+	local begintime,finishtime,count = math.maxinteger,0,0
 	local total_wesend_damage,total_werecv_damage,total_wereal_heal = 0,0,0
 	local total_hesend_damage,total_herecv_damage,total_hereal_heal = 0,0,0
 	local total_wrong_damage,total_weover_heal = 0,0
@@ -97,11 +99,6 @@ local function newsumbattle()
 	temp.total_weover_heal = total_weover_heal
 	return temp
 end
-
-allbattle = {}
-currbattle = newbattle()
---只要allbattle发生变化，sumbattle就要重新new一个
-sumbattle = newsumbattle()
 
 local function finish_battle()
 	--当前战斗没数据或已保存过了
@@ -201,11 +198,11 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 	if not discard_record then
 		currbattle.count = currbattle.count + 1
 	else
-		print('discard_record: from '..source_tid..' using skill '..skillid)
+		print('skada: discard_record from '..source_tid..' using skill '..skillid)
 	end
 end
 
-function protect_battles(battle_ids)
+local function protect_battles(battle_ids)
 	for _,battle in ipairs(allbattle) do
 		battle.protected = nil
 	end
@@ -215,19 +212,20 @@ function protect_battles(battle_ids)
 		end
 	end
 end
+
 --即使被保护也会被删除
-function rm_battle(battle_id)
-	if battle_id <= 0 or battle_id > #allbattle then
+local function rm_a_battle(battle_id)
+	if battle_id < 1 or battle_id > #allbattle then
 		return false
 	end
 	table.remove(allbattle, battle_id)
 	sumbattle = newsumbattle()
-	--TODO 这里一般不用导出数据
 	skada.export_allbattle()
 	return true
 end
+
 --被保护的不会被删除
-function try_rm_all_battles()
+local function rm_all_battles()
 	local oldsize = #allbattle
 	local temp = {}
 	for _,battle in ipairs(allbattle) do
@@ -238,12 +236,19 @@ function try_rm_all_battles()
 	allbattle = temp
 	if #allbattle ~= oldsize then
 		sumbattle = newsumbattle()
+		skada.export_allbattle()
 	end
 end
 
---------------------------------------------------------------
---functions for c++
-_G['onlogin'] = onlogin
-_G['begin_battle'] = begin_battle
-_G['finish_battle'] = finish_battle
-_G['add_damage_or_heal'] = add_damage_or_heal
+onlogin()
+
+------------------------------------------------------------
+--以下给数据生产者用
+skada.onlogin = onlogin
+skada.begin_battle = begin_battle
+skada.finish_battle = finish_battle
+skada.add_damage_or_heal = add_damage_or_heal
+--以下给数据消费者用
+skada.protect_battles = protect_battles
+skada.rm_a_battle = rm_a_battle
+skada.rm_all_battles = rm_all_battles

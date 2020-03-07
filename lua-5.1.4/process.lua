@@ -25,7 +25,7 @@ local function pre_fsd(battle)
 			end
 			--开始新一组
 			currid, currdamage = item.source_tid, 0
-			firsttime, lasttime = LONG_TIME_LATER, 0
+			firsttime, lasttime = math.maxinteger, 0
 			skillset, targetset = {}, {}
 		end
 
@@ -139,7 +139,7 @@ local function merge_fsd(srcdata, battle, adopt_data)
 					occu = item.occu,
 					name = item.name,
 					damage = 0,
-					firsttime = LONG_TIME_LATER,
+					firsttime = math.maxinteger,
 					lasttime = 0,
 					skillset = {},
 					targetset = {},
@@ -231,9 +231,9 @@ function cal_fsd_sum()
 	sumbattle.fsd_summary.OK = true
 	return true
 end
-------------------------------------------------------------
 
-function skada.cal_currbattle()
+------------------------------------------------------------
+local function cal_currbattle()
 	cal_fsd_curr()
 	local sort_ok = currbattle.sort_ok
 	for i=1,skada.MODE_SIZE do
@@ -241,11 +241,15 @@ function skada.cal_currbattle()
 	end
 end
 
-skada.cal_fsd = function(battle)
+local function cal_fsd(battle)
 	if battle == currbattle then
 		return cal_fsd_curr()
-	elseif battle == sumbattle then
+	end
+	if battle == sumbattle then
 		return cal_fsd_sum()
 	end
 	return cal_fsd_old(battle)
 end
+
+skada.cal_currbattle = cal_currbattle
+skada.cal_fsd = cal_fsd

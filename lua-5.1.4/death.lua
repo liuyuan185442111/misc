@@ -61,45 +61,48 @@ end
 
 --一场战斗结束的时候调用
 local function finish_death_record()
-	local death_record = currbattle.death_record
-	cal_death_record(death_record)
-	death_record.midresult = nil
-	for _,deadman in ipairs(death_record.result) do
+	cal_death_record()
+	currbattle.death_record.midresult = nil
+	for _,deadman in ipairs(currbattle.death_record.result) do
 		deadman.temp_activities = nil
 	end
 end
 
 --将所有战斗的数据做个合并，这里忽略了死前活动记录
-function cal_death_sum(death_record)
-	if death_record.OK then
+function cal_death_sum()
+	if sumbattle.death_record.OK then
 		return false
 	end
 	local count = 0
 	local result = {}
 	for _,battle in ipairs(allbattle) do
-		for _,v in ipairs(battle.death_record.result) do
-			if result[v.id] == nil then
-				result[v.id] = {id=v.id, count=v.count, occu=v.occu, name=v.name, death_activity={}}
+		for _,record in ipairs(battle.death_record.result) do
+			if result[record.id] == nil then
+				result[record.id] = {id=record.id, count=record.count, occu=record.occu, name=record.name, death_activity={}}
 			else
-				result[v.id].count = result[v.id].count + v.count
+				result[record.id].count = result[record.id].count + record.count
 			end
 		end
 	end
+	local death_record = sumbattle.death_record
 	death_record.count = count
 	death_record.result = result
 	death_record.OK = true
 	return true
 end
 
+--返回false表示上次调用后结果未发生变化
 local function cal_death(battle)
 	if battle == currbattle then
-		return cal_death_record(currbattle.death_record)
-	elseif battle == sumbattle then
-		return cal_death_sum(sumbattle.death_record)
+		return cal_death_record()
 	end
-	return true
+	if battle == sumbattle then
+		return cal_death_sum()
+	end
+	return false
 end
 
+------------------------------------------------------------
 skada.add_death_activity = add_death_activity
 skada.finish_death_record = finish_death_record
 skada.cal_death = cal_death
