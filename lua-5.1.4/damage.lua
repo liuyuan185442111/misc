@@ -233,14 +233,6 @@ function cal_fsd_sum()
 end
 
 ------------------------------------------------------------
-local function cal_currbattle()
-	cal_fsd_curr()
-	local sort_ok = currbattle.sort_ok
-	for i=1,skada.MODE_SIZE do
-		table.insert(sort_ok, true)
-	end
-end
-
 local function cal_fsd(battle)
 	if battle == currbattle then
 		return cal_fsd_curr()
@@ -251,5 +243,6 @@ local function cal_fsd(battle)
 	return cal_fsd_old(battle)
 end
 
-skada.cal_currbattle = cal_currbattle
+------------------------------------------------------------
+skada.cal_fsd_curr = cal_fsd_curr
 skada.cal_fsd = cal_fsd

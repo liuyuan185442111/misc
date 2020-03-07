@@ -5,8 +5,8 @@ require('common')
 require('port')
 require('export')
 require('base')
+require('damage')
 require('death')
-require('process')
 
 math.randomseed(1001086)
 

@@ -58,11 +58,11 @@ local function newbattle()
 		hh_summary2={}, --以被治疗者tid分组
 		hh_sort2={}, --以有效被治疗量排序
 
-		death_record={}, --死亡及生前事件记录
-
 		--如果"_sort"系列成员不存盘，重新加载后会重新计算，用sort_ok来避免重复计算
 		--如果"_sort"系列成员存盘，就不需要sort_ok了，但导出文件的大小可能会膨胀2倍
 		sort_ok={},
+
+		death_record={}, --死亡及生前事件记录
 	}
 end
 
@@ -240,6 +240,14 @@ local function rm_all_battles()
 	end
 end
 
+local function cal_currbattle()
+	skada.cal_fsd_curr()
+	local sort_ok = currbattle.sort_ok
+	for i=1,skada.MODE_SIZE do
+		table.insert(sort_ok, true)
+	end
+end
+
 onlogin()
 
 ------------------------------------------------------------
@@ -252,3 +260,4 @@ skada.add_damage_or_heal = add_damage_or_heal
 skada.protect_battles = protect_battles
 skada.rm_a_battle = rm_a_battle
 skada.rm_all_battles = rm_all_battles
+skada.cal_currbattle = cal_currbattle
