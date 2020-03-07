@@ -3,7 +3,12 @@ require('common')
 require('port')
 role = {}
 buff = {}
-function addbuff(xid, buffid, favorable)
+
+--有可能buff在战斗开始就已经加上了
+--战斗结束buff仍未消失
+--buff存在的时候下线或离开视野
+--提供4个函数 有利 不利 添加 删除
+function addbuff(xid, buffid)
 	local temp = role[xid]
 	if temp == nil then
 		temp = {}
