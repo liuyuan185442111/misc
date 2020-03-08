@@ -1,4 +1,5 @@
 allbattle = {}
+--TODO 如不是严格检查，以下两行可以删掉
 currbattle = nil
 sumbattle = nil
 
@@ -13,11 +14,6 @@ local function newbattle()
 		rival_level=-1,
 		rival_title='当前',
 
-		total_wrong_damage=0,
-		team_wrong_damage={}, --队友误伤
-		twd_summary={}, --以攻击者tid分组
-		twd_sort={}, --以伤害量排序
-
 		total_wesend_damage=0,
 		friend_send_damage={}, --友方造成伤害
 		fsd_summary={}, --以攻击者tid分组
@@ -30,6 +26,11 @@ local function newbattle()
 		frd_sort1={}, --以伤害量排序
 		frd_summary2={}, --以skillid分组
 		frd_sort2={}, --以伤害量排序
+
+		total_wrong_damage=0,
+		team_wrong_damage={}, --队友误伤
+		twd_summary={}, --以攻击者tid分组
+		twd_sort={}, --以伤害量排序
 
 		total_wereal_heal=0,
 		total_weover_heal=0,
@@ -58,7 +59,7 @@ local function newbattle()
 		hh_summary2={}, --以被治疗者tid分组
 		hh_sort2={}, --以有效被治疗量排序
 
-		--如果"_sort"系列成员不存盘，重新加载后会重新计算，用sort_ok来避免重复计算
+		--如果"_sort"系列成员不存盘，重新加载后在需要时会重新计算，用sort_ok来避免重复计算
 		--如果"_sort"系列成员存盘，就不需要sort_ok了，但导出文件的大小可能会膨胀2倍
 		sort_ok={},
 
@@ -100,15 +101,24 @@ local function newsumbattle()
 	return temp
 end
 
+local cal_currbattle
 local function finish_battle()
 	--当前战斗没数据或已保存过了
 	if currbattle.count == 0 or currbattle.finishtime then
 		return
 	end
 	currbattle.finishtime = skada.nowtime()
-	skada.cal_currbattle()
+	cal_currbattle()
 	skada.finish_death_record()
 	table.insert(allbattle, 1, currbattle)
+	if #allbattle > skada.MAX_BATTLES then
+		for i=#allbattle,1,-1 do
+			if not allbattle[i].protected then
+				table.remove(allbattle, i)
+				break
+			end
+		end
+	end
 	if #allbattle > skada.MAX_BATTLES then
 		table.remove(allbattle)
 	end
@@ -240,7 +250,7 @@ local function rm_all_battles()
 	end
 end
 
-local function cal_currbattle()
+cal_currbattle = function()
 	skada.cal_fsd_curr()
 	local sort_ok = currbattle.sort_ok
 	for i=1,skada.MODE_SIZE do
@@ -248,6 +258,7 @@ local function cal_currbattle()
 	end
 end
 
+--TODO for debug
 onlogin()
 
 ------------------------------------------------------------
@@ -260,4 +271,3 @@ skada.add_damage_or_heal = add_damage_or_heal
 skada.protect_battles = protect_battles
 skada.rm_a_battle = rm_a_battle
 skada.rm_all_battles = rm_all_battles
-skada.cal_currbattle = cal_currbattle

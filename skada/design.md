@@ -61,9 +61,9 @@ export_allbattle | 导出allbattle | 10
 import_allbattle | 导入allbattle | 10
 export_battle | 导出指定battle | 10
 **base.lua** |
-allbattle | 是一个数组，包含最近的若干场战斗 | 22
-currbattle | 当前战斗 | 22
-sumbattle | allbattle的总计 | 22
+allbattle | 是一个数组，包含最近的若干场战斗，这是一个全局变量，并不包含在skada中
+currbattle | 当前战斗，这是一个全局变量，并不包含在skada中
+sumbattle | allbattle的总计，这是一个全局变量，并不包含在skada中
 onlogin | 玩家登录时调用 | 11
 begin_battle | 开始一场战斗时调用 | 11
 finish_battle | 结束一场战斗时调用 | 11
@@ -71,7 +71,6 @@ add_damage_or_heal | 如果在一场战斗中，产生一条伤害或治疗时�
 protect_battles | 将指定战斗置为保护状态 | 12
 rm_a_battle | 删除一场战斗 | 12
 rm_all_battles | 尝试删除所有战斗 | 12
-cal_currbattle | 整理当前战斗的所有数据，在结束当前战斗时调用 | 10
 **death.lua** |
 add_death_activity | 为当前战斗添加一条血量增减事件 | 10
 finish_death_record | 整理当前战斗的死亡记录，在结束当前战斗时调用 | 10
@@ -84,20 +83,27 @@ cal_fsd | 整理指定战斗的友方造成伤害记录 | 12
 
 ## 计划
 week1:
+gercampinfo中添加是自己的判断直接返回友方
 更新最新代码 从外网拷贝到内网
-标题显示问题
-
-让getskillname支持npc技能
+测试已有功能有没有出问题
+退出战斗加一个弹窗
 为每个界面添加日志 统计重刷次数
-退出战斗的方式再思考一下，退出战斗加一个弹窗
+实现悬浮窗
+review frame代码
+标题显示问题
+让getskillname支持npc技能
+
+周二
+退出战斗的方式再思考一下
 实现直选功能
 
-实现悬浮窗
+周三窗口管理
 添加功能全局开关和窗口管理功能
 
-review frame代码
+周四完善item
 实现item的图标, 进度条功能
 
+周五写文档
 把ui框架整理成文档
 把数据处理模块数据结构整理出来
 

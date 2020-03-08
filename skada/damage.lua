@@ -210,11 +210,11 @@ end
 --计算已有战斗中队友造成的伤害统计
 --返回false表示未有变化
 function cal_fsd_old(battle)
-	if battle.sort_ok[2] then
+	if battle.sort_ok.fsd then
 		return false
 	end
 	repair_fsd(battle, true)
-	battle.sort_ok[2] = true
+	battle.sort_ok.fsd = true
 	return true
 end
 
