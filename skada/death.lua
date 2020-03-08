@@ -53,7 +53,7 @@ local function cal_death_record()
 		death_record.OK = true
 		return true
 	end
-	death_record.result = skada.trans_table(death_record.midresult)
+	death_record.result = skada.trans_table_if(death_record.midresult, function(a) return a.count>0 end)
 	table.sort(death_record.result, function(a,b) return a.count>b.count end)
 	death_record.OK = true
 	return true
@@ -69,7 +69,7 @@ local function finish_death_record()
 end
 
 --将所有战斗的数据做个合并，这里忽略了死前活动记录
-function cal_death_sum()
+local function cal_death_sum()
 	if sumbattle.death_record.OK then
 		return false
 	end
@@ -86,7 +86,8 @@ function cal_death_sum()
 	end
 	local death_record = sumbattle.death_record
 	death_record.count = count
-	death_record.result = result
+	death_record.result = skada.trans_table(result)
+	table.sort(death_record.result, function(a,b) return a.count>b.count end)
 	death_record.OK = true
 	return true
 end
