@@ -38,6 +38,7 @@ dump | 将一个变量转换成字符串形式 | 10
 clone_array | 返回一个数组的简单拷贝（浅拷贝） | 10
 clone_table | 返回一个map的简单拷贝（浅拷贝） | 10
 trans_array | 将一个map转换为数组（浅拷贝） | 10
+trans_array_if | 将一个map中符合条件的元素放到数组中（浅拷贝） | 10
 reverse_array | 翻转一个数组 | 10
 queue | 实现了一个队列 | 20
 **port.lua** |
@@ -83,15 +84,14 @@ cal_fsd | 整理指定战斗的友方造成伤害记录 | 12
 
 ## 计划
 week1:
-测试已有功能有没有出问题
 退出战斗加一个弹窗
 为每个界面添加日志 统计重刷次数
-实现悬浮窗
 review frame代码
-标题显示问题
-让getskillname支持npc技能
 reviewc++代码 日志里Skada->skada
 退出战斗的方式再思考一下
+标题显示问题
+让getskillname支持npc技能
+实现悬浮窗
 
 周二
 实现直选功能
