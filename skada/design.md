@@ -92,9 +92,10 @@ gercampinfo中添加是自己的判断直接返回友方
 review frame代码
 标题显示问题
 让getskillname支持npc技能
+reviewc++代码 日志里Skada->skada
+退出战斗的方式再思考一下
 
 周二
-退出战斗的方式再思考一下
 实现直选功能
 
 周三窗口管理
