@@ -24,7 +24,7 @@ test.lua
 
 ## 数据处理模块数据结构
 
-## skada表
+## skada
 数据处理模块提供的接口都置于skada表中，现将其做一下说明。
 类型：配置参数为0，函数为1，其他为2
 用处：模块内部使用为0，为数据收集模块为1，为数据展示模块为2
@@ -62,9 +62,6 @@ export_allbattle | 导出allbattle | 10
 import_allbattle | 导入allbattle | 10
 export_battle | 导出指定battle | 10
 **base.lua** |
-allbattle | 是一个数组，包含最近的若干场战斗，这是一个全局变量，并不包含在skada中
-currbattle | 当前战斗，这是一个全局变量，并不包含在skada中
-sumbattle | allbattle的总计，这是一个全局变量，并不包含在skada中
 onlogin | 玩家登录时调用 | 11
 begin_battle | 开始一场战斗时调用 | 11
 finish_battle | 结束一场战斗时调用 | 11
@@ -79,6 +76,10 @@ cal_death | 整理指定战斗的死亡记录 | 12
 **damage.lua** |
 cal_fsd_curr | 整理当前战斗的友方造成伤害记录 | 10
 cal_fsd | 整理指定战斗的友方造成伤害记录 | 12
+
+## 一场战斗
+base.lua提供了三个全局变量，分别是currbattle，sumbattle，allbattle，currbattle表示当前战斗，allbattle是一个数组，包含最近的若干场战斗，当前战斗结束时，currbattle会放入allbattle，sumbattle是allbattle中所有战斗的总计。
+一场战斗用一个table来表示，它的成员有：
 
 ## 数据展示模块框架
 
