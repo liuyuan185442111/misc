@@ -36,7 +36,7 @@ local function add_death_activity(tid, is_operator_player, operator, skillid, de
 			table.insert(record.death_activity, temp)
 		end
 		--最后放入一条死亡记录，这里name表示死亡者的名字
-		table.insert(record.death_activity, {time=dietime,name=skada.getrolename(tid),skillid=0,delta=0,ratio=0})
+		table.insert(record.death_activity, {time=dietime,name=skada.getrolename(tid),skillid=record.occu,delta=0,ratio=0})
 	end
 end
 
@@ -82,6 +82,7 @@ local function cal_death_sum()
 			else
 				result[record.id].count = result[record.id].count + record.count
 			end
+			count = count + record.count
 		end
 	end
 	local death_record = sumbattle.death_record
