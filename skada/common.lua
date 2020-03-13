@@ -22,7 +22,7 @@ local function per2str(n)
 end
 
 function seconds2str(n)
-  n = math.floor(n)
+  n = math.floor(n+0.5)
   local hour = 0
   local min = n//60
   n = n%60
