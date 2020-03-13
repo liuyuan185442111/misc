@@ -1,0 +1,4 @@
+﻿SAME_BYTE_ORDER 双端编码相同时,网络传输时无需转换为大端
+BYTE_ORDER_BIG_ENDIAN 表示本地使用大端编码
+_REENTRANT_ 多线程
+DB_USE_MMAP PageBrowser使用mmap

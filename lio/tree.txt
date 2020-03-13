@@ -1,0 +1,32 @@
+lio
+├── done
+│   ├── 已转移并重新修改的源文件
+├── io
+│   ├── itimer.h 提供了一个更精确的定时器，支持多线程，使用Linux的ITIMER_REAL进行定时
+│   ├── httpclient.h
+│   ├── pollio.h
+├── gmatrix.cpp
+├── gmatrix.h
+├── message.cpp
+├── message.h
+├── httppool.h
+└── msg.h
+
+io宏：
+USE_KEVENT
+USE_EPOLL
+USE_SELECT
+
+delivery总共提供了四种定时执行的方式：
+1.继承Timer::Observer，然后调用Timer::Attach，实现虚函数Update，Timer会大约每秒钟调用一次Update，比如CentralDeliveryClient
+2.继承Thread::Runnable，调用Thread::HouseKeeper::AddTimerTask，在指定时间之后会添加该任务到任务池，可以在Run中再次为自己调用AddTimerTask，从而实现周期调用
+3.继承IntervalTimer::Observer，然后调用IntervalTimer::Attach，实现虚函数Update
+4.IntervalTimer还实现了一个class TimerTask，接受一个Runnable指针，可实现定时任务
+
+由Timer驱动的Update一秒钟执行一次（粗略的），Timer::Update由IO驱动：
+PollIO::Poll(1000);
+Timer::Update();
+
+由IntervalTimer驱动的Update则按照设定间隔执行，需要在main中调用IntervalTimer::StartTimer启动定时器
+
+在main的最后调用Thread::Pool::Run()启动
