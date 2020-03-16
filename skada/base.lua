@@ -75,6 +75,7 @@ local function newsumbattle()
 	local total_wesend_damage,total_werecv_damage,total_wereal_heal = 0,0,0
 	local total_hesend_damage,total_herecv_damage,total_hereal_heal = 0,0,0
 	local total_wrong_damage,total_weover_heal = 0,0
+	local friend_periods = {}
 	for _,battle in ipairs(allbattle) do
 		begintime = math.min(begintime, battle.begintime)
 		finishtime = math.max(finishtime, battle.finishtime)
@@ -87,6 +88,15 @@ local function newsumbattle()
 		total_hereal_heal = total_hereal_heal + battle.total_hereal_heal
 		total_wrong_damage = total_wrong_damage + battle.total_wrong_damage
 		total_weover_heal = total_weover_heal + battle.total_weover_heal
+		for roleid,item in pairs(battle.friend_periods) do
+			local temp = friend_periods[roleid]
+			if temp == nil then
+				temp = {}
+				friend_periods[roleid] = temp
+			end
+			temp.firsttime = math.min(temp.firsttime, item.firsttime)
+			temp.lasttime = math.max(temp.lasttime, item.lasttime)
+		end
 	end
 	local temp = newbattle()
 	temp.rival_title = '总计'
@@ -101,6 +111,7 @@ local function newsumbattle()
 	temp.total_hereal_heal = total_hereal_heal
 	temp.total_wrong_damage = total_wrong_damage
 	temp.total_weover_heal = total_weover_heal
+	temp.friend_periods = friend_periods
 	return temp
 end
 
@@ -150,6 +161,13 @@ local function update_friend_periods(roleid, nowtime)
 		return
 	end
 	periods[roleid].lasttime = nowtime
+end
+local function get_friend_active_time(battle, roleid)
+	local temp = battle.friend_periods[roleid]
+	if not temp then
+		return 1
+	end
+	return temp.lasttime - temp.firsttime
 end
 
 --lastvalue 受伤害者或被治疗者的当前血量
@@ -284,6 +302,7 @@ skada.begin_battle = begin_battle
 skada.finish_battle = finish_battle
 skada.add_damage_or_heal = add_damage_or_heal
 --以下给数据消费者用
+skada.get_friend_active_time = get_friend_active_time
 skada.protect_battles = protect_battles
 skada.rm_a_battle = rm_a_battle
 skada.rm_all_battles = rm_all_battles

@@ -166,7 +166,7 @@ local function repair_fsd(battle, part)
 	for _,item in pairs(summary) do
 		if not part then
 			item.damage_ratio = item.damage / battle.total_wesend_damage
-			item.damage_rate = item.damage / (battle.friend_periods[_].firsttime - battle.friend_periods[_].lasttime)
+			item.damage_rate = item.damage / (battle.friend_periods[_].lasttime - battle.friend_periods[_].firsttime)
 			for _,v in pairs(item.skillset) do
 				v.avgdmg = v.damage / v.count
 				v.ratio = v.damage / item.damage
