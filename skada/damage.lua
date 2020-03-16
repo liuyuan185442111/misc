@@ -8,7 +8,7 @@ local function pre_fsd(battle)
 	--先以tid排序，然后分组
 	table.sort(allitems, function(a,b) return a.source_tid<b.source_tid end)
 	table.insert(allitems, {source_tid=-1})
-	local currid, currdamage, firsttime, lasttime, skillset, targetset = 0
+	local currid, currdamage, skillset, targetset = 0
 	for _,item in ipairs(allitems) do
 		if item.source_tid ~= currid then
 			if currid ~= 0 then
@@ -16,8 +16,6 @@ local function pre_fsd(battle)
 				semidata[currid] = {
 					id = currid,
 					damage = currdamage,
-					firsttime = firsttime,
-					lasttime = lasttime,
 					skillset = skillset,
 					targetset = targetset,
 				}
@@ -25,13 +23,10 @@ local function pre_fsd(battle)
 			end
 			--开始新一组
 			currid, currdamage = item.source_tid, 0
-			firsttime, lasttime = math.maxinteger, 0
 			skillset, targetset = {}, {}
 		end
 
 		currdamage = currdamage + item.value
-		firsttime = math.min(firsttime, item.time)
-		lasttime = math.max(lasttime, item.time)
 
 		do
 			local temp = skillset[item.skillid]
@@ -139,8 +134,6 @@ local function merge_fsd(srcdata, battle, adopt_data)
 					occu = item.occu,
 					name = item.name,
 					damage = 0,
-					firsttime = math.maxinteger,
-					lasttime = 0,
 					skillset = {},
 					targetset = {},
 				}
@@ -149,8 +142,6 @@ local function merge_fsd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			dest.lasttime = math.max(dest.lasttime, item.lasttime)
-			dest.firsttime = math.min(dest.firsttime, item.firsttime)
 			in_fsd_merge_skill(dest.skillset, item.skillset, adopt_data)
 			in_fsd_merge_target(dest.targetset, item.targetset, adopt_data)
 		end
@@ -166,7 +157,7 @@ local function repair_fsd(battle, part)
 	for _,item in pairs(summary) do
 		if not part then
 			item.damage_ratio = item.damage / battle.total_wesend_damage
-			item.damage_rate = item.damage / (battle.friend_periods[_].lasttime - battle.friend_periods[_].firsttime)
+			item.damage_rate = item.damage / skada.get_friend_active_time(battle, _)
 			for _,v in pairs(item.skillset) do
 				v.avgdmg = v.damage / v.count
 				v.ratio = v.damage / item.damage
@@ -397,7 +388,7 @@ local function repair_frd(battle, part)
 	for _,item in pairs(summary) do
 		if not part then
 			item.damage_ratio = item.damage / battle.total_werecv_damage
-			item.damage_rate = item.damage / (battle.friend_periods[_].firsttime - battle.friend_periods[_].lasttime)
+			item.damage_rate = item.damage / skada.get_friend_active_time(battle, _)
 			for _,v in pairs(item.skillset) do
 				v.avgdmg = v.damage / v.count
 				v.ratio = v.damage / item.damage
