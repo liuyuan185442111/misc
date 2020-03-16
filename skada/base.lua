@@ -14,6 +14,9 @@ local function newbattle()
 		rival_level=-1,
 		rival_title='当前',
 
+		--友方参战时长
+		friend_periods={},
+
 		total_wesend_damage=0,
 		friend_send_damage={}, --友方造成伤害
 		fsd_summary={}, --以攻击者tid分组
@@ -140,6 +143,15 @@ local function onlogin()
 	sumbattle = newsumbattle()
 end
 
+local function update_friend_periods(roleid, nowtime)
+	local periods = currbattle.friend_periods
+	if periods[roleid] == nil then
+		periods[roleid] = {firsttime = nowtime, lasttime = nowtime+1}
+		return
+	end
+	periods[roleid].lasttime = nowtime
+end
+
 --lastvalue 受伤害者或被治疗者的当前血量
 local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skillid, flags, isdamage, value, overvalue, lastvalue)
 	local item = {
@@ -167,6 +179,7 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 			if skada.isplayer(source_xid) then
 				table.insert(currbattle.friend_send_damage, item)
 				currbattle.total_wesend_damage = currbattle.total_wesend_damage + value
+				update_friend_periods(source_tid, item.time)
 			end
 			table.insert(currbattle.hostile_recv_damage, item)
 			currbattle.total_herecv_damage = currbattle.total_herecv_damage + value
@@ -182,6 +195,7 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 			if skada.isplayer(target_xid) then
 				table.insert(currbattle.friend_recv_damage, item)
 				currbattle.total_werecv_damage = currbattle.total_werecv_damage + value
+				update_friend_periods(target_tid, item.time)
 			end
 			local a,b,c = skada.getrivalinfo(currbattle.rival_tid, currbattle.rival_level, source_xid, source_tid)
 			if a then
@@ -196,6 +210,7 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 				table.insert(currbattle.friend_heal, item)
 				currbattle.total_wereal_heal = currbattle.total_wereal_heal + value
 				currbattle.total_weover_heal = currbattle.total_weover_heal + overvalue
+				update_friend_periods(source_tid, item.time)
 				discard_record = false
 			end
 			skada.add_death_activity(target_tid, skada.isplayer(source_xid), source_tid, skillid, value, lastvalue)
@@ -252,6 +267,7 @@ end
 
 cal_currbattle = function()
 	skada.cal_fsd_curr()
+	skada.cal_frd_curr()
 	local sort_ok = currbattle.sort_ok
 	for i=1,skada.MODE_SIZE do
 		table.insert(sort_ok, true)
