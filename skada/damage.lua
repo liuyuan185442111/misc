@@ -181,7 +181,7 @@ end
 
 --将当前战斗的新的队友造成的伤害记录合并到currbattle中
 --返回false表示未有变化
-function cal_fsd_curr()
+local function cal_fsd_curr()
 	if merge_fsd(pre_fsd()) then
 		repair_fsd()
 		return true
@@ -480,7 +480,190 @@ end
 ]]
 
 ------------------------------------------------------------
+local function pre_twd(battle)
+	battle = battle or currbattle
+	local semidata, allitems = {}, battle.team_wrong_damage
+	if #allitems == 0 then return nil end
+	battle.team_wrong_damage = {}
+
+	table.sort(allitems, function(a,b) return a.source_tid<b.source_tid end)
+	table.insert(allitems, {source_tid=-1})
+	local currid, currdamage, skillset, targetset = 0
+	for _,item in ipairs(allitems) do
+		if item.source_tid ~= currid then
+			if currid ~= 0 then
+				semidata[currid] = {
+					id = currid,
+					damage = currdamage,
+					skillset = skillset,
+					targetset = targetset,
+				}
+				if item.source_tid == -1 then break end
+			end
+			currid, currdamage = item.source_tid, 0
+			skillset, targetset = {}, {}
+		end
+
+		currdamage = currdamage + item.value
+
+		do
+			local temp = skillset[item.skillid]
+			local value = item.value
+			if temp == nil then
+				skillset[item.skillid] = {
+					id = item.skillid,
+					damage = value,
+				}
+			else
+				temp.damage = temp.damage + value
+			end
+		end
+
+		do
+			local temp = targetset[item.target_tid]
+			if temp == nil then
+				targetset[item.target_tid] = {
+					id = item.target_tid,
+					damage = item.value,
+				}
+			else
+				temp.damage = temp.damage + item.value
+			end
+		end
+	end
+
+	return semidata
+end
+
+local function in_twd_merge_set(dest, src, adopt_data)
+	for id,v in pairs(src) do
+		local t = dest[id]
+		if t then
+			t.damage = t.damage + v.damage
+		else
+			if adopt_data then
+				dest[id] = v
+			else
+				dest[id] = skada.clone_table(v)
+			end
+		end
+	end
+end
+local function merge_twd(srcdata, battle, adopt_data)
+	if not srcdata then
+		return false
+	end
+	if adopt_data == nil then
+		adopt_data = true
+	end
+	battle = battle or currbattle
+	local summary = battle.twd_summary
+	local srcdata_not_empty = false
+	for roleid,item in pairs(srcdata) do
+		srcdata_not_empty = true
+		local dest = summary[roleid]
+		if dest == nil then
+			if adopt_data then
+				item.occu = skada.getroleoccu(roleid)
+				item.name = skada.getrolename(roleid)
+				for _,v in pairs(item.skillset) do
+					v.name = skada.getskillname(v.id)
+				end
+				for _,v in pairs(item.targetset) do
+					v.name = skada.getrolename(v.id)
+				end
+				summary[roleid] = item
+			else
+				dest = {
+					id = roleid,
+					occu = item.occu,
+					name = item.name,
+					damage = 0,
+					skillset = {},
+					targetset = {},
+				}
+				summary[roleid] = dest
+			end
+		end
+		if dest then
+			dest.damage = dest.damage + item.damage
+			in_twd_merge_set(dest.skillset, item.skillset, adopt_data)
+			in_twd_merge_set(dest.targetset, item.targetset, adopt_data)
+		end
+	end
+	return srcdata_not_empty
+end
+
+local function repair_twd(battle, part)
+	battle = battle or currbattle
+	local summary = battle.twd_summary
+	for _,item in pairs(summary) do
+		if not part then
+			item.damage_ratio = item.damage / battle.total_wrong_damage
+			for _,v in pairs(item.skillset) do
+				v.ratio = v.damage / item.damage
+			end
+			for _,v in pairs(item.targetset) do
+				v.ratio = v.damage / item.damage
+			end
+		end
+		item.skillsort_NS = skada.trans_table(item.skillset)
+		table.sort(item.skillsort_NS, function(a,b) return a.damage>b.damage end)
+		item.targetsort_NS = skada.trans_table(item.targetset)
+		table.sort(item.targetsort_NS, function(a,b) return a.damage>b.damage end)
+	end
+	battle.twd_sort = skada.trans_table(summary)
+	table.sort(battle.twd_sort, function(a,b) return a.damage>b.damage end)
+end
+
+local function cal_twd_curr()
+	if merge_twd(pre_twd()) then
+		repair_twd()
+		return true
+	else
+		return false
+	end
+end
+
+local function cal_twd_old()
+	if battle.sort_ok.twd then
+		return false
+	end
+	repair_twd(battle, true)
+	battle.sort_ok.twd = true
+	return true
+end
+
+local function cal_twd_sum()
+	if sumbattle.twd_summary.OK then
+		return false
+	end
+	for _,battle in ipairs(allbattle) do
+		merge_twd(battle.twd_summary, sumbattle, false)
+	end
+	repair_twd(sumbattle)
+	sumbattle.ftw_summary.OK = true
+	return true
+end
+
+local function cal_twd(battle)
+	if battle == currbattle then
+		return cal_twd_curr()
+	end
+	if battle == sumbattle then
+		return cal_twd_sum()
+	end
+	return cal_twd_old(battle)
+end
+
+------------------------------------------------------------
 skada.cal_fsd_curr = cal_fsd_curr
 skada.cal_frd_curr = cal_frd_curr
+--skada.cal_hsd_curr = cal_hsd_curr
+--skada.cal_hrd_curr = cal_hrd_curr
+skada.cal_twd_curr = cal_twd_curr
 skada.cal_fsd = cal_fsd
 skada.cal_frd = cal_frd
+--skada.cal_hsd = cal_hsd
+--skada.cal_hrd = cal_hrd
+skada.cal_twd = cal_twd
