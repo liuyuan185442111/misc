@@ -79,6 +79,7 @@ local function in_fsd_merge_skill(dest, src, adopt_data)
 			if t.mindmg > v.mindmg then t.mindmg = v.mindmg end
 		else
 			if adopt_data then
+				v.name = skada.getskillname(skillid)
 				dest[skillid] = v
 			else
 				dest[skillid] = skada.clone_table(v)
@@ -93,6 +94,7 @@ local function in_fsd_merge_target(dest, src, adopt_data)
 			t.damage = t.damage + v.damage
 		else
 			if adopt_data then
+				v.name = v.isplayer and skada.getrolename(targettid) or skada.getnpcname(targettid)
 				dest[targettid] = v
 			else
 				dest[targettid] = skada.clone_table(v)
@@ -420,7 +422,7 @@ local function cal_frd_curr()
 	end
 end
 
-local function cal_frd_old()
+local function cal_frd_old(battle)
 	if battle.sort_ok.frd then
 		return false
 	end
@@ -430,14 +432,14 @@ local function cal_frd_old()
 end
 
 local function cal_frd_sum()
-	if sumbattle.frd_summary.OK then
+	if sumbattle.frd_summary1.OK then
 		return false
 	end
 	for _,battle in ipairs(allbattle) do
 		merge_frd(battle.frd_summary1, battle.frd_summary2, sumbattle, false)
 	end
 	repair_frd(sumbattle)
-	sumbattle.frd_summary.OK = true
+	sumbattle.frd_summary1.OK = true
 	return true
 end
 
@@ -535,13 +537,14 @@ local function pre_twd(battle)
 	return semidata
 end
 
-local function in_twd_merge_set(dest, src, adopt_data)
+local function in_twd_merge_set(dest, src, adopt_data, getname)
 	for id,v in pairs(src) do
 		local t = dest[id]
 		if t then
 			t.damage = t.damage + v.damage
 		else
 			if adopt_data then
+				v.name = getname(id)
 				dest[id] = v
 			else
 				dest[id] = skada.clone_table(v)
@@ -587,8 +590,8 @@ local function merge_twd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_twd_merge_set(dest.skillset, item.skillset, adopt_data)
-			in_twd_merge_set(dest.targetset, item.targetset, adopt_data)
+			in_twd_merge_set(dest.skillset, item.skillset, adopt_data, skada.getskillname)
+			in_twd_merge_set(dest.targetset, item.targetset, adopt_data, skada.getrolename)
 		end
 	end
 	return srcdata_not_empty
