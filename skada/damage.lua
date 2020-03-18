@@ -454,32 +454,157 @@ local function cal_frd(battle)
 end
 
 ------------------------------------------------------------
-------------------------------------------------------------
-------------------------------------------------------------
-------------------------------------------------------------
---[[
-local function pre_frd(battle)
+local function pre_hsd(battle)
+	battle = battle or currbattle
+	local semidata, allitems = {}, battle.hostile_send_damage
+	if #allitems == 0 then return nil end
+	battle.hostile_send_damage = {}
+
+	table.sort(allitems, function(a,b) return a.source_tid<b.source_tid end)
+	table.insert(allitems, {source_tid=-1})
+	local currid, currdamage, targetset = 0
+	for _,item in ipairs(allitems) do
+		if item.source_tid ~= currid then
+			if currid ~= 0 then
+				semidata[currid] = {
+					id = currid,
+					damage = currdamage,
+					isplayer = skada.isplayer(currid),
+					targetset = targetset,
+				}
+				if item.source_tid == -1 then break end
+			end
+			currid, currdamage, targetset = item.source_tid, 0, {}
+		end
+
+		currdamage = currdamage + item.value
+
+		do
+			local temp = targetset[item.target_tid]
+			if temp == nil then
+				targetset[item.target_tid] = {
+					id = item.target_tid,
+					damage = item.value,
+					isplayer = skada.isplayer(item.target_xid),
+				}
+			else
+				temp.damage = temp.damage + item.value
+			end
+		end
+	end
+
+	return semidata
 end
-local function merge_frd(srcdata, battle, adopt_data)
+
+local function merge_hsd(srcdata, battle, adopt_data)
+	if not srcdata then
+		return false
+	end
+	if adopt_data == nil then
+		adopt_data = true
+	end
+	battle = battle or currbattle
+	local summary = battle.hsd_summary
+	local srcdata_not_empty = false
+	for tid,item in pairs(srcdata) do
+		srcdata_not_empty = true
+		local dest = summary[tid]
+		if dest == nil then
+			if adopt_data then
+				item.name = item.isplayer and skada.getrolename(tid) or skada.getnpcname(tid)
+				for _,v in pairs(item.targetset) do
+					v.name = v.isplayer and skada.getrolename(v.id) or skada.getnpcname(v.id)
+				end
+				summary[tid] = item
+			else
+				dest = {
+					id = tid,
+					name = item.name,
+					damage = 0,
+					targetset = {},
+				}
+				summary[tid] = dest
+			end
+		end
+		if dest then
+			dest.damage = dest.damage + item.damage
+			in_fsd_merge_target(dest.targetset, item.targetset, adopt_data)
+		end
+	end
+	return srcdata_not_empty
 end
-local function repair_frd(battle, part)
+
+local function repair_hsd(battle, part)
 end
-local function cal_frd_curr()
+
+local function cal_hsd_curr()
+	if merge_hsd(pre_hsd()) then
+		repair_hsd()
+		return true
+	else
+		return false
+	end
 end
-local function cal_frd_old(battle)
+
+local function cal_hsd_old(battle)
+	if battle.sort_ok.hsd then
+		return false
+	end
+	repair_hsd(battle, true)
+	battle.sort_ok.hsd = true
+	return true
 end
-local function cal_frd_sum()
+
+local function cal_hsd_sum()
+	if sumbattle.hsd_summary.OK then
+		return false
+	end
+	for _,battle in ipairs(allbattle) do
+		merge_hsd(battle.hsd_summary, sumbattle, false)
+	end
+	repair_hsd(sumbattle)
+	sumbattle.hsd_summary.OK = true
+	return true
 end
-local function cal_frd(battle)
+
+local function cal_hsd(battle)
 	if battle == currbattle then
-		return cal_frd_curr()
+		return cal_hsd_curr()
 	end
 	if battle == sumbattle then
-		return cal_frd_sum()
+		return cal_hsd_sum()
 	end
-	return cal_frd_old(battle)
+	return cal_hsd_old(battle)
 end
-]]
+
+------------------------------------------------------------
+local function pre_hrd(battle)
+end
+
+local function merge_hrd(srcdata, battle, adopt_data)
+end
+
+local function repair_hrd(battle, part)
+end
+
+local function cal_hrd_curr()
+end
+
+local function cal_hrd_old(battle)
+end
+
+local function cal_hrd_sum()
+end
+
+local function cal_hrd(battle)
+	if battle == currbattle then
+		return cal_hrd_curr()
+	end
+	if battle == sumbattle then
+		return cal_hrd_sum()
+	end
+	return cal_hrd_old(battle)
+end
 
 ------------------------------------------------------------
 local function pre_twd(battle)
@@ -537,19 +662,14 @@ local function pre_twd(battle)
 	return semidata
 end
 
-local function in_twd_merge_set(dest, src, adopt_data, isskill)
+local function in_twd_merge_skill(dest, src, adopt_data)
 	for id,v in pairs(src) do
 		local t = dest[id]
 		if t then
 			t.damage = t.damage + v.damage
 		else
 			if adopt_data then
-				if isskill then
-					v.name = skada.getskillname(id)
-				else
-					v.name = skada.getrolename(id)
-					v.occu = skada.getroleoccu(id)
-				end
+				v.name = skada.getskillname(id)
 				dest[id] = v
 			else
 				dest[id] = skada.clone_table(v)
@@ -596,8 +716,8 @@ local function merge_twd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_twd_merge_set(dest.skillset, item.skillset, adopt_data, true)
-			in_twd_merge_set(dest.targetset, item.targetset, adopt_data, false)
+			in_twd_merge_skill(dest.skillset, item.skillset, adopt_data)
+			in_fsd_merge_target(dest.targetset, item.targetset, adopt_data)
 		end
 	end
 	return srcdata_not_empty
