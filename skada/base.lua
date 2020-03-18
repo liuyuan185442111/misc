@@ -1,3 +1,5 @@
+local NowVersion111189 = 1
+
 allbattle = {}
 --TODO 如不是严格检查，以下两行可以删掉
 currbattle = nil
@@ -137,7 +139,7 @@ local function finish_battle()
 		table.remove(allbattle)
 	end
 	sumbattle = newsumbattle()
-	skada.export_allbattle()
+	skada.export_allbattle(NowVersion111189)
 end
 
 local function begin_battle()
@@ -147,6 +149,9 @@ end
 
 local function onlogin()
 	skada.import_allbattle()
+	if Version111189 == nil or Version111189 < NowVersion111189 then
+		allbattle = {}
+	end
 	for _,battle in ipairs(allbattle) do
 		battle.sort_ok = {}
 	end

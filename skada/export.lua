@@ -56,12 +56,13 @@ local function import(region)
 end
 
 --所有初始数据、排序后的数据、标识为NS的数据都不导出
-local function export_allbattle()
+local function export_allbattle(version)
 	local temp = {}
 	for _,battle in ipairs(allbattle) do
 		table.insert(temp, sieve_battle_fields(battle))
 	end
-	export(0, skada.dump(temp, 'allbattle = '))
+	local ver_str = 'Version111189 = '..version
+	export(0, ver_str..skada.dump(temp, 'allbattle = '))
 end
 
 local function import_allbattle()

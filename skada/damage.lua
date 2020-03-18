@@ -466,7 +466,7 @@ local function repair_frd(battle, part)
 end
 local function cal_frd_curr()
 end
-local function cal_frd_old()
+local function cal_frd_old(battle)
 end
 local function cal_frd_sum()
 end
@@ -628,7 +628,7 @@ local function cal_twd_curr()
 	end
 end
 
-local function cal_twd_old()
+local function cal_twd_old(battle)
 	if battle.sort_ok.twd then
 		return false
 	end
@@ -645,7 +645,7 @@ local function cal_twd_sum()
 		merge_twd(battle.twd_summary, sumbattle, false)
 	end
 	repair_twd(sumbattle)
-	sumbattle.ftw_summary.OK = true
+	sumbattle.twd_summary.OK = true
 	return true
 end
 
