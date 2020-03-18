@@ -61,7 +61,7 @@ local function export_allbattle(version)
 	for _,battle in ipairs(allbattle) do
 		table.insert(temp, sieve_battle_fields(battle))
 	end
-	local ver_str = 'Version111189 = '..version
+	local ver_str = 'Version111189 = '..version..'\n'
 	export(0, ver_str..skada.dump(temp, 'allbattle = '))
 end
 

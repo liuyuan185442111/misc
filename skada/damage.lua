@@ -537,14 +537,19 @@ local function pre_twd(battle)
 	return semidata
 end
 
-local function in_twd_merge_set(dest, src, adopt_data, getname)
+local function in_twd_merge_set(dest, src, adopt_data, isskill)
 	for id,v in pairs(src) do
 		local t = dest[id]
 		if t then
 			t.damage = t.damage + v.damage
 		else
 			if adopt_data then
-				v.name = getname(id)
+				if isskill then
+					v.name = skada.getskillname(id)
+				else
+					v.name = skada.getrolename(id)
+					v.occu = skada.getroleoccu(id)
+				end
 				dest[id] = v
 			else
 				dest[id] = skada.clone_table(v)
@@ -574,6 +579,7 @@ local function merge_twd(srcdata, battle, adopt_data)
 				end
 				for _,v in pairs(item.targetset) do
 					v.name = skada.getrolename(v.id)
+					v.occu = skada.getroleoccu(v.id)
 				end
 				summary[roleid] = item
 			else
@@ -590,8 +596,8 @@ local function merge_twd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_twd_merge_set(dest.skillset, item.skillset, adopt_data, skada.getskillname)
-			in_twd_merge_set(dest.targetset, item.targetset, adopt_data, skada.getrolename)
+			in_twd_merge_set(dest.skillset, item.skillset, adopt_data, true)
+			in_twd_merge_set(dest.targetset, item.targetset, adopt_data, false)
 		end
 	end
 	return srcdata_not_empty

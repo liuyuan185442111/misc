@@ -1,9 +1,10 @@
 local NowVersion111189 = 1
-
 allbattle = {}
---TODO 如不是严格检查，以下两行可以删掉
+
+--TODO 如不是严格检查，以下3行可以删掉
 currbattle = nil
 sumbattle = nil
+Version111189 = nil
 
 --认为友方只能是玩家
 local function newbattle()
