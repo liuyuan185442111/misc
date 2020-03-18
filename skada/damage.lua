@@ -1,3 +1,54 @@
+local function in_merge_skillset(dest, src, adopt)
+	for skillid,item in pairs(src) do
+		local t = dest[skillid]
+		if t then
+			t.damage = t.damage + item.damage
+		else
+			if adopt then
+				item.name = skada.getskillname(skillid)
+				dest[skillid] = item
+			else
+				dest[skillid] = skada.clone_table(item)
+			end
+		end
+	end
+end
+local function in_merge_skillset2(dest, src, adopt)
+	for skillid,item in pairs(src) do
+		local t = dest[skillid]
+		if t then
+			t.damage = t.damage + item.damage
+			t.count = t.count + item.count
+			t.baoji = t.baoji + item.baoji
+			if t.maxdmg < item.maxdmg then t.maxdmg = item.maxdmg end
+			if t.mindmg > item.mindmg then t.mindmg = item.mindmg end
+		else
+			if adopt then
+				item.name = skada.getskillname(skillid)
+				dest[skillid] = item
+			else
+				dest[skillid] = skada.clone_table(item)
+			end
+		end
+	end
+end
+local function in_merge_targetset(dest, src, adopt)
+	for targettid,item in pairs(src) do
+		local t = dest[targettid]
+		if t then
+			t.damage = t.damage + item.damage
+		else
+			if adopt then
+				item.name = item.isplayer and skada.getrolename(targettid) or skada.getnpcname(targettid)
+				dest[targettid] = item
+			else
+				dest[targettid] = skada.clone_table(item)
+			end
+		end
+	end
+end
+
+------------------------------------------------------------
 --将新来的数据做成与fsd_summary相同的格式
 local function pre_fsd(battle)
 	battle = battle or currbattle
@@ -68,41 +119,6 @@ local function pre_fsd(battle)
 	return semidata
 end
 
-local function in_fsd_merge_skill(dest, src, adopt_data)
-	for skillid,v in pairs(src) do
-		local t = dest[skillid]
-		if t then
-			t.count = t.count + v.count
-			t.baoji = t.baoji + v.baoji
-			t.damage = t.damage + v.damage
-			if t.maxdmg < v.maxdmg then t.maxdmg = v.maxdmg end
-			if t.mindmg > v.mindmg then t.mindmg = v.mindmg end
-		else
-			if adopt_data then
-				v.name = skada.getskillname(skillid)
-				dest[skillid] = v
-			else
-				dest[skillid] = skada.clone_table(v)
-			end
-		end
-	end
-end
-local function in_fsd_merge_target(dest, src, adopt_data)
-	for targettid,v in pairs(src) do
-		local t = dest[targettid]
-		if t then
-			t.damage = t.damage + v.damage
-		else
-			if adopt_data then
-				v.name = v.isplayer and skada.getrolename(targettid) or skada.getnpcname(targettid)
-				dest[targettid] = v
-			else
-				dest[targettid] = skada.clone_table(v)
-			end
-		end
-	end
-end
-
 --将srcdata合并到fsd_summary
 --adopt_data: 是否能直接将数据拿过来 为false表示需要深拷贝
 local function merge_fsd(srcdata, battle, adopt_data)
@@ -144,8 +160,8 @@ local function merge_fsd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_fsd_merge_skill(dest.skillset, item.skillset, adopt_data)
-			in_fsd_merge_target(dest.targetset, item.targetset, adopt_data)
+			in_merge_skillset2(dest.skillset, item.skillset, adopt_data)
+			in_merge_targetset(dest.targetset, item.targetset, adopt_data)
 		end
 	end
 	return srcdata_not_empty
@@ -349,7 +365,7 @@ local function merge_frd(srcdata1, srcdata2, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_fsd_merge_skill(dest.skillset, item.skillset, adopt_data)
+			in_merge_skillset2(dest.skillset, item.skillset, adopt_data)
 		end
 	end
 
@@ -377,7 +393,7 @@ local function merge_frd(srcdata1, srcdata2, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_fsd_merge_target(dest.targetset, item.targetset, adopt_data)
+			in_merge_targetset(dest.targetset, item.targetset, adopt_data)
 		end
 	end
 
@@ -528,7 +544,7 @@ local function merge_hsd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_fsd_merge_target(dest.targetset, item.targetset, adopt_data)
+			in_merge_targetset(dest.targetset, item.targetset, adopt_data)
 		end
 	end
 	return srcdata_not_empty
@@ -588,12 +604,33 @@ local function repair_hrd(battle, part)
 end
 
 local function cal_hrd_curr()
+	if merge_hrd(pre_hrd()) then
+		repair_hrd()
+		return true
+	else
+		return false
+	end
 end
 
 local function cal_hrd_old(battle)
+	if battle.sort_ok.hrd then
+		return false
+	end
+	repair_hrd(battle, true)
+	battle.sort_ok.hrd = true
+	return true
 end
 
 local function cal_hrd_sum()
+	if sumbattle.hrd_summary.OK then
+		return false
+	end
+	for _,battle in ipairs(allbattle) do
+		merge_hrd(battle.hrd_summary, sumbattle, false)
+	end
+	repair_hrd(sumbattle)
+	sumbattle.hrd_summary.OK = true
+	return true
 end
 
 local function cal_hrd(battle)
@@ -662,21 +699,6 @@ local function pre_twd(battle)
 	return semidata
 end
 
-local function in_twd_merge_skill(dest, src, adopt_data)
-	for id,v in pairs(src) do
-		local t = dest[id]
-		if t then
-			t.damage = t.damage + v.damage
-		else
-			if adopt_data then
-				v.name = skada.getskillname(id)
-				dest[id] = v
-			else
-				dest[id] = skada.clone_table(v)
-			end
-		end
-	end
-end
 local function merge_twd(srcdata, battle, adopt_data)
 	if not srcdata then
 		return false
@@ -716,8 +738,8 @@ local function merge_twd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_twd_merge_skill(dest.skillset, item.skillset, adopt_data)
-			in_fsd_merge_target(dest.targetset, item.targetset, adopt_data)
+			in_merge_skillset(dest.skillset, item.skillset, adopt_data)
+			in_merge_targetset(dest.targetset, item.targetset, adopt_data)
 		end
 	end
 	return srcdata_not_empty
@@ -788,11 +810,11 @@ end
 ------------------------------------------------------------
 skada.cal_fsd_curr = cal_fsd_curr
 skada.cal_frd_curr = cal_frd_curr
---skada.cal_hsd_curr = cal_hsd_curr
---skada.cal_hrd_curr = cal_hrd_curr
+skada.cal_hsd_curr = cal_hsd_curr
+skada.cal_hrd_curr = cal_hrd_curr
 skada.cal_twd_curr = cal_twd_curr
 skada.cal_fsd = cal_fsd
 skada.cal_frd = cal_frd
---skada.cal_hsd = cal_hsd
---skada.cal_hrd = cal_hrd
+skada.cal_hsd = cal_hsd
+skada.cal_hrd = cal_hrd
 skada.cal_twd = cal_twd

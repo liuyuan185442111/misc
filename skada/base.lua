@@ -292,11 +292,15 @@ end
 cal_currbattle = function()
 	skada.cal_fsd_curr()
 	skada.cal_frd_curr()
+	skada.cal_hsd_curr()
+	skada.cal_hrd_curr()
 	skada.cal_twd_curr()
 	local sort_ok = currbattle.sort_ok
-	for i=1,skada.MODE_SIZE do
-		table.insert(sort_ok, true)
-	end
+	sort_ok.fsd = true
+	sort_ok.frd = true
+	sort_ok.hsd = true
+	sort_ok.hrd = true
+	sort_ok.twd = true
 end
 
 --TODO for debug
