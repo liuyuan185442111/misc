@@ -385,7 +385,7 @@ local function merge_frd(srcdata1, srcdata2, battle, adopt_data)
 	end
 	battle = battle or currbattle
 
-	local summary = battle.frd_summary1
+	local summary = battle.frd_summary
 	local srcdata_not_empty = false
 
 	for roleid,item in pairs(srcdata1) do
@@ -449,7 +449,7 @@ end
 
 local function repair_frd(battle, part)
 	battle = battle or currbattle
-	local summary = battle.frd_summary1
+	local summary = battle.frd_summary
 	for _,item in pairs(summary) do
 		if not part then
 			item.damage_ratio = item.damage / battle.total_werecv_damage
@@ -495,14 +495,14 @@ local function cal_frd_old(battle)
 end
 
 local function cal_frd_sum()
-	if sumbattle.frd_summary1.OK then
+	if sumbattle.frd_summary.OK then
 		return false
 	end
 	for _,battle in ipairs(allbattle) do
-		merge_frd(battle.frd_summary1, battle.frd_summary2, sumbattle, false)
+		merge_frd(battle.frd_summary, battle.frd_summary2, sumbattle, false)
 	end
 	repair_frd(sumbattle)
-	sumbattle.frd_summary1.OK = true
+	sumbattle.frd_summary.OK = true
 	return true
 end
 
