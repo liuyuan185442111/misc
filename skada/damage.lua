@@ -57,37 +57,34 @@ local function cal_curr(pre, merge, repair)
 		return false
 	end
 end
-
-local function cal_old(battle, repair, key)
-	if battle.sort_ok[key] then
+local function in_cal_old(battle, mode, repair)
+	if battle.sort_ok[mode] then
 		return false
 	end
 	repair(battle, true)
-	battle.sort_ok[key] = true
+	battle.sort_ok[mode] = true
 	return true
 end
-
-local function cal_sum(key, merge, repair)
-	local summary = key..'_summary'
+local function in_cal_sum(mode, merge, repair)
+	local summary = mode..'_summary'
 	if sumbattle[summary].OK then
 		return false
 	end
 	for _,battle in ipairs(allbattle) do
-		merge_twd(battle[summary], sumbattle, false)
+		merge(battle[summary], sumbattle, false)
 	end
 	repair(sumbattle)
 	sumbattle[summary].OK = true
 	return true
 end
-
-local function cal_mode(battle, key, pre, merge, repair)
+local function cal_mode(battle, mode, pre, merge, repair)
 	if battle == currbattle then
 		return cal_curr(pre, merge, repair)
 	end
 	if battle == sumbattle then
-		return cal_sum(key, merge, repair)
+		return in_cal_sum(mode, merge, repair)
 	end
-	return cal_old(battle, key, repair)
+	return in_cal_old(battle, mode, repair)
 end
 
 ------------------------------------------------------------
@@ -859,21 +856,14 @@ local function cal_twd(battle)
 end
 ]]
 
-local function cal_twd_curr()
-	return cal_curr(pre_twd, merge_twd, repair_twd)
-end
-local function cal_twd(battle)
-	return cal_mode(battle, 'twd', pre_twd, merge_twd, repair_twd)
-end
-
 ------------------------------------------------------------
-skada.cal_fsd_curr = cal_fsd_curr
-skada.cal_frd_curr = cal_frd_curr
-skada.cal_hsd_curr = cal_hsd_curr
-skada.cal_hrd_curr = cal_hrd_curr
-skada.cal_twd_curr = cal_twd_curr
-skada.cal_fsd = cal_fsd
-skada.cal_frd = cal_frd
-skada.cal_hsd = cal_hsd
-skada.cal_hrd = cal_hrd
-skada.cal_twd = cal_twd
+skada.cal_fsd_curr = function() return cal_curr(pre_fsd, merge_fsd, repair_fsd) end
+skada.cal_frd_curr = function() return cal_curr(pre_frd, merge_frd, repair_frd) end
+skada.cal_hsd_curr = function() return cal_curr(pre_hsd, merge_hsd, repair_hsd) end
+skada.cal_hrd_curr = function() return cal_curr(pre_hrd, merge_hrd, repair_hrd) end
+skada.cal_twd_curr = function() return cal_curr(pre_twd, merge_twd, repair_twd) end
+skada.cal_fsd = function(battle) return cal_mode(battle, 'fsd', pre_fsd, merge_fsd, repair_fsd) end
+skada.cal_frd = function(battle) return cal_mode(battle, 'frd', pre_frd, merge_frd, repair_frd) end
+skada.cal_hsd = function(battle) return cal_mode(battle, 'hsd', pre_hsd, merge_hsd, repair_hsd) end
+skada.cal_hrd = function(battle) return cal_mode(battle, 'hrd', pre_hrd, merge_hrd, repair_hrd) end
+skada.cal_twd = function(battle) return cal_mode(battle, 'twd', pre_twd, merge_twd, repair_twd) end
