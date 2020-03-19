@@ -24,7 +24,4 @@ skada.add_damage_or_heal(2,102,12,4,8,0, true,12,0)
 skada.add_damage_or_heal(1,102,12,4,9,0, true,13,0)
 skada.add_damage_or_heal(2,101,11,8,6,0, true,20,0)
 skada.finish_battle()
-
-cal_fsd_sum()
-skada.export_battle(sumbattle)
 ]]

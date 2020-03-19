@@ -238,7 +238,6 @@ end
 
 --将当前战斗的新的队友造成的伤害记录合并到currbattle中
 --返回false表示未有变化
---[[
 local function cal_fsd_curr()
 	if merge_fsd(pre_fsd()) then
 		repair_fsd()
@@ -250,7 +249,7 @@ end
 
 --计算已有战斗中队友造成的伤害统计
 --返回false表示未有变化
-function cal_fsd_old(battle)
+function in_cal_fsd_old(battle)
 	if battle.sort_ok.fsd then
 		return false
 	end
@@ -261,7 +260,7 @@ end
 
 --计算sumbattle中队友造成的伤害统计
 --返回false表示未有变化
-function cal_fsd_sum()
+function in_cal_fsd_sum()
 	if sumbattle.fsd_summary.OK then
 		return false
 	end
@@ -278,16 +277,9 @@ local function cal_fsd(battle)
 		return cal_fsd_curr()
 	end
 	if battle == sumbattle then
-		return cal_fsd_sum()
+		return in_cal_fsd_sum()
 	end
-	return cal_fsd_old(battle)
-end
-]]
-local function cal_fsd_curr()
-	return cal_curr(pre_fsd, merge_fsd, repair_fsd)
-end
-local function cal_fsd(battle)
-	return cal_mode(battle, 'fsd', pre_fsd, merge_fsd, repair_fsd)
+	return in_cal_fsd_old(battle)
 end
 
 ------------------------------------------------------------
@@ -476,25 +468,7 @@ local function repair_frd(battle, part)
 	table.sort(battle.frd_sort2, function(a,b) return a.damage>b.damage end)
 end
 
-local function cal_frd_curr()
-	if merge_frd(pre_frd()) then
-		repair_frd()
-		return true
-	else
-		return false
-	end
-end
-
-local function cal_frd_old(battle)
-	if battle.sort_ok.frd then
-		return false
-	end
-	repair_frd(battle, true)
-	battle.sort_ok.frd = true
-	return true
-end
-
-local function cal_frd_sum()
+local function in_cal_frd_sum()
 	if sumbattle.frd_summary1.OK then
 		return false
 	end
@@ -508,12 +482,12 @@ end
 
 local function cal_frd(battle)
 	if battle == currbattle then
-		return cal_frd_curr()
+		return cal_curr(pre_frd, merge_frd, repair_frd)
 	end
 	if battle == sumbattle then
-		return cal_frd_sum()
+		return in_cal_frd_sum()
 	end
-	return cal_frd_old(battle)
+	return in_cal_old(battle, 'frd', repair_frd)
 end
 
 ------------------------------------------------------------
@@ -525,14 +499,14 @@ local function pre_hsd(battle)
 
 	table.sort(allitems, function(a,b) return a.source_tid<b.source_tid end)
 	table.insert(allitems, {source_tid=-1})
-	local currid, currdamage, targetset = 0
+	local currid, currdamage, last_source_xid, targetset = 0
 	for _,item in ipairs(allitems) do
 		if item.source_tid ~= currid then
 			if currid ~= 0 then
 				semidata[currid] = {
 					id = currid,
 					damage = currdamage,
-					isplayer = skada.isplayer(currid),
+					isplayer = skada.isplayer(last_source_xid),
 					targetset = targetset,
 				}
 				if item.source_tid == -1 then break end
@@ -541,6 +515,7 @@ local function pre_hsd(battle)
 		end
 
 		currdamage = currdamage + item.value
+		last_source_xid = item.source_xid
 
 		do
 			local temp = targetset[item.target_tid]
@@ -600,46 +575,6 @@ end
 local function repair_hsd(battle, part)
 end
 
-local function cal_hsd_curr()
-	if merge_hsd(pre_hsd()) then
-		repair_hsd()
-		return true
-	else
-		return false
-	end
-end
-
-local function cal_hsd_old(battle)
-	if battle.sort_ok.hsd then
-		return false
-	end
-	repair_hsd(battle, true)
-	battle.sort_ok.hsd = true
-	return true
-end
-
-local function cal_hsd_sum()
-	if sumbattle.hsd_summary.OK then
-		return false
-	end
-	for _,battle in ipairs(allbattle) do
-		merge_hsd(battle.hsd_summary, sumbattle, false)
-	end
-	repair_hsd(sumbattle)
-	sumbattle.hsd_summary.OK = true
-	return true
-end
-
-local function cal_hsd(battle)
-	if battle == currbattle then
-		return cal_hsd_curr()
-	end
-	if battle == sumbattle then
-		return cal_hsd_sum()
-	end
-	return cal_hsd_old(battle)
-end
-
 ------------------------------------------------------------
 local function pre_hrd(battle)
 end
@@ -648,46 +583,6 @@ local function merge_hrd(srcdata, battle, adopt_data)
 end
 
 local function repair_hrd(battle, part)
-end
-
-local function cal_hrd_curr()
-	if merge_hrd(pre_hrd()) then
-		repair_hrd()
-		return true
-	else
-		return false
-	end
-end
-
-local function cal_hrd_old(battle)
-	if battle.sort_ok.hrd then
-		return false
-	end
-	repair_hrd(battle, true)
-	battle.sort_ok.hrd = true
-	return true
-end
-
-local function cal_hrd_sum()
-	if sumbattle.hrd_summary.OK then
-		return false
-	end
-	for _,battle in ipairs(allbattle) do
-		merge_hrd(battle.hrd_summary, sumbattle, false)
-	end
-	repair_hrd(sumbattle)
-	sumbattle.hrd_summary.OK = true
-	return true
-end
-
-local function cal_hrd(battle)
-	if battle == currbattle then
-		return cal_hrd_curr()
-	end
-	if battle == sumbattle then
-		return cal_hrd_sum()
-	end
-	return cal_hrd_old(battle)
 end
 
 ------------------------------------------------------------
@@ -814,51 +709,9 @@ local function repair_twd(battle, part)
 	table.sort(battle.twd_sort, function(a,b) return a.damage>b.damage end)
 end
 
---[[
-local function cal_twd_curr()
-	if merge_twd(pre_twd()) then
-		repair_twd()
-		return true
-	else
-		return false
-	end
-end
-
-local function cal_twd_old(battle)
-	if battle.sort_ok.twd then
-		return false
-	end
-	repair_twd(battle, true)
-	battle.sort_ok.twd = true
-	return true
-end
-
-local function cal_twd_sum()
-	if sumbattle.twd_summary.OK then
-		return false
-	end
-	for _,battle in ipairs(allbattle) do
-		merge_twd(battle.twd_summary, sumbattle, false)
-	end
-	repair_twd(sumbattle)
-	sumbattle.twd_summary.OK = true
-	return true
-end
-
-local function cal_twd(battle)
-	if battle == currbattle then
-		return cal_twd_curr()
-	end
-	if battle == sumbattle then
-		return cal_twd_sum()
-	end
-	return cal_twd_old(battle)
-end
-]]
-
 ------------------------------------------------------------
 skada.cal_fsd_curr = function() return cal_curr(pre_fsd, merge_fsd, repair_fsd) end
-skada.cal_frd_curr = cal_frd_curr
+skada.cal_frd_curr = function() return cal_curr(pre_frd, merge_frd, repair_frd) end
 skada.cal_hsd_curr = function() return cal_curr(pre_hsd, merge_hsd, repair_hsd) end
 skada.cal_hrd_curr = function() return cal_curr(pre_hrd, merge_hrd, repair_hrd) end
 skada.cal_twd_curr = function() return cal_curr(pre_twd, merge_twd, repair_twd) end
