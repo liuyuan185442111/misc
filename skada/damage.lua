@@ -50,7 +50,7 @@ local function in_merge_targetset(dest, src, adopt)
 			t.damage = t.damage + item.damage
 		else
 			if adopt then
-				item.name = item.isplayer and skada.getrolename(tid) or skada.getnpcname(tid)
+				item.name = skada.getpawnname(item.isplayer, tid)
 				dest[tid] = item
 			else
 				dest[tid] = skada.clone_table(item)
@@ -109,7 +109,8 @@ local function pre_fsd(battle)
 	--先以tid排序，然后分组
 	table.sort(allitems, comp_by_source)
 	table.insert(allitems, {source_tid=-1})
-	local currid, currdamage, skillset, targetset = 0
+	--为了防止id出现0的异常情况, 给它们都赋上初值
+	local currid, currdamage, skillset, targetset = 0, 0, {}, {}
 	for _,item in ipairs(allitems) do
 		if item.source_tid ~= currid then
 			if currid ~= 0 then
@@ -123,8 +124,7 @@ local function pre_fsd(battle)
 				if item.source_tid == -1 then break end
 			end
 			--开始新一组
-			currid, currdamage = item.source_tid, 0
-			skillset, targetset = {}, {}
+			currid, currdamage, skillset, targetset = item.source_tid, 0, {}, {}
 		end
 
 		currdamage = currdamage + item.value
@@ -192,7 +192,7 @@ local function merge_fsd(srcdata, battle, adopt_data)
 					v.name = skada.getskillname(v.id)
 				end
 				for _,v in pairs(item.targetset) do
-					v.name = v.isplayer and skada.getrolename(v.id) or skada.getnpcname(v.id)
+					v.name = skada.getpawnname(v.isplayer, v.id)
 				end
 				summary[roleid] = item
 			else
@@ -303,7 +303,7 @@ local function pre_frd(battle)
 	local semidata1 = {}
 	table.sort(allitems, comp_by_target)
 	table.insert(allitems, {target_tid=-1})
-	local currid, currdamage, skillset = 0
+	local currid, currdamage, skillset = 0, 0, {}
 	for _,item in ipairs(allitems) do
 		if item.target_tid ~= currid then
 			if currid ~= 0 then
@@ -345,8 +345,8 @@ local function pre_frd(battle)
 	table.remove(allitems)
 	table.sort(allitems, function(a,b) return a.skillid<b.skillid end)
 	table.insert(allitems, {skillid=-999999999})
-	local targetset
-	currid = 0
+	currid, currdamage = 0, 0
+	local targetset = {}
 	for _,item in ipairs(allitems) do
 		if item.skillid ~= currid then
 			if currid ~= 0 then
@@ -510,7 +510,7 @@ local function pre_hsd(battle)
 
 	table.sort(allitems, comp_by_source)
 	table.insert(allitems, {source_tid=-1})
-	local currid, currdamage, last_source_xid, targetset = 0
+	local currid, currdamage, last_source_xid, targetset = 0, 0, '', {}
 	for _,item in ipairs(allitems) do
 		if item.source_tid ~= currid then
 			if currid ~= 0 then
@@ -560,9 +560,9 @@ local function merge_hsd(srcdata, battle, adopt_data)
 		local dest = summary[tid]
 		if dest == nil then
 			if adopt_data then
-				item.name = item.isplayer and skada.getrolename(tid) or skada.getnpcname(tid)
+				item.name = skada.getpawnname(item.isplayer, tid)
 				for _,v in pairs(item.targetset) do
-					v.name = v.isplayer and skada.getrolename(v.id) or skada.getnpcname(v.id)
+					v.name = skada.getpawnname(v.isplayer, v.id)
 				end
 				summary[tid] = item
 			else
@@ -608,7 +608,7 @@ local function pre_hrd(battle)
 
 	table.sort(allitems, comp_by_target)
 	table.insert(allitems, {target_tid=-1})
-	local currid, currdamage, last_target_xid, sourceset = 0
+	local currid, currdamage, last_target_xid, sourceset = 0, 0, '', {}
 	for _,item in ipairs(allitems) do
 		if item.target_tid ~= currid then
 			if currid ~= 0 then
@@ -658,9 +658,9 @@ local function merge_hrd(srcdata, battle, adopt_data)
 		local dest = summary[tid]
 		if dest == nil then
 			if adopt_data then
-				item.name = item.isplayer and skada.getrolename(tid) or skada.getnpcname(tid)
+				item.name = skada.getpawnname(item.isplayer, tid)
 				for _,v in pairs(item.sourceset) do
-					v.name = v.isplayer and skada.getrolename(v.id) or skada.getnpcname(v.id)
+					v.name = skada.getpawnname(v.isplayer, v.id)
 				end
 				summary[tid] = item
 			else
@@ -706,7 +706,7 @@ local function pre_twd(battle)
 
 	table.sort(allitems, comp_by_source)
 	table.insert(allitems, {source_tid=-1})
-	local currid, currdamage, skillset, targetset = 0
+	local currid, currdamage, skillset, targetset = 0, 0, {}, {}
 	for _,item in ipairs(allitems) do
 		if item.source_tid ~= currid then
 			if currid ~= 0 then

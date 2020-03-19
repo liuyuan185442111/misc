@@ -39,6 +39,9 @@ end
 local function getnpcname(tid)
 	return 'npc'
 end
+local function getpawnname(isplayer, tid)
+	return isplayer and getrolename(tid) or getnpcname(tid)
+end
 local function getskillname(skillid)
 	return 'attack'
 end
@@ -68,6 +71,7 @@ skada.isbaoji = isbaoji
 skada.getroleoccu = getroleoccu
 skada.getrolename = getrolename
 skada.getnpcname = getnpcname
+skada.getpawnname = getpawnname
 skada.getskillname = getskillname
 skada.getrolemaxhp = getrolemaxhp
 skada.getrivalinfo = getrivalinfo
