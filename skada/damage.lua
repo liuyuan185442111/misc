@@ -1,3 +1,14 @@
+local function comp_by_damage(a, b)
+	return a.damage > b.damage
+end
+local function comp_by_source(a, b)
+	return a.source_tid > b.source_tid
+end
+local function comp_by_target(a, b)
+	return a.target_tid > b.target_tid
+end
+
+------------------------------------------------------------
 local function in_merge_skillset(dest, src, adopt)
 	for skillid,item in pairs(src) do
 		local t = dest[skillid]
@@ -33,16 +44,16 @@ local function in_merge_skillset2(dest, src, adopt)
 	end
 end
 local function in_merge_targetset(dest, src, adopt)
-	for targettid,item in pairs(src) do
-		local t = dest[targettid]
+	for tid,item in pairs(src) do
+		local t = dest[tid]
 		if t then
 			t.damage = t.damage + item.damage
 		else
 			if adopt then
-				item.name = item.isplayer and skada.getrolename(targettid) or skada.getnpcname(targettid)
-				dest[targettid] = item
+				item.name = item.isplayer and skada.getrolename(tid) or skada.getnpcname(tid)
+				dest[tid] = item
 			else
-				dest[targettid] = skada.clone_table(item)
+				dest[tid] = skada.clone_table(item)
 			end
 		end
 	end
@@ -96,7 +107,7 @@ local function pre_fsd(battle)
 	battle.friend_send_damage = {}
 
 	--先以tid排序，然后分组
-	table.sort(allitems, function(a,b) return a.source_tid<b.source_tid end)
+	table.sort(allitems, comp_by_source)
 	table.insert(allitems, {source_tid=-1})
 	local currid, currdamage, skillset, targetset = 0
 	for _,item in ipairs(allitems) do
@@ -224,13 +235,13 @@ local function repair_fsd(battle, part)
 			end
 		end
 		item.skillsort_NS = skada.trans_table(item.skillset)
-		table.sort(item.skillsort_NS, function(a,b) return a.damage>b.damage end)
+		table.sort(item.skillsort_NS, comp_by_damage)
 		item.targetsort_NS = skada.trans_table(item.targetset)
-		table.sort(item.targetsort_NS, function(a,b) return a.damage>b.damage end)
+		table.sort(item.targetsort_NS, comp_by_damage)
 	end
 	battle.fsd_sort1 = skada.trans_table(summary)
 	--以伤害量排序
-	table.sort(battle.fsd_sort1, function(a,b) return a.damage>b.damage end)
+	table.sort(battle.fsd_sort1, comp_by_damage)
 	battle.fsd_sort2 = skada.clone_array(battle.fsd_sort1)
 	--以伤害速度排序
 	table.sort(battle.fsd_sort2, function(a,b) return a.damage_rate>b.damage_rate end)
@@ -249,7 +260,7 @@ end
 
 --计算已有战斗中队友造成的伤害统计
 --返回false表示未有变化
-function in_cal_fsd_old(battle)
+local function in_cal_fsd_old(battle)
 	if battle.sort_ok.fsd then
 		return false
 	end
@@ -260,7 +271,7 @@ end
 
 --计算sumbattle中队友造成的伤害统计
 --返回false表示未有变化
-function in_cal_fsd_sum()
+local function in_cal_fsd_sum()
 	if sumbattle.fsd_summary.OK then
 		return false
 	end
@@ -290,7 +301,7 @@ local function pre_frd(battle)
 	battle.friend_recv_damage = {}
 
 	local semidata1 = {}
-	table.sort(allitems, function(a,b) return a.target_tid<b.target_tid end)
+	table.sort(allitems, comp_by_target)
 	table.insert(allitems, {target_tid=-1})
 	local currid, currdamage, skillset = 0
 	for _,item in ipairs(allitems) do
@@ -452,20 +463,20 @@ local function repair_frd(battle, part)
 			end
 		end
 		item.skillsort_NS = skada.trans_table(item.skillset)
-		table.sort(item.skillsort_NS, function(a,b) return a.damage>b.damage end)
+		table.sort(item.skillsort_NS, comp_by_damage)
 	end
 	battle.frd_sort1 = skada.trans_table(summary)
-	table.sort(battle.frd_sort1, function(a,b) return a.damage>b.damage end)
+	table.sort(battle.frd_sort1, comp_by_damage)
 	summary = battle.frd_summary2
 	for _,item in pairs(summary) do
 		if not part then
 			item.damage_ratio = item.damage / battle.total_werecv_damage
 		end
 		item.targetsort_NS = skada.trans_table(item.targetset)
-		table.sort(item.targetsort_NS, function(a,b) return a.damage>b.damage end)
+		table.sort(item.targetsort_NS, comp_by_damage)
 	end
 	battle.frd_sort2 = skada.trans_table(summary)
-	table.sort(battle.frd_sort2, function(a,b) return a.damage>b.damage end)
+	table.sort(battle.frd_sort2, comp_by_damage)
 end
 
 local function in_cal_frd_sum()
@@ -497,7 +508,7 @@ local function pre_hsd(battle)
 	if #allitems == 0 then return nil end
 	battle.hostile_send_damage = {}
 
-	table.sort(allitems, function(a,b) return a.source_tid<b.source_tid end)
+	table.sort(allitems, comp_by_source)
 	table.insert(allitems, {source_tid=-1})
 	local currid, currdamage, last_source_xid, targetset = 0
 	for _,item in ipairs(allitems) do
@@ -573,16 +584,117 @@ local function merge_hsd(srcdata, battle, adopt_data)
 end
 
 local function repair_hsd(battle, part)
+	battle = battle or currbattle
+	local summary = battle.hsd_summary
+	for _,item in pairs(summary) do
+		if not part then
+			for _,v in pairs(item.targetset) do
+				v.ratio = v.damage / item.damage
+			end
+		end
+		item.targetsort_NS = skada.trans_table(item.targetset)
+		table.sort(item.targetsort_NS, comp_by_damage)
+	end
+	battle.hsd_sort = skada.trans_table(summary)
+	table.sort(battle.hsd_sort, comp_by_damage)
 end
 
 ------------------------------------------------------------
 local function pre_hrd(battle)
+	battle = battle or currbattle
+	local semidata, allitems = {}, battle.hostile_recv_damage
+	if #allitems == 0 then return nil end
+	battle.hostile_recv_damage = {}
+
+	table.sort(allitems, comp_by_target)
+	table.insert(allitems, {target_tid=-1})
+	local currid, currdamage, last_target_xid, sourceset = 0
+	for _,item in ipairs(allitems) do
+		if item.target_tid ~= currid then
+			if currid ~= 0 then
+				semidata[currid] = {
+					id = currid,
+					damage = currdamage,
+					isplayer = skada.isplayer(last_target_xid),
+					sourceset = sourceset,
+				}
+				if item.target_tid == -1 then break end
+			end
+			currid, currdamage, sourceset = item.target_tid, 0, {}
+		end
+
+		currdamage = currdamage + item.value
+		last_target_xid = item.target_xid
+
+		do
+			local temp = sourceset[item.source_tid]
+			if temp == nil then
+				sourceset[item.source_tid] = {
+					id = item.source_tid,
+					damage = item.value,
+					isplayer = skada.isplayer(item.source_xid),
+				}
+			else
+				temp.damage = temp.damage + item.value
+			end
+		end
+	end
+
+	return semidata
 end
 
 local function merge_hrd(srcdata, battle, adopt_data)
+	if not srcdata then
+		return false
+	end
+	if adopt_data == nil then
+		adopt_data = true
+	end
+	battle = battle or currbattle
+	local summary = battle.hrd_summary
+	local srcdata_not_empty = false
+	for tid,item in pairs(srcdata) do
+		srcdata_not_empty = true
+		local dest = summary[tid]
+		if dest == nil then
+			if adopt_data then
+				item.name = item.isplayer and skada.getrolename(tid) or skada.getnpcname(tid)
+				for _,v in pairs(item.sourceset) do
+					v.name = v.isplayer and skada.getrolename(v.id) or skada.getnpcname(v.id)
+				end
+				summary[tid] = item
+			else
+				dest = {
+					id = tid,
+					name = item.name,
+					damage = 0,
+					sourceset = {},
+				}
+				summary[tid] = dest
+			end
+		end
+		if dest then
+			dest.damage = dest.damage + item.damage
+			in_merge_targetset(dest.sourceset, item.sourceset, adopt_data)
+		end
+	end
+	return srcdata_not_empty
 end
 
 local function repair_hrd(battle, part)
+	battle = battle or currbattle
+	local summary = battle.hrd_summary
+	for _,item in pairs(summary) do
+		if not part then
+			for _,v in pairs(item.sourceset) do
+				v.ratio = v.damage / item.damage
+			end
+		end
+		item.sourcesort_NS = skada.trans_table(item.sourceset)
+		table.sort(item.sourcesort_NS, comp_by_damage)
+	end
+	battle.hrd_sort = skada.trans_table(summary)
+	table.sort(battle.hrd_sort, comp_by_damage)
 end
 
 ------------------------------------------------------------
@@ -592,7 +704,7 @@ local function pre_twd(battle)
 	if #allitems == 0 then return nil end
 	battle.team_wrong_damage = {}
 
-	table.sort(allitems, function(a,b) return a.source_tid<b.source_tid end)
+	table.sort(allitems, comp_by_source)
 	table.insert(allitems, {source_tid=-1})
 	local currid, currdamage, skillset, targetset = 0
 	for _,item in ipairs(allitems) do
@@ -701,12 +813,12 @@ local function repair_twd(battle, part)
 			end
 		end
 		item.skillsort_NS = skada.trans_table(item.skillset)
-		table.sort(item.skillsort_NS, function(a,b) return a.damage>b.damage end)
+		table.sort(item.skillsort_NS, comp_by_damage)
 		item.targetsort_NS = skada.trans_table(item.targetset)
-		table.sort(item.targetsort_NS, function(a,b) return a.damage>b.damage end)
+		table.sort(item.targetsort_NS, comp_by_damage)
 	end
 	battle.twd_sort = skada.trans_table(summary)
-	table.sort(battle.twd_sort, function(a,b) return a.damage>b.damage end)
+	table.sort(battle.twd_sort, comp_by_damage)
 end
 
 ------------------------------------------------------------
