@@ -385,7 +385,7 @@ local function merge_frd(srcdata1, srcdata2, battle, adopt_data)
 	end
 	battle = battle or currbattle
 
-	local summary = battle.frd_summary
+	local summary = battle.frd_summary1
 	local srcdata_not_empty = false
 
 	for roleid,item in pairs(srcdata1) do
@@ -449,7 +449,7 @@ end
 
 local function repair_frd(battle, part)
 	battle = battle or currbattle
-	local summary = battle.frd_summary
+	local summary = battle.frd_summary1
 	for _,item in pairs(summary) do
 		if not part then
 			item.damage_ratio = item.damage / battle.total_werecv_damage
@@ -495,14 +495,14 @@ local function cal_frd_old(battle)
 end
 
 local function cal_frd_sum()
-	if sumbattle.frd_summary.OK then
+	if sumbattle.frd_summary1.OK then
 		return false
 	end
 	for _,battle in ipairs(allbattle) do
-		merge_frd(battle.frd_summary, battle.frd_summary2, sumbattle, false)
+		merge_frd(battle.frd_summary1, battle.frd_summary2, sumbattle, false)
 	end
 	repair_frd(sumbattle)
-	sumbattle.frd_summary.OK = true
+	sumbattle.frd_summary1.OK = true
 	return true
 end
 
@@ -858,12 +858,12 @@ end
 
 ------------------------------------------------------------
 skada.cal_fsd_curr = function() return cal_curr(pre_fsd, merge_fsd, repair_fsd) end
-skada.cal_frd_curr = function() return cal_curr(pre_frd, merge_frd, repair_frd) end
+skada.cal_frd_curr = cal_frd_curr
 skada.cal_hsd_curr = function() return cal_curr(pre_hsd, merge_hsd, repair_hsd) end
 skada.cal_hrd_curr = function() return cal_curr(pre_hrd, merge_hrd, repair_hrd) end
 skada.cal_twd_curr = function() return cal_curr(pre_twd, merge_twd, repair_twd) end
 skada.cal_fsd = function(battle) return cal_mode(battle, 'fsd', pre_fsd, merge_fsd, repair_fsd) end
-skada.cal_frd = function(battle) return cal_mode(battle, 'frd', pre_frd, merge_frd, repair_frd) end
+skada.cal_frd = cal_frd
 skada.cal_hsd = function(battle) return cal_mode(battle, 'hsd', pre_hsd, merge_hsd, repair_hsd) end
 skada.cal_hrd = function(battle) return cal_mode(battle, 'hrd', pre_hrd, merge_hrd, repair_hrd) end
 skada.cal_twd = function(battle) return cal_mode(battle, 'twd', pre_twd, merge_twd, repair_twd) end

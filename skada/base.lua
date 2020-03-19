@@ -28,7 +28,7 @@ local function newbattle()
 
 		total_werecv_damage=0,
 		friend_recv_damage={}, --友方受到伤害
-		frd_summary={}, --以被攻击者tid分组
+		frd_summary1={}, --以被攻击者tid分组
 		frd_sort1={}, --以伤害量排序
 		frd_summary2={}, --以skillid分组
 		frd_sort2={}, --以伤害量排序
