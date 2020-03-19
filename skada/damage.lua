@@ -49,6 +49,48 @@ local function in_merge_targetset(dest, src, adopt)
 end
 
 ------------------------------------------------------------
+local function cal_curr(pre, merge, repair)
+	if merge(pre()) then
+		repair()
+		return true
+	else
+		return false
+	end
+end
+
+local function cal_old(battle, repair, key)
+	if battle.sort_ok[key] then
+		return false
+	end
+	repair(battle, true)
+	battle.sort_ok[key] = true
+	return true
+end
+
+local function cal_sum(key, merge, repair)
+	local summary = key..'_summary'
+	if sumbattle[summary].OK then
+		return false
+	end
+	for _,battle in ipairs(allbattle) do
+		merge_twd(battle[summary], sumbattle, false)
+	end
+	repair(sumbattle)
+	sumbattle[summary].OK = true
+	return true
+end
+
+local function cal_mode(battle, key, pre, merge, repair)
+	if battle == currbattle then
+		return cal_curr(pre, merge, repair)
+	end
+	if battle == sumbattle then
+		return cal_sum(key, merge, repair)
+	end
+	return cal_old(battle, key, repair)
+end
+
+------------------------------------------------------------
 --将新来的数据做成与fsd_summary相同的格式
 local function pre_fsd(battle)
 	battle = battle or currbattle
@@ -199,6 +241,7 @@ end
 
 --将当前战斗的新的队友造成的伤害记录合并到currbattle中
 --返回false表示未有变化
+--[[
 local function cal_fsd_curr()
 	if merge_fsd(pre_fsd()) then
 		repair_fsd()
@@ -241,6 +284,13 @@ local function cal_fsd(battle)
 		return cal_fsd_sum()
 	end
 	return cal_fsd_old(battle)
+end
+]]
+local function cal_fsd_curr()
+	return cal_curr(pre_fsd, merge_fsd, repair_fsd)
+end
+local function cal_fsd(battle)
+	return cal_mode(battle, 'fsd', pre_fsd, merge_fsd, repair_fsd)
 end
 
 ------------------------------------------------------------
@@ -767,6 +817,7 @@ local function repair_twd(battle, part)
 	table.sort(battle.twd_sort, function(a,b) return a.damage>b.damage end)
 end
 
+--[[
 local function cal_twd_curr()
 	if merge_twd(pre_twd()) then
 		repair_twd()
@@ -805,6 +856,14 @@ local function cal_twd(battle)
 		return cal_twd_sum()
 	end
 	return cal_twd_old(battle)
+end
+]]
+
+local function cal_twd_curr()
+	return cal_curr(pre_twd, merge_twd, repair_twd)
+end
+local function cal_twd(battle)
+	return cal_mode(battle, 'twd', pre_twd, merge_twd, repair_twd)
 end
 
 ------------------------------------------------------------

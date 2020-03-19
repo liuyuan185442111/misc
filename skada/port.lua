@@ -75,4 +75,3 @@ skada.savedata = savedata
 skada.loaddata = loaddata
 skada.MAX_BATTLES = 10
 skada.MAX_DEATH_ACTIVITIES = 10
-skada.MODE_SIZE = 16

@@ -54,7 +54,6 @@ savedata | 保存数据 | 10
 loaddata | 加载数据 | 10
 MAX_BATTLES | 最多保留战斗的场数 | 00
 MAX_DEATH_ACTIVITIES | 生前记录的最大数目 | 00
-MODE_SIZE | 战斗统计条目的数量 | 00
 **export.lua** |
 export_allbattle | 导出allbattle | 10
 import_allbattle | 导入allbattle | 10
@@ -197,6 +196,8 @@ Tooltip有一个item池，它的item没什么特殊的。
 没有使用数据处理模块数据更新时通知数据展示模块的驱动方式，一来想使这些模块尽量解耦，二来想简单一些。
 
 ## 计划
+删除mode_size,写完伤害的核心代码先，然后转移到内网
+
 week3:323
 1敌方造成伤害核心代码
 2敌方受到伤害核心代码
