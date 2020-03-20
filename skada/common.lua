@@ -46,8 +46,18 @@ local function outputstr(...)
     table.insert(strtab, str)
   end
 end
+local visiblenums={}
+for i=48,57 do visiblenums[i] = true end
+local function isvisiblenum(str)
+  local a = string.btye(str, 1)
+  if a ~= 45 then --'-'
+    return visible_nums[a]
+  else
+    return visible_nums[string.btye(str, 2)]
+  end
+end
 local function outputnumstr(str)
-  if str=='inf' or str=='nan' or str=='-inf' or str=='-nan' then
+  if not isvisiblenum(str) then
     str = '0'
   end
   table.insert(strtab, str)
@@ -56,9 +66,8 @@ local function serialize(o, prefix, header, tailer)
   if header then outputstr(header) end
   local t = type(o)
   if t=='number' then
-  --TODO 正式版本应该使用'%q'版本
-    outputnumstr(tostring(o))
-    --outputnumstr(string.format('%q', o))
+    --outputnumstr(tostring(o))
+    outputnumstr(string.format('%q', o))
   elseif t=='string' or t=='boolean' or t=='nil' then
     --o will change to string before Lua 5.3.3
     outputstr(string.format('%q', o))
