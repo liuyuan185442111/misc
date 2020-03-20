@@ -49,11 +49,11 @@ end
 local visiblenums={}
 for i=48,57 do visiblenums[i] = true end
 local function isvisiblenum(str)
-  local a = string.btye(str, 1)
+  local a = string.byte(str, 1)
   if a ~= 45 then --'-'
-    return visible_nums[a]
+    return visiblenums[a]
   else
-    return visible_nums[string.btye(str, 2)]
+    return visiblenums[string.byte(str, 2)]
   end
 end
 local function outputnumstr(str)
