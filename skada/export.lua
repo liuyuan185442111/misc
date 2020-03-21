@@ -62,7 +62,10 @@ local function export_allbattle(version)
 		table.insert(temp, sieve_battle_fields(battle))
 	end
 	local ver_str = 'Version111189 = '..version..'\n'
+	DEBUG111189 = false
 	export(0, ver_str..skada.dump(temp, 'allbattle = '))
+	DEBUG111189 = true
+	export(1, ver_str..skada.dump(temp, 'allbattle = '))
 end
 
 local function import_allbattle()

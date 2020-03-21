@@ -1,3 +1,5 @@
+DEBUG111189 = false
+
 local function num2str_inner(n)
   if math.type(n) == 'integer' then
     return tostring(n)
@@ -7,12 +9,17 @@ local function num2str_inner(n)
 end
 local function num2str(n)
   if type(n) ~= 'number' then return 'x' end
+  local minus = ''
+  if n<0 then
+    minus='-'
+    n=-n
+  end
   if n<10000 then
-    return num2str_inner(n)
+    return minus..num2str_inner(n)
   elseif n<100000000 then
-    return num2str_inner(n/10000)..'万'
+    return minus..num2str_inner(n/10000)..'万'
   else
-    return num2str_inner(n/100000000)..'亿'
+    return minus..num2str_inner(n/100000000)..'亿'
   end
 end
 
@@ -46,18 +53,21 @@ local function outputstr(...)
     table.insert(strtab, str)
   end
 end
-local visiblenums={}
-for i=48,57 do visiblenums[i] = true end
-local function isvisiblenum(str)
+--用以将除以0等情况下产生的异常数字变为0输出
+local digits={}
+--数字0到9
+for i=48,57 do digits[i] = true end
+--这里假定str是由数字转换来的字符串
+local function isnormalnumstr(str)
   local a = string.byte(str, 1)
-  if a ~= 45 then --'-'
-    return visiblenums[a]
+  if a ~= 45 then --负号
+    return digits[a]
   else
-    return visiblenums[string.byte(str, 2)]
+    return digits[string.byte(str, 2)]
   end
 end
 local function outputnumstr(str)
-  if not isvisiblenum(str) then
+  if not isnormalnumstr(str) then
     str = '0'
   end
   table.insert(strtab, str)
@@ -66,8 +76,11 @@ local function serialize(o, prefix, header, tailer)
   if header then outputstr(header) end
   local t = type(o)
   if t=='number' then
-    --outputnumstr(tostring(o))
+  if DEBUG111189 then
+    outputnumstr(tostring(o))
+  else
     outputnumstr(string.format('%q', o))
+  end
   elseif t=='string' or t=='boolean' or t=='nil' then
     --o will change to string before Lua 5.3.3
     outputstr(string.format('%q', o))
