@@ -29,6 +29,15 @@ end
 local function isbaoji(flag)
 	return (flag & 1) ~= 0
 end
+local function isshanduo(flag)
+	return (flag & 2) ~= 0
+end
+local function isgedang(flag)
+	return (flag & 4) ~= 0
+end
+local function ismingzhong(flag)
+	return flag == 0
+end
 
 local function getroleoccu(tid)
 	return 1
@@ -68,6 +77,9 @@ skada.isplayer = isplayer
 skada.is_self_or_teammate = is_self_or_teammate
 skada.nowtime = nowtime
 skada.isbaoji = isbaoji
+skada.isshanduo = isshanduo
+skada.isgedang = isgedang
+skada.ismingzhong = ismingzhong
 skada.getroleoccu = getroleoccu
 skada.getrolename = getrolename
 skada.getnpcname = getnpcname

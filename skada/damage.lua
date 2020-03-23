@@ -31,6 +31,9 @@ local function in_merge_skillset2(dest, src, adopt)
 			t.damage = t.damage + item.damage
 			t.count = t.count + item.count
 			t.baoji = t.baoji + item.baoji
+			t.shanduo = t.shanduo + item.shanduo
+			t.gedang = t.gedang + item.gedang
+			t.mingzhong = t.mingzhong + item.mingzhong
 			if t.maxdmg < item.maxdmg then t.maxdmg = item.maxdmg end
 			if t.mindmg > item.mindmg then t.mindmg = item.mindmg end
 		else
@@ -140,12 +143,18 @@ local function pre_fsd(battle)
 					mindmg = value,
 					count = 1,
 					baoji = skada.isbaoji(item.flags) and 1 or 0,
+					shanduo = skada.isshanduo(item.flags) and 1 or 0,
+					gedang = skada.isgedang(item.flags) and 1 or 0,
+					mingzhong = skada.ismingzhong(item.flags) and 1 or 0,
 				}
 			else
 				temp.damage = temp.damage + value
 				temp.maxdmg = math.max(temp.maxdmg, value)
 				temp.mindmg = math.min(temp.mindmg, value)
 				if skada.isbaoji(item.flags) then temp.baoji = temp.baoji + 1 end
+				if skada.isshanduo(item.flags) then temp.shanduo = temp.shanduo + 1 end
+				if skada.isgedang(item.flags) then temp.gedang = temp.gedang + 1 end
+				if skada.ismingzhong(item.flags) then temp.mingzhong = temp.mingzhong + 1 end
 				temp.count = temp.count + 1
 			end
 		end
@@ -330,12 +339,18 @@ local function pre_frd(battle)
 					mindmg = value,
 					count = 1,
 					baoji = skada.isbaoji(item.flags) and 1 or 0,
+					shanduo = skada.isshanduo(item.flags) and 1 or 0,
+					gedang = skada.isgedang(item.flags) and 1 or 0,
+					mingzhong = skada.ismingzhong(item.flags) and 1 or 0,
 				}
 			else
 				temp.damage = temp.damage + value
 				temp.maxdmg = math.max(temp.maxdmg, value)
 				temp.mindmg = math.min(temp.mindmg, value)
 				if skada.isbaoji(item.flags) then temp.baoji = temp.baoji + 1 end
+				if skada.isshanduo(item.flags) then temp.shanduo = temp.shanduo + 1 end
+				if skada.isgedang(item.flags) then temp.gedang = temp.gedang + 1 end
+				if skada.ismingzhong(item.flags) then temp.mingzhong = temp.mingzhong + 1 end
 				temp.count = temp.count + 1
 			end
 		end
