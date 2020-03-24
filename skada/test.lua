@@ -3,6 +3,7 @@
 require('strict')
 require('common')
 require('port')
+require('json')
 require('export')
 require('base')
 require('damage')

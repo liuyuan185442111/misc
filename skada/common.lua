@@ -1,5 +1,3 @@
-DEBUG111189 = false
-
 local function num2str_inner(n)
   if math.type(n) == 'integer' then
     return tostring(n)
@@ -54,25 +52,6 @@ local function outputstr(...)
     table.insert(strtab, str)
   end
 end
---用以将除以0等情况下产生的异常数字变为0输出
-local digits={}
---数字0到9
-for i=48,57 do digits[i] = true end
---这里假定str是由数字转换来的字符串
-local function isnormalnumstr(str)
-  local a = string.byte(str, 1)
-  if a ~= 45 then --负号
-    return digits[a]
-  else
-    return digits[string.byte(str, 2)]
-  end
-end
-local function outputnumstr(str)
-  if not isnormalnumstr(str) then
-    str = '0'
-  end
-  table.insert(strtab, str)
-end
 local function serialize(o, prefix, header, tailer)
   if header then outputstr(header) end
   local t = type(o)
@@ -80,11 +59,8 @@ local function serialize(o, prefix, header, tailer)
     if not (o*0==0) then
       table.insert(strtab, '0')
     else
-      if DEBUG111189 then
-        table.insert(strtab, tostring(o))
-      else
-        table.insert(strtab, string.format('%q', o))
-      end
+      table.insert(strtab, tostring(o))
+      --table.insert(strtab, string.format('%q', o))
     end
   elseif t=='string' or t=='boolean' or t=='nil' then
     --o will change to string before Lua 5.3.3

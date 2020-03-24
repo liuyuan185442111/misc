@@ -50,7 +50,8 @@ local function getroleinfo(tid)
 end
 local nullname, nulloccu = {}, {}
 local function getroleinfo2(tid)
-	return nullname, nulloccu
+	return '沃恩at', 1
+	--return nullname, nulloccu
 end
 local function getnpcname(tid)
 	return 'npc'
@@ -75,7 +76,7 @@ local function savedata(region, data)
 	return true
 end
 local function loaddata(region)
-	return '', true
+	return '', false
 end
 
 ------------------------------------------------------------

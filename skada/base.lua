@@ -1,10 +1,7 @@
-local NowVersion111189 = 1
 allbattle = {}
-
---TODO 如不是严格检查，以下3行可以删掉
+--TODO 如不是严格检查，以下可以删掉
 currbattle = nil
 sumbattle = nil
-Version111189 = nil
 
 --认为友方只能是玩家
 local function newbattle()
@@ -140,7 +137,8 @@ local function finish_battle()
 		table.remove(allbattle)
 	end
 	sumbattle = newsumbattle()
-	skada.export_allbattle(NowVersion111189)
+	skada.export_allbattle()
+	skada.export_allbattle_json()
 end
 
 local function begin_battle()
@@ -149,10 +147,7 @@ local function begin_battle()
 end
 
 local function onlogin()
-	skada.import_allbattle()
-	if Version111189 == nil or Version111189 < NowVersion111189 then
-		allbattle = {}
-	end
+	skada.import_allbattle_json()
 	for _,battle in ipairs(allbattle) do
 		battle.sort_ok = {}
 	end
@@ -178,6 +173,9 @@ end
 
 --lastvalue 受伤害者或被治疗者的当前血量
 local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid, skillid, flags, isdamage, value, overvalue, lastvalue)
+	source_tid = tostring(source_tid)
+	target_tid = tostring(target_tid)
+	skillid = tostring(skillid)
 	local item = {
 		source_xid=source_xid,target_xid=target_xid,source_tid=source_tid,target_tid=target_tid,
 		isdamage=isdamage,value=value,overvalue=overvalue,
@@ -286,6 +284,7 @@ local function rm_all_battles()
 	if #allbattle ~= oldsize then
 		sumbattle = newsumbattle()
 		skada.export_allbattle()
+		skada.export_allbattle_json()
 	end
 end
 
