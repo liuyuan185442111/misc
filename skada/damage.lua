@@ -195,7 +195,7 @@ local function merge_fsd(srcdata, battle, adopt_data)
 		local dest = summary[roleid]
 		if dest == nil then
 			if adopt_data then
-				item.name, item.occu = skada.getroleinfo(roleid)
+				item.name, item.occu = skada.getroleinfo2(roleid)
 				for _,v in pairs(item.skillset) do
 					v.name = skada.getskillname(v.id)
 				end
@@ -410,7 +410,7 @@ local function merge_frd(srcdata1, srcdata2, battle, adopt_data)
 		local dest = summary[roleid]
 		if dest == nil then
 			if adopt_data then
-				item.name, item.occu = skada.getroleinfo(roleid)
+				item.name, item.occu = skada.getroleinfo2(roleid)
 				for _,v in pairs(item.skillset) do
 					v.name = skada.getskillname(v.id)
 				end
@@ -440,7 +440,7 @@ local function merge_frd(srcdata1, srcdata2, battle, adopt_data)
 			if adopt_data then
 				item.name = skada.getskillname(skillid)
 				for _,v in pairs(item.targetset) do
-					v.name, v.occu = skada.getroleinfo(v.id)
+					v.name, v.occu = skada.getroleinfo2(v.id)
 				end
 				summary[skillid] = item
 			else
@@ -780,12 +780,12 @@ local function merge_twd(srcdata, battle, adopt_data)
 		local dest = summary[roleid]
 		if dest == nil then
 			if adopt_data then
-				item.name, item.occu = skada.getroleinfo(roleid)
+				item.name, item.occu = skada.getroleinfo2(roleid)
 				for _,v in pairs(item.skillset) do
 					v.name = skada.getskillname(v.id)
 				end
 				for _,v in pairs(item.targetset) do
-					v.name, v.occu = skada.getroleinfo(v.id)
+					v.name, v.occu = skada.getroleinfo2(v.id)
 				end
 				summary[roleid] = item
 			else

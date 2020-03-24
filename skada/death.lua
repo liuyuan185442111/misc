@@ -15,7 +15,7 @@ local function add_death_activity(tid, is_operator_player, operator, skillid, de
 		local name, occu = skada.getroleinfo(tid)
 		record = {
 			--count是死亡计数
-			id=tid, count=0, occu=occu, name=name,
+			id=tid, count=0, name=name, occu=occu,
 			--临时记录事件，对象死亡时将其放入death_activity, 作为其死亡前的一些事件记录
 			temp_activities=skada.queue.new(skada.MAX_DEATH_ACTIVITIES), death_activity={}
 		}

@@ -9,6 +9,7 @@ local function num2str_inner(n)
 end
 local function num2str(n)
   if type(n) ~= 'number' then return 'x' end
+  if not (n*0==0) then return '0' end
   local minus = ''
   if n<0 then
     minus='-'
@@ -76,11 +77,15 @@ local function serialize(o, prefix, header, tailer)
   if header then outputstr(header) end
   local t = type(o)
   if t=='number' then
-  if DEBUG111189 then
-    outputnumstr(tostring(o))
-  else
-    outputnumstr(string.format('%q', o))
-  end
+    if not (o*0==0) then
+      table.insert(strtab, '0')
+    else
+      if DEBUG111189 then
+        table.insert(strtab, tostring(o))
+      else
+        table.insert(strtab, string.format('%q', o))
+      end
+    end
   elseif t=='string' or t=='boolean' or t=='nil' then
     --o will change to string before Lua 5.3.3
     outputstr(string.format('%q', o))
