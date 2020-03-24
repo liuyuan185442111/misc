@@ -12,16 +12,17 @@ local function add_death_activity(tid, is_operator_player, operator, skillid, de
 	end
 	local record = midresult[tid]
 	if record == nil then
+		local name, occu = skada.getroleinfo(tid)
 		record = {
 			--count是死亡计数
-			id=tid, count=0, occu=skada.getroleoccu(tid), name=skada.getrolename(tid),
+			id=tid, count=0, occu=occu, name=name,
 			--临时记录事件，对象死亡时将其放入death_activity, 作为其死亡前的一些事件记录
 			temp_activities=skada.queue.new(skada.MAX_DEATH_ACTIVITIES), death_activity={}
 		}
 		midresult[tid] = record
 	end
 	record.temp_activities:push({time=skada.nowtime(),
-		name=is_operator_player and skada.getrolename(operator) or skada.getnpcname(operator),
+		name=skada.getpawnname(is_operator_player, operator),
 		skillid=skillid, delta=delta, ratio=hp/skada.getrolemaxhp(tid)})
 	if hp <= 0 then --认为对象死亡
 		death_record.OK = nil
@@ -36,7 +37,7 @@ local function add_death_activity(tid, is_operator_player, operator, skillid, de
 			table.insert(record.death_activity, temp)
 		end
 		--最后放入一条死亡记录，这里name表示死亡者的名字
-		table.insert(record.death_activity, {time=dietime,name=skada.getrolename(tid),skillid=record.occu,delta=0,ratio=0})
+		table.insert(record.death_activity, {time=dietime,name=skada.getpawnname(true, tid),skillid=record.occu,delta=0,ratio=0})
 	end
 end
 

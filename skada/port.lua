@@ -45,6 +45,9 @@ end
 local function getrolename(tid)
 	return 'what'
 end
+local function getroleinfo(tid)
+	return 'what', 1
+end
 local function getnpcname(tid)
 	return 'npc'
 end
@@ -80,9 +83,7 @@ skada.isbaoji = isbaoji
 skada.isshanduo = isshanduo
 skada.isgedang = isgedang
 skada.ismingzhong = ismingzhong
-skada.getroleoccu = getroleoccu
-skada.getrolename = getrolename
-skada.getnpcname = getnpcname
+skada.getroleinfo = getroleinfo
 skada.getpawnname = getpawnname
 skada.getskillname = getskillname
 skada.getrolemaxhp = getrolemaxhp
