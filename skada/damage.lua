@@ -74,7 +74,7 @@ local function in_merge_targetset2(dest, src, adopt)
 				if item.isplayer then
 					item.name, item.occu = skada.getroleoccu(tid)
 				else
-					item.name, item.occu = skada.getnpcname(tid), 0
+					item.name, item.occu = skada.getpawnname(false, tid), 0
 				end
 				dest[tid] = item
 			else
@@ -610,7 +610,7 @@ local function merge_hsd(srcdata, battle, adopt_data)
 					if v.isplayer then
 						v.name, v.occu = skada.getroleinfo(v.id)
 					else
-						v.name, v.occu = skada.getnpcname(v.id), 0
+						v.name, v.occu = skada.getpawnname(false, v.id), 0
 					end
 				end
 				summary[tid] = item
@@ -712,7 +712,7 @@ local function merge_hrd(srcdata, battle, adopt_data)
 					if v.isplayer then
 						v.name, v.occu = skada.getroleinfo(v.id)
 					else
-						v.name, v.occu = skada.getnpcname(v.id), 0
+						v.name, v.occu = skada.getpawnname(false, v.id), 0
 					end
 				end
 				summary[tid] = item
