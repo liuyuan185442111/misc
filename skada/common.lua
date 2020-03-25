@@ -7,7 +7,7 @@ local function num2str_inner(n)
 end
 local function num2str(n)
   if type(n) ~= 'number' then return 'x' end
-  if not (n*0==0) then return '0' end
+  if not (n*0==0) or n==0 then return '0' end
   local minus = ''
   if n<0 then
     minus='-'

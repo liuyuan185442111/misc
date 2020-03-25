@@ -64,6 +64,25 @@ local function in_merge_targetset(dest, src, adopt)
 		end
 	end
 end
+local function in_merge_targetset2(dest, src, adopt)
+	for tid,item in pairs(src) do
+		local t = dest[tid]
+		if t then
+			t.damage = t.damage + item.damage
+		else
+			if adopt then
+				if item.isplayer then
+					item.name, item.occu = skada.getroleoccu(tid)
+				else
+					item.name, item.occu = skada.getnpcname(tid), 0
+				end
+				dest[tid] = item
+			else
+				dest[tid] = skada.clone_table(item)
+			end
+		end
+	end
+end
 
 ------------------------------------------------------------
 local function cal_curr(pre, merge, repair)
@@ -588,7 +607,11 @@ local function merge_hsd(srcdata, battle, adopt_data)
 			if adopt_data then
 				item.name = skada.getpawnname(item.isplayer, tid)
 				for _,v in pairs(item.targetset) do
-					v.name = skada.getpawnname(v.isplayer, v.id)
+					if v.isplayer then
+						v.name, v.occu = skada.getroleinfo(v.id)
+					else
+						v.name, v.occu = skada.getnpcname(v.id), 0
+					end
 				end
 				summary[tid] = item
 			else
@@ -603,7 +626,7 @@ local function merge_hsd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_merge_targetset(dest.targetset, item.targetset, adopt_data)
+			in_merge_targetset2(dest.targetset, item.targetset, adopt_data)
 		end
 	end
 	return srcdata_not_empty
@@ -686,7 +709,11 @@ local function merge_hrd(srcdata, battle, adopt_data)
 			if adopt_data then
 				item.name = skada.getpawnname(item.isplayer, tid)
 				for _,v in pairs(item.sourceset) do
-					v.name = skada.getpawnname(v.isplayer, v.id)
+					if v.isplayer then
+						v.name, v.occu = skada.getroleinfo(v.id)
+					else
+						v.name, v.occu = skada.getnpcname(v.id), 0
+					end
 				end
 				summary[tid] = item
 			else
@@ -701,7 +728,7 @@ local function merge_hrd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_merge_targetset(dest.sourceset, item.sourceset, adopt_data)
+			in_merge_targetset2(dest.sourceset, item.sourceset, adopt_data)
 		end
 	end
 	return srcdata_not_empty
