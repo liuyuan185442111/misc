@@ -48,10 +48,9 @@ end
 local function getroleinfo(tid)
 	return 'what', 1
 end
-local nullname, nulloccu = {}, {}
+local nullname = {}
 local function getroleinfo2(tid)
-	return '沃恩at', 1
-	--return nullname, nulloccu
+	return 'waht2', 0
 end
 local function getnpcname(tid)
 	return 'npc'
@@ -89,6 +88,7 @@ skada.isshanduo = isshanduo
 skada.isgedang = isgedang
 skada.ismingzhong = ismingzhong
 skada.getroleinfo = getroleinfo
+skada.nullname = nullname
 skada.getroleinfo2 = getroleinfo2
 skada.getpawnname = getpawnname
 skada.getskillname = getskillname

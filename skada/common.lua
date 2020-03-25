@@ -104,18 +104,10 @@ local function clone_table(org)
   return t
 end
 
-local function trans_table(org)
+local function trans_table(org, pred)
   local t = {}
   for _,v in pairs(org) do
-    table.insert(t, v)
-  end
-  return t
-end
-
-local function trans_table_if(org, pred)
-  local t = {}
-  for _,v in pairs(org) do
-    if pred(v) then
+    if not pred or pred(v) then
       table.insert(t, v)
     end
   end
@@ -177,6 +169,5 @@ skada.dump = dump
 skada.clone_array = clone_array
 skada.clone_table = clone_table
 skada.trans_table = trans_table
-skada.trans_table_if = trans_table_if
 skada.reverse_array = reverse_array
 skada.queue = queue

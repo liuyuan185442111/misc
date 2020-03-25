@@ -54,7 +54,7 @@ local function cal_death_record()
 		death_record.OK = true
 		return true
 	end
-	death_record.result = skada.trans_table_if(death_record.midresult, function(a) return a.count>0 end)
+	death_record.result = skada.trans_table(death_record.midresult, function(a) return a.count>0 end)
 	table.sort(death_record.result, function(a,b) return a.count>b.count end)
 	death_record.OK = true
 	return true

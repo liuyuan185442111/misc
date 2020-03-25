@@ -1,3 +1,6 @@
+local function has_valid_name(a)
+	return a.name ~= skada.nullname
+end
 local function comp_by_damage(a, b)
 	return a.damage > b.damage
 end
@@ -242,12 +245,15 @@ local function repair_fsd(battle, part)
 				v.ratio = v.damage / item.damage
 			end
 		end
+		if item.name == skada.nullname then
+			item.name, item.occu = skada.getroleinfo2(item.id)
+		end
 		item.skillsort_NS = skada.trans_table(item.skillset)
 		table.sort(item.skillsort_NS, comp_by_damage)
 		item.targetsort_NS = skada.trans_table(item.targetset)
 		table.sort(item.targetsort_NS, comp_by_damage)
 	end
-	battle.fsd_sort1 = skada.trans_table(summary)
+	battle.fsd_sort1 = skada.trans_table(summary, has_valid_name)
 	--以伤害量排序
 	table.sort(battle.fsd_sort1, comp_by_damage)
 	battle.fsd_sort2 = skada.clone_array(battle.fsd_sort1)
@@ -474,17 +480,25 @@ local function repair_frd(battle, part)
 				v.ratio = v.damage / item.damage
 			end
 		end
+		if item.name == skada.nullname then
+			item.name, item.occu = skada.getroleinfo2(item.id)
+		end
 		item.skillsort_NS = skada.trans_table(item.skillset)
 		table.sort(item.skillsort_NS, comp_by_damage)
 	end
-	battle.frd_sort1 = skada.trans_table(summary)
+	battle.frd_sort1 = skada.trans_table(summary, has_valid_name)
 	table.sort(battle.frd_sort1, comp_by_damage)
 	summary = battle.frd_summary2
 	for _,item in pairs(summary) do
 		if not part then
 			item.damage_ratio = item.damage / battle.total_werecv_damage
 		end
-		item.targetsort_NS = skada.trans_table(item.targetset)
+		for _,v in pairs(item.targetset) do
+			if v.name == skada.nullname then
+				v.name, v.occu = skada.getroleinfo2(v.id)
+			end
+		end
+		item.targetsort_NS = skada.trans_table(item.targetset, has_valid_name)
 		table.sort(item.targetsort_NS, comp_by_damage)
 	end
 	battle.frd_sort2 = skada.trans_table(summary)
@@ -822,12 +836,20 @@ local function repair_twd(battle, part)
 				v.ratio = v.damage / item.damage
 			end
 		end
+		if item.name == skada.nullname then
+			item.name, item.occu = skada.getroleinfo2(item.id)
+		end
+		for _,v in pairs(item.targetset) do
+			if v.name == skada.nullname then
+				v.name, v.occu = skada.getroleinfo2(v.id)
+			end
+		end
 		item.skillsort_NS = skada.trans_table(item.skillset)
 		table.sort(item.skillsort_NS, comp_by_damage)
-		item.targetsort_NS = skada.trans_table(item.targetset)
+		item.targetsort_NS = skada.trans_table(item.targetset, has_valid_name)
 		table.sort(item.targetsort_NS, comp_by_damage)
 	end
-	battle.twd_sort = skada.trans_table(summary)
+	battle.twd_sort = skada.trans_table(summary, has_valid_name)
 	table.sort(battle.twd_sort, comp_by_damage)
 end
 
