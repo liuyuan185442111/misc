@@ -64,7 +64,7 @@ local function in_merge_targetset(dest, src, adopt)
 		end
 	end
 end
-local function in_merge_targetset2(dest, src, adopt)
+local function in_merge_pawnset(dest, src, adopt)
 	for tid,item in pairs(src) do
 		local t = dest[tid]
 		if t then
@@ -72,9 +72,9 @@ local function in_merge_targetset2(dest, src, adopt)
 		else
 			if adopt then
 				if item.isplayer then
-					item.name, item.occu = skada.getroleoccu(tid)
+					item.name, item.occu = skada.getroleinfo2(tid)
 				else
-					item.name, item.occu = skada.getpawnname(false, tid), 0
+					item.name = skada.getpawnname(false, tid)
 				end
 				dest[tid] = item
 			else
@@ -608,9 +608,9 @@ local function merge_hsd(srcdata, battle, adopt_data)
 				item.name = skada.getpawnname(item.isplayer, tid)
 				for _,v in pairs(item.targetset) do
 					if v.isplayer then
-						v.name, v.occu = skada.getroleinfo(v.id)
+						v.name, v.occu = skada.getroleinfo2(v.id)
 					else
-						v.name, v.occu = skada.getpawnname(false, v.id), 0
+						v.name = skada.getpawnname(false, v.id)
 					end
 				end
 				summary[tid] = item
@@ -626,7 +626,7 @@ local function merge_hsd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_merge_targetset2(dest.targetset, item.targetset, adopt_data)
+			in_merge_pawnset(dest.targetset, item.targetset, adopt_data)
 		end
 	end
 	return srcdata_not_empty
@@ -641,7 +641,12 @@ local function repair_hsd(battle, part)
 				v.ratio = v.damage / item.damage
 			end
 		end
-		item.targetsort_NS = skada.trans_table(item.targetset)
+		for _,v in pairs(item.targetset) do
+			if v.name == skada.nullname then
+				v.name, v.occu = skada.getroleinfo2(v.id)
+			end
+		end
+		item.targetsort_NS = skada.trans_table(item.targetset, has_valid_name)
 		table.sort(item.targetsort_NS, comp_by_damage)
 	end
 	battle.hsd_sort = skada.trans_table(summary)
@@ -710,9 +715,9 @@ local function merge_hrd(srcdata, battle, adopt_data)
 				item.name = skada.getpawnname(item.isplayer, tid)
 				for _,v in pairs(item.sourceset) do
 					if v.isplayer then
-						v.name, v.occu = skada.getroleinfo(v.id)
+						v.name, v.occu = skada.getroleinfo2(v.id)
 					else
-						v.name, v.occu = skada.getpawnname(false, v.id), 0
+						v.name = skada.getpawnname(false, v.id)
 					end
 				end
 				summary[tid] = item
@@ -728,7 +733,7 @@ local function merge_hrd(srcdata, battle, adopt_data)
 		end
 		if dest then
 			dest.damage = dest.damage + item.damage
-			in_merge_targetset2(dest.sourceset, item.sourceset, adopt_data)
+			in_merge_pawnset(dest.sourceset, item.sourceset, adopt_data)
 		end
 	end
 	return srcdata_not_empty
@@ -743,7 +748,12 @@ local function repair_hrd(battle, part)
 				v.ratio = v.damage / item.damage
 			end
 		end
-		item.sourcesort_NS = skada.trans_table(item.sourceset)
+		for _,v in pairs(item.sourceset) do
+			if v.name == skada.nullname then
+				v.name, v.occu = skada.getroleinfo2(v.id)
+			end
+		end
+		item.sourcesort_NS = skada.trans_table(item.sourceset, has_valid_name)
 		table.sort(item.sourcesort_NS, comp_by_damage)
 	end
 	battle.hrd_sort = skada.trans_table(summary)
