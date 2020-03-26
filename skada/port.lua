@@ -39,14 +39,11 @@ local function ismingzhong(flag)
 	return flag == 0
 end
 
-local function getroleoccu(tid)
-	return 1
-end
 local function getrolename(tid)
 	return 'what'
 end
 local function getroleinfo(tid)
-	return 'what', 1
+	return getrolename(), 1
 end
 local nullname = {}
 local function getroleinfo2(tid)

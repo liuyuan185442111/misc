@@ -1,5 +1,4 @@
 allbattle = {}
---TODO 如不是严格检查，以下可以删掉
 currbattle = nil
 sumbattle = nil
 
@@ -301,9 +300,6 @@ cal_currbattle = function()
 	sort_ok.hrd = true
 	sort_ok.twd = true
 end
-
---TODO for debug
-onlogin()
 
 ------------------------------------------------------------
 --以下给数据生产者用
