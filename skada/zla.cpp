@@ -28,6 +28,7 @@ struct BuffCover
 		int period;
 		int covertime;//覆盖时间
 		int coverage;//覆盖率
+		elem(bool a, int64 b, int c) : active(a), lastaddtime(b), period(c), coverage(0), covertime(0) { }
 	};
 	std::unordered_map<std::pair<int64, int>, elem> pools;
 
@@ -63,8 +64,51 @@ struct BuffCover
 
 	bool OK = false;
 
-	void addbuff(int64 roleid, int buffid, int period)
+	void addbuff(int64 roleid, int buffid, int64 addtime, int period)
 	{
+		{
+		auto key = std::make_pair(roleid, buffid);
+		auto iter = pools.find(key);
+		if(iter == pools.end())
+		{
+			pools.emplace(std::piecewise_construct, std::forward_as_tuple(key), std::forward_as_tuple(true, addtime, period));
+		}
+		else
+		{
+			auto &elem = iter->second;
+			if(elem.lastaddtime > 0)
+			{
+				//再次add buff
+				int64 nowtime;
+				if(nowtime > elem.lastaddtime + elem.period)
+				{
+					//如果当前时间迟于终止时间
+					elem.covertime += elem.period;
+					elem.lastaddtime = addtime;
+					elem.period = period;
+				}
+				else
+				{
+					elem.covertime += nowtime - elem.lastaddtime;
+					elem.lastaddtime = addtime;
+					elem.period = period;
+				}
+			}
+			else
+			{
+				elem.lastaddtime = addtime;
+				elem.period = period;
+			}
+		}
+		}
+
+		{
+		buff_set[buffid].active = true;
+		buff_set[buffid].roles.insert(roleid);
+		}
+		{
+			role_set[roleid].buffs.insert(buffid);
+		}
 	}
 	void delbuff(int64 roleid, int buffid)
 	{
