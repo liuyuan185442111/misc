@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <functional>
+#include <algorithm>
 using namespace std;
 
 using int64 = long;
@@ -24,11 +25,11 @@ struct BuffCover
 	struct elem
 	{
 		bool active;
-		int64 lastaddtime;//上次添加时间
+		int64 addtime = 0;//上次添加时间
 		int period;
 		int covertime;//覆盖时间
+		int lasttime = 0;//覆盖时间
 		int coverage;//覆盖率
-		elem(bool a, int64 b, int c) : active(a), lastaddtime(b), period(c), coverage(0), covertime(0) { }
 	};
 	std::unordered_map<std::pair<int64, int>, elem> pools;
 
@@ -43,6 +44,7 @@ struct BuffCover
 	{
 		int buffid;
 		int count;
+		buff_sort_content(int a, int b) : buffid(a), count(b) {}
 	};
 	std::vector<buff_sort_content> buff_sort;//按数量排序的buffs，由buff_set得来
 	std::vector<buff_sort_content> debuff_sort;//按数量排序的debuffs，由buff_set得来
@@ -63,59 +65,84 @@ struct BuffCover
 	std::vector<role_sort_content> role_sort;//按平均覆盖率排序的roles，由role_set得来
 
 	bool OK = false;
+	int64 starttime = 0;
 
 	void addbuff(int64 roleid, int buffid, int64 addtime, int period)
 	{
+		bool active = true;
+		auto &elem = pools[std::make_pair(roleid, buffid)];
+		if(elem.addtime > 0) //未del便add
 		{
-		auto key = std::make_pair(roleid, buffid);
-		auto iter = pools.find(key);
+			int64 nowtime;
+			elem.covertime = elem.lasttime + std::min(nowtime - elem.addtime, (int64)elem.period);
+		}
+		elem.active = active;
+		elem.addtime = addtime;
+		elem.period = period;
+		buff_set[buffid].active = active;
+		buff_set[buffid].roles.insert(roleid);
+		role_set[roleid].buffs.insert(buffid);
+	}
+	void delbuff(int64 roleid, int buffid, bool finish)
+	{
+		auto iter = pools.find(std::make_pair(roleid, buffid));
 		if(iter == pools.end())
 		{
-			pools.emplace(std::piecewise_construct, std::forward_as_tuple(key), std::forward_as_tuple(true, addtime, period));
+			addbuff(roleid, buffid, starttime, 0);
+			delbuff(roleid, buffid, finish);
 		}
 		else
 		{
 			auto &elem = iter->second;
-			if(elem.lastaddtime > 0)
+			if(elem.addtime > 0)
 			{
-				//再次add buff
 				int64 nowtime;
-				if(nowtime > elem.lastaddtime + elem.period)
-				{
-					//如果当前时间迟于终止时间
-					elem.covertime += elem.period;
-					elem.lastaddtime = addtime;
-					elem.period = period;
-				}
+				if(finish)
+					elem.covertime = elem.lasttime + std::min(nowtime - elem.addtime, (int64)elem.period);
 				else
-				{
-					elem.covertime += nowtime - elem.lastaddtime;
-					elem.lastaddtime = addtime;
-					elem.period = period;
-				}
+					elem.covertime = elem.lasttime + nowtime - elem.addtime;
+				elem.addtime = 0;
+			}
+		}
+	}
+	//nowtime为0表示最终的计算
+	bool calbuff(int64 nowtime)
+	{
+		OK = true;
+		for(auto &e : pools)
+		{
+			auto &elem = e.second;
+			if(elem.addtime > 0)
+			{
+				int64 nowtime;
+				elem.covertime = elem.lasttime + std::min(nowtime - elem.addtime, (int64)elem.period);
+			}
+			elem.coverage = elem.covertime / 1;
+		}
+
+		for(auto &e : buff_set)
+		{
+			auto &roles = e.second.roles;
+			auto &sorted_roles = e.second.sorted_roles;
+			if(e.second.active)
+			{
+				buff_sort.emplace_back(e.first, (int)roles.size());
 			}
 			else
 			{
-				elem.lastaddtime = addtime;
-				elem.period = period;
+				debuff_sort.emplace_back(e.first, (int)roles.size());
 			}
+			sorted_roles.clear();
+			sorted_roles.reserve(roles.size());
+			auto key = std::make_pair((int64)0, e.first);
+			for(auto f : roles)
+			{
+				key.first = f;
+				sorted_roles.push_back(std::make_pair(pools[key].coverage, f));
+			}
+			using T = typename remove_reference<decltype(sorted_roles)>::type::const_reference;
+			std::sort(sorted_roles.begin(), sorted_roles.end(), [](T a, T b){return a.first>b.first;});
 		}
-		}
-
-		{
-		buff_set[buffid].active = true;
-		buff_set[buffid].roles.insert(roleid);
-		}
-		{
-			role_set[roleid].buffs.insert(buffid);
-		}
-	}
-	void delbuff(int64 roleid, int buffid)
-	{
-	}
-	bool calbuff()
-	{
-		OK = true;
 	}
 	//一个名字和职业的缓存
 	//数据的导入导出
