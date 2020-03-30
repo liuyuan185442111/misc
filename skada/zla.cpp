@@ -61,8 +61,10 @@ struct BuffCover
 		int64 roleid;
 		int coverage;//平均覆盖率
 		int count;//数量
+		role_sort_content(int64 a, int b, int c) : roleid(a), coverage(b), count(c) {}
 	};
-	std::vector<role_sort_content> role_sort;//按平均覆盖率排序的roles，由role_set得来
+	std::vector<role_sort_content> role_sort1;//按平均覆盖率排序的roles，由role_set得来
+	std::vector<role_sort_content> role_sort2;//按平均覆盖率排序的roles，由role_set得来
 
 	bool OK = false;
 	int64 starttime = 0;
@@ -143,6 +145,44 @@ struct BuffCover
 			using T = typename remove_reference<decltype(sorted_roles)>::type::const_reference;
 			std::sort(sorted_roles.begin(), sorted_roles.end(), [](T a, T b){return a.first>b.first;});
 		}
+		using T = typename remove_reference<decltype(buff_sort)>::type::const_reference;
+		std::sort(buff_sort.begin(), buff_sort.end(), [](T a, T b){return a.count>b.count;});
+		std::sort(debuff_sort.begin(), debuff_sort.end(), [](T a, T b){return a.count>b.count;});
+
+		for(auto &e : role_set)
+		{
+			auto &content = e.second;
+			auto key = std::make_pair(e.first, 0); 
+			int count1 = 0, count2 = 0;
+			int coverage1 = 0, coverage2 = 0;
+			for(auto &f : content.buffs)
+			{
+				key.second = f;
+				const auto &elem = pools[key];
+				if(elem.active)
+				{
+					++count1;
+					coverage1 += elem.coverage;
+					content.sorted_buffs.push_back(std::make_pair(elem.coverage, f));
+				}
+				else
+				{
+					++count2;
+					coverage2 += elem.coverage;
+					content.sorted_debuffs.push_back(std::make_pair(elem.coverage, f));
+				}
+			}
+			using T = typename decltype(content.sorted_buffs)::const_reference;
+			std::sort(content.sorted_buffs.begin(), content.sorted_buffs.end(), [](T a, T b){return a.first>b.first;});
+			std::sort(content.sorted_debuffs.begin(), content.sorted_debuffs.end(), [](T a, T b){return a.first>b.first;});
+			role_sort1.clear();
+			role_sort1.emplace_back(e.first, coverage1, count1);
+			role_sort2.clear();
+			role_sort2.emplace_back(e.first, coverage2, count2);
+		}
+		using U = typename decltype(role_sort1)::const_reference;
+		std::sort(role_sort1.begin(), role_sort1.end(), [](U a, U b){return a.coverage>b.coverage;});
+		std::sort(role_sort2.begin(), role_sort2.end(), [](U a, U b){return a.coverage>b.coverage;});
 	}
 	//一个名字和职业的缓存
 	//数据的导入导出
