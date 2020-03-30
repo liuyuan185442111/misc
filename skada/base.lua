@@ -114,14 +114,13 @@ local function newsumbattle()
 	return temp
 end
 
-local cal_currbattle
 local function finish_battle()
 	--当前战斗没数据或已保存过了
 	if currbattle.count == 0 or currbattle.finishtime then
 		return
 	end
 	currbattle.finishtime = skada.nowtime()
-	cal_currbattle()
+	skada.cal_curr_damage()
 	skada.finish_death_record()
 	table.insert(allbattle, 1, currbattle)
 	if #allbattle > skada.MAX_BATTLES then
@@ -157,6 +156,7 @@ end
 local function update_friend_periods(roleid, nowtime)
 	local periods = currbattle.friend_periods
 	if periods[roleid] == nil then
+		--如果下次记录的时间和本次记录时间相同呢？还能保证lasttime-firsttime至少为1吗？
 		periods[roleid] = {firsttime = nowtime, lasttime = nowtime+1}
 		return
 	end
@@ -285,20 +285,6 @@ local function rm_all_battles()
 		skada.export_allbattle()
 		skada.export_allbattle_json()
 	end
-end
-
-cal_currbattle = function()
-	skada.cal_fsd_curr()
-	skada.cal_frd_curr()
-	skada.cal_hsd_curr()
-	skada.cal_hrd_curr()
-	skada.cal_twd_curr()
-	local sort_ok = currbattle.sort_ok
-	sort_ok.fsd = true
-	sort_ok.frd = true
-	sort_ok.hsd = true
-	sort_ok.hrd = true
-	sort_ok.twd = true
 end
 
 ------------------------------------------------------------

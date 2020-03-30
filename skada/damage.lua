@@ -891,13 +891,22 @@ local function repair_twd(battle, part)
 end
 
 ------------------------------------------------------------
-skada.cal_fsd_curr = function() return cal_curr(pre_fsd, merge_fsd, repair_fsd) end
-skada.cal_frd_curr = function() return cal_curr(pre_frd, merge_frd, repair_frd) end
-skada.cal_hsd_curr = function() return cal_curr(pre_hsd, merge_hsd, repair_hsd) end
-skada.cal_hrd_curr = function() return cal_curr(pre_hrd, merge_hrd, repair_hrd) end
-skada.cal_twd_curr = function() return cal_curr(pre_twd, merge_twd, repair_twd) end
 skada.cal_fsd = function(battle) return cal_mode(battle, 'fsd', pre_fsd, merge_fsd, repair_fsd) end
 skada.cal_frd = cal_frd
 skada.cal_hsd = function(battle) return cal_mode(battle, 'hsd', pre_hsd, merge_hsd, repair_hsd) end
 skada.cal_hrd = function(battle) return cal_mode(battle, 'hrd', pre_hrd, merge_hrd, repair_hrd) end
 skada.cal_twd = function(battle) return cal_mode(battle, 'twd', pre_twd, merge_twd, repair_twd) end
+
+skada.cal_curr_damage = function()
+	local sort_ok = currbattle.sort_ok
+	cal_curr(pre_fsd, merge_fsd, repair_fsd)
+	sort_ok.fsd = true
+	cal_curr(pre_frd, merge_frd, repair_frd)
+	sort_ok.frd = true
+	cal_curr(pre_hsd, merge_hsd, repair_hsd)
+	sort_ok.hsd = true
+	cal_curr(pre_hrd, merge_hrd, repair_hrd)
+	sort_ok.hrd = true
+	cal_curr(pre_twd, merge_twd, repair_twd)
+	sort_ok.twd = true
+end

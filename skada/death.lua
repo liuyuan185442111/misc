@@ -24,7 +24,7 @@ local function add_death_activity(tid, is_operator_player, operator, skillid, de
 	record.temp_activities:push({time=skada.nowtime(),
 		name=skada.getpawnname(is_operator_player, operator),
 		skillid=skillid, delta=delta, ratio=hp/skada.getrolemaxhp(tid)})
-	if hp <= 0 then --认为对象死亡
+	if delta < 0 and hp <= 0 then --认为对象死亡
 		death_record.OK = nil
 		death_record.count = (death_record.count == nil) and 1 or (death_record.count + 1)
 		record.count = record.count + 1

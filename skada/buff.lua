@@ -4,9 +4,9 @@ require('port')
 role_set = {}
 buff_set = {}
 
---有可能buff在战斗之前就已经加上了: 进入战斗时认为此时添加所有已有buff
---战斗结束buff仍未消失
---buff存在的时候下线或离开视野
+--忽略战斗期间始终存在的buff
+
+--处理buff未消失又加上的情况
 function addbuff(roleid, buffid)
 	local temp = role_set[roleid]
 	if temp == nil then
@@ -28,6 +28,7 @@ function addbuff(roleid, buffid)
 	temp[roleid] = true 
 end
 
+--处理未捕获加buff事件直接删buff的情况
 function delbuff(roleid, buffid)
 	local temp = role_set[roleid]
 	if temp == nil then
@@ -39,6 +40,10 @@ function delbuff(roleid, buffid)
 	end
 	temp.time = temp.time + skada.nowtime() - temp.addtime
 	temp.addtime = 0
+end
+
+--统一处理结束战斗的情况
+function clear()
 end
 
 addbuff('a', 1)
