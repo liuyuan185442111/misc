@@ -33,7 +33,7 @@ private:
 
 	struct BuffSetElem
 	{
-		bool active;
+		int active = 0;
 		std::unordered_set<int64> roles;
 		std::vector<std::pair<int, int64>> sorted_roles;//按覆盖率排序的roles
 	};

@@ -90,11 +90,10 @@ local function newsumbattle()
 		for roleid,item in pairs(battle.friend_periods) do
 			local temp = friend_periods[roleid]
 			if temp == nil then
-				temp = {firsttime=math.maxinteger, lasttime=0}
+				temp = {firsttime=0, lasttime=0}
 				friend_periods[roleid] = temp
 			end
-			temp.firsttime = math.min(temp.firsttime, item.firsttime)
-			temp.lasttime = math.max(temp.lasttime, item.lasttime)
+			temp.lasttime = temp.lasttime + item.lasttime - item.firsttime
 		end
 	end
 	local temp = newbattle()
