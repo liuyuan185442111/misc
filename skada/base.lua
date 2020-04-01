@@ -70,14 +70,13 @@ local function newbattle()
 end
 
 local function newsumbattle()
-	local begintime,finishtime,count = math.maxinteger,0,0
+	local finishtime,count = 0,0
 	local total_wesend_damage,total_werecv_damage,total_wereal_heal = 0,0,0
 	local total_hesend_damage,total_herecv_damage,total_hereal_heal = 0,0,0
 	local total_wrong_damage,total_weover_heal = 0,0
 	local friend_periods = {}
 	for _,battle in ipairs(allbattle) do
-		begintime = math.min(begintime, battle.begintime)
-		finishtime = math.max(finishtime, battle.finishtime)
+		finishtime = finishtime + battle.finishtime - battle.begintime
 		count = count + battle.count
 		total_wesend_damage = total_wesend_damage + battle.total_wesend_damage
 		total_werecv_damage = total_werecv_damage + battle.total_werecv_damage
@@ -98,7 +97,7 @@ local function newsumbattle()
 	end
 	local temp = newbattle()
 	temp.rival_title = '总计'
-	temp.begintime = begintime
+	temp.begintime = 0
 	temp.finishtime = finishtime
 	temp.count = count
 	temp.total_wesend_damage = total_wesend_damage
@@ -120,6 +119,7 @@ local function finish_battle()
 	end
 	currbattle.finishtime = skada.nowtime()
 	skada.cal_curr_damage()
+	skada.cal_curr_heal()
 	skada.finish_death_record()
 	table.insert(allbattle, 1, currbattle)
 	if #allbattle > skada.MAX_BATTLES then

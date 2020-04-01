@@ -8,6 +8,7 @@ require('export')
 require('base')
 require('damage')
 require('death')
+require('heal')
 
 math.randomseed(1001086)
 
