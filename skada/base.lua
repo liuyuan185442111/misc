@@ -144,6 +144,7 @@ local function begin_battle()
 end
 
 local function onlogin()
+	allbattle = {}
 	skada.import_allbattle_json()
 	for _,battle in ipairs(allbattle) do
 		battle.sort_ok = {}
