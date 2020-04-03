@@ -71,6 +71,7 @@ local function export_allbattle()
 	end
 	table.insert(temp, Version)
 	export(0, skada.dump(temp, 'allbattle = '))
+	return Version
 end
 
 local function export_allbattle_json()
@@ -80,6 +81,7 @@ local function export_allbattle_json()
 	end
 	table.insert(temp, Version)
 	export(1, skada.encode(sieve_battle_fields(temp)))
+	return Version
 end
 
 local function import_allbattle()
@@ -89,6 +91,7 @@ local function import_allbattle()
 		else
 			table.remove(allbattle)
 		end
+		return Version
 	end
 end
 
@@ -101,6 +104,7 @@ local function import_allbattle_json()
 		else
 			table.remove(allbattle)
 		end
+		return Version
 	end
 end
 
