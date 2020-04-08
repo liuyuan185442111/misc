@@ -3,10 +3,20 @@ import scrapy
 import re
 
 # 将ROBOTSTXT_OBEY改为False
+
+class BeautyItem(scrapy.Item):
+	id = scrapy.Field()
+	baseurl = scrapy.Field()
+	topic = scrapy.Field()
+	tags = scrapy.Field()
+	intro = scrapy.Field()
+	num = scrapy.Field()
+	images = scrapy.Field()
+
 from beauty.items import BeautyItem
 
-class A2meinvSpider(scrapy.Spider):
-	name = '2meinv'
+class AimeinvSpider(scrapy.Spider):
+	name = 'imeinv'
 	allowed_domains = ['2meinv.com']
 	start_urls = ['https://www.2meinv.com/article-63.html']
 
@@ -43,3 +53,7 @@ class A2meinvSpider(scrapy.Spider):
 				else:
 					self.images = {}
 					yield scrapy.Request(nexturl, callback=self.parse)
+					pass
+				pass
+			pass
+		pass
