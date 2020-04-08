@@ -13,7 +13,7 @@ if len(sys.argv) == 1:
 	sys.exit(1)
 
 start = int(sys.argv[1])
-count = 10
+count = 100
 xmlfile ='1_567.xml'
 
 def nowtime():
@@ -28,15 +28,20 @@ def download(url, headers):
 			else:
 				time.sleep(3)
 				continue
-		except requests.exceptions.ConnectTimeout as e:
-			print(e)
-			time.sleep(3)
-			continue
 		except requests.exceptions.ConnectionError as e:
 			print(e)
 			time.sleep(3)
 			continue
+		except requests.exceptions.ConnectTimeout as e:
+			print(e)
+			time.sleep(3)
+			continue
+		except requests.exceptions.ReadTimeout as e:
+			print(e)
+			time.sleep(3)
+			continue
 		except requests.exceptions.RequestException as e:
+			print(type(e))
 			print(e)
 			break
 
