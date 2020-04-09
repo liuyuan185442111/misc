@@ -297,12 +297,275 @@ local function cal_weheal(battle)
 	return in_cal_weheal_old(battle)
 end
 
+local function pre_heheal(battle)
+	battle = battle or currbattle
+	local allitems = battle.hostile_heal
+	if #allitems == 0 then return nil end
+	battle.hostile_heal = {}
+
+	local semidata1 = {}
+	table.sort(allitems, comp_by_source)
+	table.insert(allitems, {source_tid=-1})
+	local currid, realheal, overheal, skillset = 0, 0, 0, {}
+	for _,item in ipairs(allitems) do
+		if item.source_tid ~= currid then
+			if currid ~= 0 then
+				semidata1[currid] = {
+					id = currid,
+					realheal = realheal,
+					overheal = overheal,
+					skillset = skillset,
+				}
+				if item.source_tid == -1 then break end
+			end
+			currid, realheal, overheal, skillset = item.source_tid, 0, 0, {}
+		end
+
+		realheal = realheal + item.value
+		overheal = overheal + item.overvalue
+
+		do
+			local temp = skillset[item.skillid]
+			local value = item.value
+			if temp == nil then
+				skillset[item.skillid] = {
+					id = item.skillid,
+					heal = value,
+					overheal = item.overvalue,
+					maxheal = value,
+					minheal = value,
+					count = 1,
+					baoji = skada.isbaoji(item.flags) and 1 or 0,
+					shanduo = skada.isshanduo(item.flags) and 1 or 0,
+					gedang = skada.isgedang(item.flags) and 1 or 0,
+					mingzhong = skada.ismingzhong(item.flags) and 1 or 0,
+				}
+			else
+				temp.heal = temp.heal + value
+				temp.overheal = temp.overheal + item.overvalue
+				temp.maxheal = math.max(temp.maxheal, value)
+				temp.minheal = math.min(temp.minheal, value)
+				if skada.isbaoji(item.flags) then temp.baoji = temp.baoji + 1 end
+				if skada.isshanduo(item.flags) then temp.shanduo = temp.shanduo + 1 end
+				if skada.isgedang(item.flags) then temp.gedang = temp.gedang + 1 end
+				if skada.ismingzhong(item.flags) then temp.mingzhong = temp.mingzhong + 1 end
+				temp.count = temp.count + 1
+			end
+		end
+	end
+
+	local semidata2 = {}
+	table.remove(allitems)
+	table.sort(allitems, comp_by_target)
+	table.insert(allitems, {target_tid=-1})
+	currid, realheal, overheal, skillset = 0, 0, 0, {}
+	for _,item in ipairs(allitems) do
+		if item.target_tid ~= currid then
+			if currid ~= 0 then
+				semidata2[currid] = {
+					id = currid,
+					realheal = realheal,
+					overheal = overheal,
+					skillset = skillset,
+				}
+				if item.target_tid == -1 then break end
+			end
+			currid, realheal, overheal, skillset = item.target_tid, 0, 0, {}
+		end
+
+		realheal = realheal + item.value
+		overheal = overheal + item.overvalue
+
+		do
+			local temp = skillset[item.skillid]
+			local value = item.value
+			if temp == nil then
+				skillset[item.skillid] = {
+					id = item.skillid,
+					heal = value,
+					overheal = item.overvalue,
+					maxheal = value,
+					minheal = value,
+					count = 1,
+					baoji = skada.isbaoji(item.flags) and 1 or 0,
+					shanduo = skada.isshanduo(item.flags) and 1 or 0,
+					gedang = skada.isgedang(item.flags) and 1 or 0,
+					mingzhong = skada.ismingzhong(item.flags) and 1 or 0,
+				}
+			else
+				temp.heal = temp.heal + value
+				temp.overheal = temp.overheal + item.overvalue
+				temp.maxheal = math.max(temp.maxheal, value)
+				temp.minheal = math.min(temp.minheal, value)
+				if skada.isbaoji(item.flags) then temp.baoji = temp.baoji + 1 end
+				if skada.isshanduo(item.flags) then temp.shanduo = temp.shanduo + 1 end
+				if skada.isgedang(item.flags) then temp.gedang = temp.gedang + 1 end
+				if skada.ismingzhong(item.flags) then temp.mingzhong = temp.mingzhong + 1 end
+				temp.count = temp.count + 1
+			end
+		end
+	end
+
+	return semidata1, semidata2
+end
+
+local function merge_heheal(srcdata1, srcdata2, battle, adopt_data)
+	if not srcdata1 then
+		return false
+	end
+	if adopt_data == nil then
+		adopt_data = true
+	end
+	battle = battle or currbattle
+
+	local summary = battle.hh_summary1
+	local srcdata_not_empty = false
+
+	for roleid,item in pairs(srcdata1) do
+		srcdata_not_empty = true
+		local dest = summary[roleid]
+		if dest == nil then
+			if adopt_data then
+				item.name, item.occu = skada.getroleinfo2(roleid)
+				for _,v in pairs(item.skillset) do
+					v.name = skada.getskillname(v.id)
+				end
+				summary[roleid] = item
+			else
+				dest = {
+					id = roleid,
+					occu = item.occu,
+					name = item.name,
+					realheal = 0,
+					overheal = 0,
+					skillset = {},
+				}
+				summary[roleid] = dest
+			end
+		end
+		if dest then
+			dest.realheal = dest.realheal + item.realheal
+			dest.overheal = dest.overheal + item.overheal
+			in_merge_skillset(dest.skillset, item.skillset, adopt_data)
+		end
+	end
+
+	summary = battle.hh_summary2
+	for roleid,item in pairs(srcdata2) do
+		srcdata_not_empty = true
+		local dest = summary[roleid]
+		if dest == nil then
+			if adopt_data then
+				item.name, item.occu = skada.getroleinfo2(roleid)
+				for _,v in pairs(item.skillset) do
+					v.name = skada.getskillname(v.id)
+				end
+				summary[roleid] = item
+			else
+				dest = {
+					id = roleid,
+					occu = item.occu,
+					name = item.name,
+					realheal = 0,
+					overheal = 0,
+					skillset = {},
+				}
+				summary[roleid] = dest
+			end
+		end
+		if dest then
+			dest.realheal = dest.realheal + item.realheal
+			dest.overheal = dest.overheal + item.overheal
+			in_merge_skillset(dest.skillset, item.skillset, adopt_data)
+		end
+	end
+
+	return srcdata_not_empty
+end
+
+local function repair_heheal(battle, part)
+	battle = battle or currbattle
+	local summary = battle.hh_summary1
+	for _,item in pairs(summary) do
+		if not part then
+			item.heal_ratio = item.realheal / battle.total_hereal_heal
+			for _,v in pairs(item.skillset) do
+				v.avgheal = v.heal / v.count
+			end
+		end
+		if item.name == skada.nullname then
+			item.name, item.occu = skada.getroleinfo2(item.id)
+		end
+		item.skillsort_NS = skada.trans_table(item.skillset)
+		table.sort(item.skillsort_NS, function(a,b)return a.heal>b.heal end)
+	end
+	battle.hh_sort1 = skada.trans_table(summary, has_valid_name)
+	table.sort(battle.hh_sort1, function(a,b)return a.realheal>b.realheal end)
+
+	summary = battle.hh_summary2
+	for _,item in pairs(summary) do
+		if not part then
+			item.heal_ratio = item.realheal / battle.total_hereal_heal
+			for _,v in pairs(item.skillset) do
+				v.avgheal = v.heal / v.count
+			end
+		end
+		if item.name == skada.nullname then
+			item.name, item.occu = skada.getroleinfo2(item.id)
+		end
+		item.skillsort_NS = skada.trans_table(item.skillset)
+		table.sort(item.skillsort_NS, function(a,b)return a.heal>b.heal end)
+	end
+	battle.hh_sort2 = skada.trans_table(summary, has_valid_name)
+	table.sort(battle.hh_sort2, function(a,b)return a.realheal>b.realheal end)
+end
+
+local function cal_heheal_curr()
+	if merge_heheal(pre_heheal()) then
+		repair_heheal()
+		return true
+	else
+		return false
+	end
+end
+
+local function in_cal_heheal_old(battle)
+	if battle.sort_ok.heheal then
+		return false
+	end
+	repair_heheal(battle, true)
+	battle.sort_ok.heheal = true
+	return true
+end
+
+local function in_cal_heheal_sum()
+	if sumbattle.hh_summary1.OK then
+		return false
+	end
+	for _,battle in ipairs(allbattle) do
+		merge_heheal(battle.hh_summary1, battle.hh_summary2, sumbattle, false)
+	end
+	repair_heheal(sumbattle)
+	sumbattle.hh_summary1.OK = true
+	return true
+end
+
+local function cal_heheal(battle)
+	if battle == currbattle then
+		return cal_heheal_curr()
+	end
+	if battle == sumbattle then
+		return in_cal_heheal_sum()
+	end
+	return in_cal_heheal_old(battle)
+end
+
 skada.cal_weheal = cal_weheal
---skada.cal_heheal = cal_heheal
+skada.cal_heheal = cal_heheal
 skada.cal_curr_heal = function()
 	local sort_ok = currbattle.sort_ok
 	cal_weheal_curr()
 	sort_ok.weheal = true
-	--cal_heheal_curr()
+	cal_heheal_curr()
 	sort_ok.heheal = true
 end

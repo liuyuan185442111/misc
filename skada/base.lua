@@ -236,7 +236,7 @@ local function add_damage_or_heal(source_xid, target_xid, source_tid, target_tid
 			skada.add_death_activity(target_tid, skada.isplayer(source_xid), source_tid, skillid, value, lastvalue)
 		else --hostile
 			table.insert(currbattle.hostile_heal, item)
-			currbattle.total_herecv_damage = currbattle.total_herecv_damage + value
+			currbattle.total_hereal_heal = currbattle.total_hereal_heal + value
 			discard_record = false
 		end
 	end
