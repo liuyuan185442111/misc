@@ -40,9 +40,8 @@ local function newbattle()
 		fh_summary1={}, --以治疗者tid分组
 		fh_sort1={}, --以有效治疗量排序
 		fh_sort2={}, --以过量治疗量排序
-		fh_sort3={}, --以总治疗量排序
 		fh_summary2={}, --以被治疗者tid分组
-		fh_sort4={}, --以有效被治疗量排序
+		fh_sort5={}, --以有效被治疗量排序
 
 		total_hesend_damage=0,
 		hostile_send_damage={}, --敌对造成伤害

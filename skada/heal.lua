@@ -1,8 +1,50 @@
+local function has_valid_name(a)
+	return a.name ~= skada.nullname
+end
 local function comp_by_source(a, b)
 	return a.source_tid > b.source_tid
 end
 local function comp_by_target(a, b)
 	return a.target_tid > b.target_tid
+end
+
+local function in_merge_skillset(dest, src, adopt)
+	for skillid,item in pairs(src) do
+		local t = dest[skillid]
+		if t then
+			t.heal = t.heal + item.heal
+			t.overheal = t.overheal + item.overheal
+			t.count = t.count + item.count
+			t.baoji = t.baoji + item.baoji
+			t.shanduo = t.shanduo + item.shanduo
+			t.gedang = t.gedang + item.gedang
+			t.mingzhong = t.mingzhong + item.mingzhong
+			if t.maxheal < item.maxheal then t.maxheal = item.maxheal end
+			if t.minheal > item.minheal then t.minheal = item.minheal end
+		else
+			if adopt then
+				item.name = skada.getskillname(skillid)
+				dest[skillid] = item
+			else
+				dest[skillid] = skada.clone_table(item)
+			end
+		end
+	end
+end
+local function in_merge_targetset(dest, src, adopt)
+	for tid,item in pairs(src) do
+		local t = dest[tid]
+		if t then
+			t.heal = t.heal + item.heal
+		else
+			if adopt then
+				item.name = skada.getpawnname(true, tid)
+				dest[tid] = item
+			else
+				dest[tid] = skada.clone_table(item)
+			end
+		end
+	end
 end
 
 local function pre_weheal(battle)
@@ -40,6 +82,7 @@ local function pre_weheal(battle)
 				skillset[item.skillid] = {
 					id = item.skillid,
 					heal = value,
+					overheal = item.overvalue,
 					maxheal = value,
 					minheal = value,
 					count = 1,
@@ -50,6 +93,7 @@ local function pre_weheal(battle)
 				}
 			else
 				temp.heal = temp.heal + value
+				temp.overheal = temp.overheal + item.overvalue
 				temp.maxheal = math.max(temp.maxheal, value)
 				temp.minheal = math.min(temp.minheal, value)
 				if skada.isbaoji(item.flags) then temp.baoji = temp.baoji + 1 end
@@ -136,8 +180,8 @@ local function merge_weheal(srcdata1, srcdata2, battle, adopt_data)
 		if dest then
 			dest.realheal = dest.realheal + item.realheal
 			dest.overheal = dest.overheal + item.overheal
-			--in_merge_skillset2(dest.skillset, item.skillset, adopt_data)
-			--in_merge_targetset(dest.targetset, item.targetset, adopt_data)
+			in_merge_skillset(dest.skillset, item.skillset, adopt_data)
+			in_merge_targetset(dest.targetset, item.targetset, adopt_data)
 		end
 	end
 
@@ -168,35 +212,49 @@ local function merge_weheal(srcdata1, srcdata2, battle, adopt_data)
 end
 
 local function repair_weheal(battle, part)
-	do return end
 	battle = battle or currbattle
-	local summary = battle.fsd_summary
+	local summary = battle.fh_summary1
 	for _,item in pairs(summary) do
 		if not part then
-			item.damage_ratio = item.damage / battle.total_wesend_damage
-			item.damage_rate = item.damage / skada.get_friend_active_time(battle, _)
+			item.heal_ratio = item.realheal / battle.total_wereal_heal
+			item.heal_rate = item.realheal / skada.get_friend_active_time(battle, _)
+			item.over_ratio = item.overheal / item.realheal
 			for _,v in pairs(item.skillset) do
-				v.avgdmg = v.damage / v.count
-				v.ratio = v.damage / item.damage
+				v.avgheal = v.heal / v.count
 			end
 			for _,v in pairs(item.targetset) do
-				v.ratio = v.damage / item.damage
+				v.ratio = v.heal / item.realheal
 			end
 		end
 		if item.name == skada.nullname then
 			item.name, item.occu = skada.getroleinfo2(item.id)
 		end
-		item.skillsort_NS = skada.trans_table(item.skillset)
-		table.sort(item.skillsort_NS, comp_by_damage)
+		item.skillsort1_NS = skada.trans_table(item.skillset)
+		item.skillsort2_NS = skada.clone_array(item.skillsort1_NS)
+		item.skillsort3_NS = skada.clone_array(item.skillsort1_NS)
+		table.sort(item.skillsort1_NS, function(a,b)return a.heal>b.heal end)
+		table.sort(item.skillsort2_NS, function(a,b)return a.overheal>b.overheal end)
+		table.sort(item.skillsort3_NS, function(a,b)return a.heal+a.overheal>b.heal+b.overheal end)
 		item.targetsort_NS = skada.trans_table(item.targetset)
-		table.sort(item.targetsort_NS, comp_by_damage)
+		table.sort(item.targetsort_NS, function(a,b)return a.heal>b.heal end)
 	end
-	battle.fsd_sort1 = skada.trans_table(summary, has_valid_name)
-	--以伤害量排序
-	table.sort(battle.fsd_sort1, comp_by_damage)
-	battle.fsd_sort2 = skada.clone_array(battle.fsd_sort1)
-	--以伤害速度排序
-	table.sort(battle.fsd_sort2, function(a,b) return a.damage_rate>b.damage_rate end)
+	battle.fh_sort1 = skada.trans_table(summary, has_valid_name)
+	table.sort(battle.fh_sort1, function(a,b)return a.realheal>b.realheal end)
+	battle.fh_sort2 = skada.clone_array(battle.fh_sort1)
+	table.sort(battle.fh_sort2, function(a,b)return a.overheal>b.overheal end)
+
+	summary = battle.fh_summary2
+	for _,item in pairs(summary) do
+		if not part then
+			item.heal_ratio = item.realheal / battle.total_wereal_heal
+			item.heal_rate = item.realheal / skada.get_friend_active_time(battle, _)
+		end
+		if item.name == skada.nullname then
+			item.name, item.occu = skada.getroleinfo2(item.id)
+		end
+	end
+	battle.fh_sort5 = skada.trans_table(summary, has_valid_name)
+	table.sort(battle.fh_sort5, function(a,b)return a.realheal>b.realheal end)
 end
 
 local function cal_weheal_curr()
