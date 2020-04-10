@@ -312,6 +312,7 @@ local function pre_heheal(battle)
 			if currid ~= 0 then
 				semidata1[currid] = {
 					id = currid,
+					isplayer = skada.isplayer(item.source_xid),
 					realheal = realheal,
 					overheal = overheal,
 					skillset = skillset,
@@ -364,6 +365,7 @@ local function pre_heheal(battle)
 			if currid ~= 0 then
 				semidata2[currid] = {
 					id = currid,
+					isplayer = skada.isplayer(item.target_xid),
 					realheal = realheal,
 					overheal = overheal,
 					skillset = skillset,
@@ -426,7 +428,7 @@ local function merge_heheal(srcdata1, srcdata2, battle, adopt_data)
 		local dest = summary[roleid]
 		if dest == nil then
 			if adopt_data then
-				item.name, item.occu = skada.getroleinfo2(roleid)
+				item.name = skada.getpawnname(item.isplayer, roleid)
 				for _,v in pairs(item.skillset) do
 					v.name = skada.getskillname(v.id)
 				end
@@ -434,7 +436,6 @@ local function merge_heheal(srcdata1, srcdata2, battle, adopt_data)
 			else
 				dest = {
 					id = roleid,
-					occu = item.occu,
 					name = item.name,
 					realheal = 0,
 					overheal = 0,
@@ -456,7 +457,7 @@ local function merge_heheal(srcdata1, srcdata2, battle, adopt_data)
 		local dest = summary[roleid]
 		if dest == nil then
 			if adopt_data then
-				item.name, item.occu = skada.getroleinfo2(roleid)
+				item.name = skada.getpawnname(item.isplayer, roleid)
 				for _,v in pairs(item.skillset) do
 					v.name = skada.getskillname(v.id)
 				end
@@ -464,7 +465,6 @@ local function merge_heheal(srcdata1, srcdata2, battle, adopt_data)
 			else
 				dest = {
 					id = roleid,
-					occu = item.occu,
 					name = item.name,
 					realheal = 0,
 					overheal = 0,
@@ -493,9 +493,6 @@ local function repair_heheal(battle, part)
 				v.avgheal = v.heal / v.count
 			end
 		end
-		if item.name == skada.nullname then
-			item.name, item.occu = skada.getroleinfo2(item.id)
-		end
 		item.skillsort_NS = skada.trans_table(item.skillset)
 		table.sort(item.skillsort_NS, function(a,b)return a.heal>b.heal end)
 	end
@@ -509,9 +506,6 @@ local function repair_heheal(battle, part)
 			for _,v in pairs(item.skillset) do
 				v.avgheal = v.heal / v.count
 			end
-		end
-		if item.name == skada.nullname then
-			item.name, item.occu = skada.getroleinfo2(item.id)
 		end
 		item.skillsort_NS = skada.trans_table(item.skillset)
 		table.sort(item.skillsort_NS, function(a,b)return a.heal>b.heal end)
