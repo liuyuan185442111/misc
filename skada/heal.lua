@@ -38,7 +38,7 @@ local function in_merge_targetset(dest, src, adopt)
 			t.heal = t.heal + item.heal
 		else
 			if adopt then
-				item.name = skada.getpawnname(true, tid)
+				item.name, item.occu = skada.getroleinfo2(tid)
 				dest[tid] = item
 			else
 				dest[tid] = skada.clone_table(item)
@@ -161,7 +161,7 @@ local function merge_weheal(srcdata1, srcdata2, battle, adopt_data)
 					v.name = skada.getskillname(v.id)
 				end
 				for _,v in pairs(item.targetset) do
-					v.name = skada.getpawnname(true, v.id)
+					v.name, v.occu = skada.getroleinfo2(v.id)
 				end
 				summary[roleid] = item
 			else
@@ -217,13 +217,15 @@ local function repair_weheal(battle, part)
 	for _,item in pairs(summary) do
 		if not part then
 			item.heal_ratio = item.realheal / battle.total_wereal_heal
-			item.heal_rate = item.realheal / skada.get_friend_active_time(battle, _)
 			item.over_ratio = item.overheal / item.realheal
 			for _,v in pairs(item.skillset) do
 				v.avgheal = v.heal / v.count
 			end
 			for _,v in pairs(item.targetset) do
 				v.ratio = v.heal / item.realheal
+				if v.name == skada.nullname then
+					v.name, v.occu = skada.getroleinfo2(_)
+				end
 			end
 		end
 		if item.name == skada.nullname then
@@ -235,7 +237,7 @@ local function repair_weheal(battle, part)
 		table.sort(item.skillsort1_NS, function(a,b)return a.heal>b.heal end)
 		table.sort(item.skillsort2_NS, function(a,b)return a.overheal>b.overheal end)
 		table.sort(item.skillsort3_NS, function(a,b)return a.heal+a.overheal>b.heal+b.overheal end)
-		item.targetsort_NS = skada.trans_table(item.targetset)
+		item.targetsort_NS = skada.trans_table(item.targetset, has_valid_name)
 		table.sort(item.targetsort_NS, function(a,b)return a.heal>b.heal end)
 	end
 	battle.fh_sort1 = skada.trans_table(summary, has_valid_name)
@@ -247,7 +249,6 @@ local function repair_weheal(battle, part)
 	for _,item in pairs(summary) do
 		if not part then
 			item.heal_ratio = item.realheal / battle.total_wereal_heal
-			item.heal_rate = item.realheal / skada.get_friend_active_time(battle, _)
 		end
 		if item.name == skada.nullname then
 			item.name, item.occu = skada.getroleinfo2(item.id)
