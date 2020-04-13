@@ -13,8 +13,8 @@ if len(sys.argv) == 1:
 	sys.exit(1)
 
 start = int(sys.argv[1])
-count = 100
-xmlfile ='1_567.xml'
+count = 1000
+xmlfile ='2000.xml'
 
 def nowtime():
 	return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
