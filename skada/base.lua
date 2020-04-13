@@ -111,6 +111,11 @@ local function newsumbattle()
 	return temp
 end
 
+local function save_allbattle()
+	skada.export_allbattle()
+	skada.export_allbattle_json()
+end
+
 local function finish_battle()
 	--当前战斗没数据或已保存过了
 	if currbattle.count == 0 or currbattle.finishtime then
@@ -133,8 +138,7 @@ local function finish_battle()
 		table.remove(allbattle)
 	end
 	sumbattle = newsumbattle()
-	skada.export_allbattle()
-	skada.export_allbattle_json()
+	save_allbattle()
 end
 
 local function begin_battle()
@@ -265,7 +269,7 @@ local function rm_a_battle(battle_id)
 	end
 	table.remove(allbattle, battle_id)
 	sumbattle = newsumbattle()
-	skada.export_allbattle()
+	save_allbattle()
 	return true
 end
 
@@ -281,8 +285,7 @@ local function rm_all_battles()
 	allbattle = temp
 	if #allbattle ~= oldsize then
 		sumbattle = newsumbattle()
-		skada.export_allbattle()
-		skada.export_allbattle_json()
+		save_allbattle()
 	end
 end
 
