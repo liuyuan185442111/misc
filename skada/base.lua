@@ -276,16 +276,22 @@ end
 --被保护的不会被删除
 local function rm_all_battles()
 	local oldsize = #allbattle
+	local rm_curr = false
 	local temp = {}
 	for _,battle in ipairs(allbattle) do
 		if battle.protected then
 			table.insert(temp, battle)
+		elseif battle == currbattle then
+			rm_curr = true
 		end
 	end
 	allbattle = temp
 	if #allbattle ~= oldsize then
 		sumbattle = newsumbattle()
 		save_allbattle()
+	end
+	if rm_curr then
+		currbattle = newbattle()
 	end
 end
 

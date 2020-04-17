@@ -24,6 +24,7 @@ end
 
 local function per2str(n)
   if type(n) ~= 'number' then return 'x' end
+  if not (n*0==0) or n==0 then return '0%' end
   return string.format('%.1f%%', n*100.0)
 end
 
