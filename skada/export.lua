@@ -48,9 +48,9 @@ local function import(region)
 				print(info)
 				error('加载'..region..'失败')
 			else
-				local ret,info = pcall(code)
+				local ret,info2 = pcall(code)
 				if not ret then
-					print(info)
+					print(info2)
 					error('执行'..region..'失败')
 				else
 					return true

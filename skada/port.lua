@@ -52,8 +52,8 @@ end
 local function getnpcname(tid)
 	return 'npc'
 end
-local function getpawnname(isplayer, tid)
-	return isplayer and getrolename(tid) or getnpcname(tid)
+local function getpawnname(bisplayer, tid)
+	return bisplayer and getrolename(tid) or getnpcname(tid)
 end
 local function getskillname(skillid)
 	return 'attack'
