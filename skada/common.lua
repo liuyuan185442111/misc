@@ -28,7 +28,7 @@ local function per2str(n)
   return string.format('%.1f%%', n*100.0)
 end
 
-function seconds2str(n)
+local function seconds2str(n)
   n = math.floor(n+0.5)
   local hour = 0
   local min = n//60
