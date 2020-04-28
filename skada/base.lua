@@ -262,6 +262,17 @@ local function protect_battles(battle_ids)
 	end
 end
 
+local function protect_a_battle(battle_id)
+	if battle_id > 0 and battle_id <= #allbattle then
+		allbattle[battle_id].protected = true
+	end
+end
+local function unprotect_a_battle(battle_id)
+	if battle_id > 0 and battle_id <= #allbattle then
+		allbattle[battle_id].protected = nil
+	end
+end
+
 --即使被保护也会被删除
 local function rm_a_battle(battle_id)
 	if battle_id < 1 or battle_id > #allbattle then
@@ -304,5 +315,7 @@ skada.add_damage_or_heal = add_damage_or_heal
 --以下给数据消费者用
 skada.get_friend_active_time = get_friend_active_time
 skada.protect_battles = protect_battles
+skada.protect_a_battle = protect_a_battle
+skada.unprotect_a_battle = unprotect_a_battle
 skada.rm_a_battle = rm_a_battle
 skada.rm_all_battles = rm_all_battles
