@@ -2,31 +2,31 @@
 数据处理模块负责数据的存储、计算、导入导出等，它的数据来源是收集模块，处理过的数据提供给展示模块使用，它暴露一系列的方法，供另外两个模块调用。
 数据收集模块负责收集数据并处理成处理模块需要的格式。
 数据展示模块从处理模块获得数据并进行展示。
+当前目录下的文件都属于数据处理模块。
 
 ## 数据处理模块文件说明
-strict.lua：检测未声明便使用的全局变量的工具
-这个文件不是必需的。
+strict.lua：检测未声明便使用的全局变量的工具，这个文件不是必需的，但若使用，应于其他文件之前加载
 
 common.lua：一些基础工具
 port.lua：查询必要信息的接口，移植时需要修改该文件
+json.lua：将变量转换为json格式，pure_json.lua是原版
 export.lua：数据导入导出
 base.lua：主要的数据结构和提供数据来源的函数
-base.lua需要在common.lua，port.lua，export.lua之后加载，common.lua提供全局的skada变量，由于在base.lua中定义了几个全局的变量，它们需要port.lua中的nowtime()函数和export.lua中的import_allbattle()函数。
+
+common.lua需要在除strict.lua之前加载，base.lua需要在port.lua、export.lua之后加载，json.lua需要在export.lua之前加载，common.lua提供全局的skada变量，由于在base.lua中定义了几个全局的变量，它们需要port.lua中的nowtime()函数和export.lua中的import_allbattle()函数和import_allbattle_json()函数，import_allbattle_json()函数需要json.lua中的decode()函数。
 后面的几个文件提供的都是函数，且没有被全局变量直接调用，所以顺序无关紧要。
 
-death.lua
-死亡统计
-damage.lua
-伤害类信息的统计
+death.lua：死亡统计
+damage.lua：伤害类信息的统计
+heal.lua：治疗类信息的统计
 
-test.lua
-简单测试
+test.lua：简单测试
 
 ## skada
-数据处理模块提供的接口都置于skada表中，现将其做一下说明。
+数据处理模块提供的接口都置于skada表中，现做说明：
 类型：配置参数为0，函数为1，其他为2
-用处：模块内部使用为0，为数据收集模块为1，为数据展示模块为2
-| 成员 | 说明 | 属性(类型/用处) |
+用途：模块内部使用为0，为数据收集模块为1，为数据展示模块为2
+| 成员 | 说明 | 属性(类型/用途) |
 |:--|:--|:--|
 **common.lua** |
 num2str | 将一个数字转换为字符串 | 10
