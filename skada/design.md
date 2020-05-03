@@ -1,5 +1,6 @@
 战斗统计系统分为三个模块，数据收集、数据处理、数据展示。
-数据处理模块负责数据的存储、计算、导入导出等，它的数据来源是收集模块，处理过的数据提供给展示模块使用，它暴露一系列的方法，供另外两个模块调用。
+数据处理模块负责数据的存储、计算、导入导出等，它的数据来源是收集模块，
+处理过的数据提供给展示模块使用，它暴露一系列的方法，供另外两个模块调用。
 数据收集模块负责收集数据并处理成处理模块需要的格式。
 数据展示模块从处理模块获得数据并进行展示。
 当前目录下的文件都属于数据处理模块。
@@ -13,7 +14,11 @@ json.lua：将变量转换为json格式，pure_json.lua是原版
 export.lua：数据导入导出
 base.lua：主要的数据结构和提供数据来源的函数
 
-common.lua需要在除strict.lua之前加载，base.lua需要在port.lua、export.lua之后加载，json.lua需要在export.lua之前加载，common.lua提供全局的skada变量，由于在base.lua中定义了几个全局的变量，它们需要port.lua中的nowtime()函数和export.lua中的import_allbattle()函数和import_allbattle_json()函数，import_allbattle_json()函数需要json.lua中的decode()函数。
+common.lua需要在除strict.lua之前加载，base.lua需要在port.lua、export.lua之后加载，
+json.lua需要在export.lua之前加载，common.lua提供全局的skada变量，
+由于在base.lua中定义了几个全局的变量，它们需要port.lua中的nowtime()函数和
+export.lua中的import_allbattle()函数和import_allbattle_json()函数，
+import_allbattle_json()函数需要json.lua中的decode()函数。
 后面的几个文件提供的都是函数，且没有被全局变量直接调用，所以顺序无关紧要。
 
 death.lua：死亡统计
@@ -87,9 +92,12 @@ cal_curr_heal | 整理当前战斗的我方和敌方治疗记录 | 10
 encode | 将指定变量编码为json格式 | 10
 decode | 将json字符串解码为lua变量 | 10
 
-## 一场战斗
-base.lua提供了三个全局变量，分别是currbattle，sumbattle，allbattle，currbattle表示当前战斗，allbattle是一个数组，包含最近的若干场战斗，当前战斗结束时，currbattle会放入allbattle，sumbattle是allbattle中所有战斗的总计。
-数据处理模块的核心便是一场战斗的数据组织，它的主要成员在newbattle函数中说明了，但有一些细节需要说明一下，这里以友方造成伤害为例。
+## 数据组织和计算
+base.lua提供了三个全局变量，分别是currbattle，sumbattle，allbattle。
+currbattle表示当前战斗，allbattle是一个数组，包含最近的若干场战斗，
+当前战斗结束时，currbattle会放入allbattle，sumbattle是allbattle中所有战斗的总计。
+数据处理模块的核心便是一场战斗的数据组织，它的主要成员在newbattle函数中说明了，
+但还有一些细节需要说明，这里以友方造成伤害为例。
 ```
 total_wesend_damage=0,
 friend_send_damage={}, --友方造成伤害
@@ -131,20 +139,25 @@ name --目标名字
 damage --对该目标造成的总伤害
 ratio --对该目标造成的总伤害占该玩家造成总伤害的比例
 
-由于skillset需要按照伤害量排序并展示，但中间的计算过程中skillset以tid分组比较容易计算，所以调用cal_fsd_curr时，
+由于skillset需要按照伤害量排序并展示，但中间的计算过程中以tid分组比较容易计算，所以调用cal_fsd_curr时，
 会生成一个skillsort_NS成员，它是skillset的一个拷贝，并以伤害量从大到小进行了排序。这个成员不会存盘。
 同理也会生成targetsort_NS。
 
-以上是当前战斗的计算过程，对于从磁盘加载的历史战斗，是没有skillsort_NS的，
-在cal_fsd_old时会重新生成skillsort_NS和targetsort_NS。对于sumbattle更复杂一些，
-因为sumbattle不存盘，cal_fsd_sum会将历史战斗的fsd_summary进行合并，然后生成skillsort_NS和targetsort_NS。
+以上是当前战斗的计算过程，对于从磁盘加载的历史战斗，是没有skillsort_NS的，因为它是skillsort的一个冗余，没必要存盘。
+在cal_fsd_old时会重新生成skillsort_NS和targetsort_NS。对于sumbattle则更复杂一些，因为sumbattle不存盘，
+cal_fsd_sum会将历史战斗的fsd_summary进行合并，然后生成skillsort_NS和targetsort_NS。
 cal_fsd函数根据请求的是currbattle，sumbattle，还是其他历史战斗调用相应的函数。
 
-fsd_sort1是将fsd_summary拷贝后按伤害量进行排序，fsd_sort2是将fsd_summary拷贝后按每秒伤害进行排序，
-它们也不存盘，因为它们是fsd_summary的冗余，在cal_fsd函数中会重新进行计算。
+fsd_sort1将fsd_summary拷贝后按伤害量进行排序，fsd_sort2将fsd_summary拷贝后按每秒伤害进行排序，
+它们也不存盘，因为它们是fsd_summary的冗余，在cal_fsd函数中会重新进行计算，在有需要的时候。
 ```
 
+## 数据收集模块
+比较简单，不再介绍。
+
 ## 数据展示模块
+数据展示模块与具体界面联系比较紧密，代码不在这里，简单介绍下框架。
+
 ### 窗口
 窗口可能有多个，每个窗口都包含：
 widget 一个窗口绑定一个widget
