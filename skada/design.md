@@ -35,18 +35,19 @@ seconds2str | 将秒数转换为几时几分几秒的字符串 | 10
 dump | 将一个变量转换成字符串形式 | 10
 clone_array | 返回一个数组的简单拷贝（浅拷贝） | 10
 clone_table | 返回一个map的简单拷贝（浅拷贝） | 10
-trans_array | 将一个map转换为数组（浅拷贝） | 10
-trans_array_if | 将一个map中符合条件的元素放到数组中（浅拷贝） | 10
+trans_table | 将一个map转换为数组（浅拷贝） | 10
 reverse_array | 翻转一个数组 | 10
 queue | 实现了一个队列 | 20
 **port.lua** |
 getcampinfo | 获取与host的相对阵营 | 10
 isplayer | 判断是否是玩家 | 10
 is_self_or_teammate | 判断是否是自己或队友 | 10
+nowtime | 获取当前时间（秒） | 10
 isbaoji | 判断是否是暴击 | 10
-getroleoccu | 获取指定角色的职业 | 10
-getrolename | 获取指定角色的名字 | 10
-getnpcname | 获取指定npc的名字 | 10
+getroleinfo | 获取指定角色的名字和职业 | 10
+nullname | 某些时候获取角色名字失败时返回该值 | 10
+getroleinfo2  | 获取指定角色的名字和职业，如果找不到该角色则返回nullname和0 | 10
+getpawnname | 获取指定角色或npc的名字 | 10
 getskillname | 获取指定技能或buff的名字 | 10
 getrolemaxhp | 获取指定角色的最大血量 | 10
 getrivalinfo | 获取对方的等级、类型等信息 | 10
@@ -55,8 +56,10 @@ loaddata | 加载数据 | 10
 MAX_BATTLES | 最多保留战斗的场数 | 00
 MAX_DEATH_ACTIVITIES | 生前记录的最大数目 | 00
 **export.lua** |
-export_allbattle | 导出allbattle | 10
-import_allbattle | 导入allbattle | 10
+export_allbattle | 以lua格式导出allbattle | 10
+import_allbattle | 导入lua格式的allbattle | 10
+export_allbattle_json | 以json格式导出allbattle | 10
+import_allbattle_json | 导入json格式的allbattle | 10
 export_battle | 导出指定battle | 10
 **base.lua** |
 onlogin | 玩家登录时调用 | 11
@@ -64,6 +67,8 @@ begin_battle | 开始一场战斗时调用 | 11
 finish_battle | 结束一场战斗时调用 | 11
 add_damage_or_heal | 如果在一场战斗中，产生一条伤害或治疗时调用 | 11
 protect_battles | 将指定战斗置为保护状态 | 12
+protect_a_battle | 将指定战斗置为保护状态 | 12
+unprotect_a_battle | 将指定战斗置为非保护状态 | 12
 rm_a_battle | 删除一场战斗 | 12
 rm_all_battles | 尝试删除所有战斗 | 12
 **death.lua** |
@@ -71,8 +76,16 @@ add_death_activity | 为当前战斗添加一条血量增减事件 | 10
 finish_death_record | 整理当前战斗的死亡记录，在结束当前战斗时调用 | 10
 cal_death | 整理指定战斗的死亡记录 | 12
 **damage.lua** |
-cal_fsd_curr | 整理当前战斗的友方造成伤害记录 | 10
 cal_fsd | 整理指定战斗的友方造成伤害记录 | 12
+其他伤害记录... |
+cal_curr_damage | 整理当前战斗的友方/敌方的造成/受到伤害记录 | 10
+**heal.lua** |
+cal_weheal | 整理指定战斗的我方治疗记录 | 12
+cal_heheal | 整理指定战斗的敌方治疗记录 | 12
+cal_curr_heal | 整理当前战斗的我方和敌方治疗记录 | 10
+**json.lua** |
+encode | 将指定变量编码为json格式 | 10
+decode | 将json字符串解码为lua变量 | 10
 
 ## 一场战斗
 base.lua提供了三个全局变量，分别是currbattle，sumbattle，allbattle，currbattle表示当前战斗，allbattle是一个数组，包含最近的若干场战斗，当前战斗结束时，currbattle会放入allbattle，sumbattle是allbattle中所有战斗的总计。
