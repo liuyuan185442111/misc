@@ -3,6 +3,7 @@
 //一个不使用默认内存分配器的string和map
 
 #include <stddef.h>
+#include <stdlib.h>
 
 template <typename _Tp>
 class lalloc

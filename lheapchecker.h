@@ -2,8 +2,9 @@
 #define LHEAPCHECKER
 
 /** 一个简单的内存检测工具 需要gcc使用-rdynamic参数链接
- * 重载全局的perator new和perator delete
- * 定义一个全局的lheapchecker对象, 程序结束前调用其check方法, 即可得到未释放的内存
+ * 重载全局的operator new和operator delete,
+ * 定义一个全局的lheapchecker对象, 程序结束前调用其dumpto方法,
+ * 即可得到未释放的内存是在何处分配的, 例如:
 lheapchecker checker;
 void *operator new(size_t n)
 {
@@ -16,23 +17,31 @@ void operator delete(void *p)
 }
 */
 
-#include <execinfo.h>
 #include "lalloc.h"
-#include <iostream>
+#include <execinfo.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <vector>
 
 class lheapchecker
 {
-	lmap<void*, int> call_counter;
-	lmap<void*, int*> addr_caller;
-	lmap<void*, lstring> cache;
+public:
+	lheapchecker(bool open = true, bool loney = true)
+		: isopen(open), get_symbol_lonely(loney), symbols_per_time(0) {}
+	void open() { isopen = true; }
+	void close() { isopen = false; }
+	void set_symbols_per_time(size_t n) { symbols_per_time = n; }
+
+private:
+	lmap<void*, int> call_counter;//function address, counter
+	lmap<void*, int*> addr_caller;//memory, counter pointer
+	lmap<void*, lstring> cache;//function address, function address string
 	bool isopen;
 	bool get_symbol_lonely;//即时获取symbol
 	size_t symbols_per_time;//一次获取几个symbols
 
-	//获取所有symbols
+	//一个一个的获取所有symbols
 	void symbols()
 	{
 		for(lmap<void*, int>::iterator it = call_counter.begin(), ie = call_counter.end(); it != ie; ++it)
@@ -41,7 +50,6 @@ class lheapchecker
 			{
 				void* temp[1] = {it->first};
 				char ** stacktrace = backtrace_symbols(temp, 1);
-				//应用于部分动态库会崩溃, 不知为何
 				if(strstr(stacktrace[0], ".so("))
 				{
 					free(stacktrace);
@@ -53,6 +61,7 @@ class lheapchecker
 			}
 		}
 	}
+	//获取n个symbols, 返回是否已经处理完毕
 	bool _symbol(size_t n)
 	{
 		if(n == 0) n=1;
@@ -77,10 +86,10 @@ class lheapchecker
 			}
 			free(stacktrace);
 		}
-		//返回是否已经处理完毕
 		//碰到恰好处理完毕call_counter的情况,那就再调用一次该函数
 		return n>0;
 	}
+	//n个n个的获取所有symbols
 	void symbols(size_t n)
 	{
 		bool status = isopen;
@@ -90,11 +99,6 @@ class lheapchecker
 	}
 
 public:
-	lheapchecker(bool open = true, bool loney = true)
-		: isopen(open), get_symbol_lonely(loney), symbols_per_time(0) {}
-	void open() { isopen = true; }
-	void close() { isopen = false; }
-	void set_symbols_per_time(size_t n) { symbols_per_time = n; }
 	void* call(void *addr)
 	{
 		if(!isopen) return addr;
