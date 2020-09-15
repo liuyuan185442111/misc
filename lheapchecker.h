@@ -29,51 +29,10 @@ class lheapchecker
 	lmap<void*, int*> addr_caller;
 	lmap<void*, lstring> cache;
 	bool isopen;
+	bool get_symbol_lonely;//即时获取symbol
+	size_t symbols_per_time;//一次获取几个symbols
 
-public:
-	lheapchecker(bool open = true) : isopen(open){}
-	void open() { isopen = true; }
-	void close() { isopen = false; }
-	void* call(void *addr)
-	{
-		if(!isopen) return addr;
-		void* buffer[3];
-		int stack_num = backtrace(buffer, 3);
-		if(stack_num < 3)
-		{
-			puts("lheapchecker backtrace error");
-			return NULL;
-		}
-
-		/*
-		if(cache.find(buffer[2]) == cache.end())
-		{
-			void* temp[1] = {buffer[2]};
-			char ** stacktrace = backtrace_symbols(temp, 1);
-			//应用于部分动态库会崩溃, 不知为何
-			if(strstr(stacktrace[0], ".so("))
-			{
-				free(stacktrace);
-				return addr;
-			}
-			cache[buffer[2]] = stacktrace[0];
-			free(stacktrace);
-		}
-		*/
-
-		int *pnum = &call_counter[buffer[2]];
-		++*pnum;
-		addr_caller[addr] = pnum;
-
-		return addr;
-	}
-	void uncall(void *addr)
-	{
-		lmap<void*, int*>::iterator iter = addr_caller.find(addr);
-		if(iter != addr_caller.end())
-			--*iter->second;
-	}
-
+	//获取所有symbols
 	void symbols()
 	{
 		for(lmap<void*, int>::iterator it = call_counter.begin(), ie = call_counter.end(); it != ie; ++it)
@@ -94,9 +53,97 @@ public:
 			}
 		}
 	}
+	bool _symbol(size_t n)
+	{
+		if(n == 0) n=1;
+		std::vector<void*> temp;
+		temp.reserve(n);
+		for(lmap<void*, int>::iterator it = call_counter.begin(), ie = call_counter.end(); n > 0 && it != ie; ++it)
+		{
+			if(cache.find(it->first) == cache.end())
+			{
+				--n;
+				temp.push_back(it->first);
+			}
+		}
+		if(!temp.empty())
+		{
+			char ** stacktrace = backtrace_symbols(&temp[0], temp.size());
+			for(int i=temp.size()-1; i>=0; --i)
+			{
+				if(strstr(stacktrace[i], ".so("))
+					continue;
+				cache[temp[i]] = stacktrace[i];
+			}
+			free(stacktrace);
+		}
+		//返回是否已经处理完毕
+		//碰到恰好处理完毕call_counter的情况,那就再调用一次该函数
+		return n>0;
+	}
+	void symbols(size_t n)
+	{
+		bool status = isopen;
+		isopen = false;
+		while(!_symbol(n));
+		isopen = status;
+	}
+
+public:
+	lheapchecker(bool open = true, bool loney = true)
+		: isopen(open), get_symbol_lonely(loney), symbols_per_time(0) {}
+	void open() { isopen = true; }
+	void close() { isopen = false; }
+	void set_symbols_per_time(size_t n) { symbols_per_time = n; }
+	void* call(void *addr)
+	{
+		if(!isopen) return addr;
+		void* buffer[3];
+		int stack_num = backtrace(buffer, 3);
+		if(stack_num < 3)
+		{
+			puts("lheapchecker backtrace error");
+			return NULL;
+		}
+
+		if(get_symbol_lonely)
+		{
+			if(cache.find(buffer[2]) == cache.end())
+			{
+				void* temp[1] = {buffer[2]};
+				char ** stacktrace = backtrace_symbols(temp, 1);
+				//应用于部分动态库会崩溃, 不知为何
+				if(strstr(stacktrace[0], ".so("))
+				{
+					free(stacktrace);
+					return addr;
+				}
+				cache[buffer[2]] = stacktrace[0];
+				free(stacktrace);
+			}
+		}
+
+		int *pnum = &call_counter[buffer[2]];
+		++*pnum;
+		addr_caller[addr] = pnum;
+
+		return addr;
+	}
+	void uncall(void *addr)
+	{
+		lmap<void*, int*>::iterator iter = addr_caller.find(addr);
+		if(iter != addr_caller.end())
+			--*iter->second;
+	}
 	void dumpto(int fd = 1)
 	{
-		symbols();
+		if(!get_symbol_lonely)
+		{
+			if(symbols_per_time < 2)
+				symbols();
+			else
+				symbols(symbols_per_time);
+		}
 		for(lmap<void*, int>::iterator it = call_counter.begin(), ie = call_counter.end(); it != ie; ++it)
 		{
 			if(it->second != 0)
