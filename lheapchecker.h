@@ -5,14 +5,20 @@
  * 重载全局的operator new和operator delete,
  * 定义一个全局的lheapchecker对象, 程序结束前调用其dumpto方法,
  * 即可得到未释放的内存是在何处分配的, 例如:
-lheapchecker checker;
+//checker不定义成全局变量是因为, 其他全局变量如果更早的构造,
+//且调用了new, 则会使用未初始化的checker
+lheapchecker &checker()
+{
+	static lheapchecker checker;
+	return checker;
+}
 void *operator new(size_t n)
 {
-	return checker.call(malloc(n));
+	return checker().call(malloc(n));
 }
 void operator delete(void *p)
 {
-	checker.uncall(p);
+	checker().uncall(p);
 	free(p);
 }
 */
@@ -50,12 +56,6 @@ private:
 			{
 				void* temp[1] = {it->first};
 				char ** stacktrace = backtrace_symbols(temp, 1);
-				if(strstr(stacktrace[0], ".so("))
-				{
-					free(stacktrace);
-					cache[it->first] = "so";
-					break;
-				}
 				cache[it->first] = stacktrace[0];
 				free(stacktrace);
 			}
@@ -80,8 +80,6 @@ private:
 			char ** stacktrace = backtrace_symbols(&temp[0], temp.size());
 			for(int i=temp.size()-1; i>=0; --i)
 			{
-				if(strstr(stacktrace[i], ".so("))
-					continue;
 				cache[temp[i]] = stacktrace[i];
 			}
 			free(stacktrace);
@@ -116,12 +114,6 @@ public:
 			{
 				void* temp[1] = {buffer[2]};
 				char ** stacktrace = backtrace_symbols(temp, 1);
-				//应用于部分动态库会崩溃, 不知为何
-				if(strstr(stacktrace[0], ".so("))
-				{
-					free(stacktrace);
-					return addr;
-				}
 				cache[buffer[2]] = stacktrace[0];
 				free(stacktrace);
 			}
