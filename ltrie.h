@@ -14,11 +14,10 @@ struct TrieNode
 {
 	char value;
 	bool isleaf = false;
-	//std::unordered_map<char, TrieNode*> children;
-	std::map<char, TrieNode*> children;
+	std::unordered_map<char, TrieNode*> children;
 	TrieNode *parent;//用于回溯和删除
 	TrieNode *fail = nullptr;
-	TrieNode() : value(0), parent(nullptr){}
+	TrieNode() : value('^'), parent(nullptr){}
 	TrieNode(char v, TrieNode* p) : value(v), parent(p){}
 };
 
@@ -70,6 +69,7 @@ static const TrieNode* find(const TrieNode *root, const std::string &str)
 	return root->isleaf ? root : nullptr;
 }
 
+//执行过del_str后fail指针需要rebuild
 static void del_str(const TrieNode *root, const std::string &str)
 {
 	if(TrieNode *target = const_cast<TrieNode*>(find(root, str)))
@@ -96,6 +96,7 @@ static void del_str(const TrieNode *root, const std::string &str)
 				return;
 			}
 		}
+		assert(target == root);
 	}
 }
 
@@ -107,6 +108,7 @@ static std::string backtrack(const TrieNode *node)
 		str.push_back(node->value);
 		node = node->parent;
 	} while(node);
+	str.pop_back();
 	std::reverse(str.begin(), str.end());
 	return std::move(str);
 }
@@ -124,7 +126,8 @@ static void bfs_trie(const TrieNode *root)
 		}
 		for(auto &child : root->children)
 		{
-			cout << "bfs " << child.first << endl;
+			cout << "bfs " << child.first << ",parent->" << child.second->parent->value
+				<< ",failto->" << backtrack(child.second->fail) << endl;
 			q.push(child.second);
 		}
 		q.pop();
@@ -144,6 +147,79 @@ static void free_trie(const TrieNode *root)
 		}
 		free((void*)root);
 		q.pop();
+	}
+}
+
+//Aho–Corasick Algorithm
+static void build_fail(const TrieNode *croot)
+{
+	TrieNode *root = const_cast<TrieNode*>(croot);
+	std::queue<TrieNode*> q;
+	//将根节点的所有孩子节点的fail指向根节点并插入队列
+	for(auto &child : root->children)
+	{
+		child.second->fail = root;
+		q.push(child.second);
+	}
+	while(!q.empty())
+	{
+		auto curr = q.front();
+		for(auto &child : curr->children)
+		{
+			//判断每个孩子节点的值是否与其failto节点的某孩子节点的值相等
+			auto failto = curr->fail;
+			while(true)
+			{
+				auto iter = failto->children.find(child.first);
+				if(iter != failto->children.end())
+				{
+					//如找到值相等的孩子节点, 更新fail指针
+					child.second->fail = iter->second;
+					break;
+				}
+				//否则尝试继续找failto的fail节点, 直到root
+				if(!failto->fail)
+				{
+					assert(failto == root);
+					child.second->fail = root;
+					break;
+				}
+				failto = failto->fail;
+			}
+			q.push(child.second);
+		}
+		q.pop();
+	}
+}
+
+static void match_str(const TrieNode *root, const std::string &str)
+{
+	const TrieNode *curr = root;
+	for(auto c : str)
+	{
+		while(true)
+		{
+			auto iter = curr->children.find(c);
+			if(iter != curr->children.end())
+			{
+				//当前节点的孩子节点中有所找字符
+				curr = iter->second;
+				//判断孩子节点是不是叶子节点
+				if(curr->isleaf)
+					printf("%s\n", backtrack(curr).data());
+				//判断孩子节点的fail节点是不是叶子节点
+				if(curr->fail->isleaf)
+					printf("%s\n", backtrack(curr->fail).data());
+				break;
+			}
+			if(curr->fail)
+				curr = curr->fail;
+			else
+			{
+				curr = root;
+				break;
+			}
+		}
 	}
 }
 
