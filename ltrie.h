@@ -6,6 +6,12 @@
 #include <unordered_map>
 #include <queue>
 #include <utility>
+#include <assert.h>
+
+/**一个AC自动机的实现, 用于多模式字符串的匹配.
+顺便支持了trie的删除操作, 但由于删除可能会导致fail指针失效, 所以不应与AC自动机混合使用.
+参考自 https://www.cnblogs.com/nullzx/p/7499397.html
+*/
 
 struct ltrie
 {
@@ -204,12 +210,13 @@ static void match_str(const TrieNode *root, const std::string &str)
 			{
 				//当前节点的孩子节点中有所找字符
 				curr = iter->second;
+				//注: backtrack(curr->fail)是backtrack(curr)的后缀
 				//判断孩子节点是不是叶子节点
 				if(curr->isleaf)
-					printf("%s\n", backtrack(curr).data());
+					cout << backtrack(curr) << endl;
 				//判断孩子节点的fail节点是不是叶子节点
 				if(curr->fail->isleaf)
-					printf("%s\n", backtrack(curr->fail).data());
+					cout << backtrack(curr->fail) << endl;
 				break;
 			}
 			if(curr->fail)
