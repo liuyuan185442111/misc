@@ -11,6 +11,15 @@
 /**一个AC自动机的实现, 用于多模式字符串的匹配.
 顺便支持了trie的删除操作, 但由于删除可能会导致fail指针失效, 所以不应与AC自动机混合使用.
 参考自 https://www.cnblogs.com/nullzx/p/7499397.html
+
+eg:
+	auto root = ltrie::init_trie();
+	std::string strs[] = {"abd", "abdk", "abchijn", "chnit", "ijabdf", "ijaij"};
+	for(const auto &str : strs)
+		ltrie::add_str(root, str);
+	ltrie::build_fail(root);
+	ltrie::match_str(root, "abchnijabdfk");
+	ltrie::free_trie(root);
 */
 
 struct ltrie
