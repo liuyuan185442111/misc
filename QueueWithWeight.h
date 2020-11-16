@@ -8,7 +8,7 @@
 
 using TIMETYPE = time_t;
 
-//©исцсзсно╥ее╤с
+//Е▐╞Г■╗Д╨▌Ф╦╦Ф┬▐Ф▌▓И≤÷
 template <typename T>
 class QueueWithWeight
 {
