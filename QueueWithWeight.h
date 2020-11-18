@@ -26,7 +26,7 @@ public:
 	TIMETYPE avgwaittime(unsigned index=0);
 	//获取本tick需要广播的数据, int为在本队列中的位次
 	//应以小于1秒的间隔周期调用
-	void tick(std::vector<std::vector<std::pair<T,int>>> notice);
+	void tick(std::vector<std::vector<std::pair<T,int>>> &notice);
 
 private:
 	using Queue = std::list<T>;
@@ -79,6 +79,77 @@ private:
 		} while(!q.empty());
 		return 0;
 	}
+	void _tick(TIMETYPE curtime)
+	{
+		bool hit_any = false;
+		for(auto &cfg : _config)
+		{
+			if(curtime - cfg.last_hit_time >= cfg.interval)
+			{
+				cfg.hit = true;
+				cfg.last_hit_time = curtime;
+				hit_any = true;
+			}
+			else
+			{
+				cfg.hit = false;
+			}
+		}
+		if(!hit_any) return;
+
+		int upbound;
+		for(auto iter = _config.crbegin(); iter != _config.crend(); ++iter)
+		{
+			if(iter->hit)
+			{
+				upbound = iter->upbound;
+				break;
+			}
+		}
+		cout << "upbound is " << upbound << endl;
+
+		for(size_t index=0; index<_queues.size(); ++index)
+		{
+			const auto &queue = _queues[index];
+			if(queue.empty()) continue;
+
+			auto iter = queue.begin();
+			int pos = 0;
+			for(const auto &cfg : _config)
+			{
+				if(cfg.upbound > upbound) break;
+				if(cfg.hit)
+				{
+					int diff = 0;
+					auto *pnotice = &_notice[curtime+diff];
+					int circle0 = std::ceil((float)cfg.num/cfg.interval);
+					cout << "circle0 is " << cfg.num << "/" << cfg.interval << "=" << circle0 << endl;
+					int circle = circle0;
+					int maxpos = std::min(cfg.upbound, (int)queue.size());
+					for(; pos<maxpos; ++pos,++iter)
+					{
+						cout << "pos " << pos << ", val " << *iter << ", diff " << diff << endl;
+						for(int k=pnotice->size(); k<=index; ++k)
+							pnotice->push_back(std::vector<std::pair<T,int>>());
+						(*pnotice)[index].emplace_back(*iter, pos);
+						if(--circle == 0)
+						{
+							circle = circle0;
+							++diff;
+							pnotice = &_notice[curtime+diff];
+						}
+					}
+					if(maxpos < cfg.upbound) break;
+				}
+				else
+				{
+					if((int)queue.size() < cfg.upbound) break;
+					std::advance(iter, cfg.num);
+					pos = cfg.upbound;
+				}
+			}
+		}
+	}
 
 	//portable
 	TIMETYPE _gettime() const
@@ -87,7 +158,7 @@ private:
 	}
 	unsigned _getnum() const
 	{
-		return 0;
+		return 2;
 	}
 };
 
@@ -116,6 +187,8 @@ QueueWithWeight<T>::QueueWithWeight(const std::vector<unsigned> &weights)
 	{
 		_config[i].num = _config[i].upbound - _config[i-1].upbound;
 	}
+	for(const auto &cfg : _config)
+		assert(cfg.num > 0);
 }
 template <typename T>
 size_t QueueWithWeight<T>::push(T t, unsigned index)
@@ -214,7 +287,7 @@ TIMETYPE QueueWithWeight<T>::avgwaittime(unsigned index)
 	return 1;
 }
 template <typename T>
-void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> notice)
+void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> &notice)
 {
 	static TIMETYPE curtime = 100;
 	++curtime;
@@ -232,81 +305,11 @@ void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> notice)
 		else break;
 	};
 
-
-	bool hit_any = false;
-	for(auto &cfg : _config)
-	{
-		if(curtime - cfg.last_hit_time >= cfg.interval)
-		{
-			cfg.hit = true;
-			cfg.last_hit_time = curtime;
-			hit_any = true;
-		}
-		else
-		{
-			cfg.hit = false;
-		}
-	}
-	if(!hit_any) return;
-
-	int upbound;
-	for(auto iter = _config.crbegin(); iter != _config.crend(); ++iter)
-	{
-		if(iter->hit)
-		{
-			upbound = iter->upbound;
-			break;
-		}
-	}
-	cout << "upbound is " << upbound << endl;
-
-	for(size_t index = 0; index < _queues.size(); ++index)
-	{
-		auto &queue = _queues[index];
-		if(queue.empty()) continue;
-		auto iter = queue.begin();
-		int counter = 0;
-		for(const auto &cfg : _config)
-		{
-			if(cfg.upbound > upbound) break;
-			if(cfg.hit)
-			{
-				//待优化
-				int diff = 0;
-				int circle = cfg.num/cfg.interval;
-				for(; counter < cfg.upbound; ++counter)
-				{
-					if(--circle == 0) ++diff;
-					for(int k = _notice[curtime+diff].size(); k < index; ++k)
-						_notice[curtime+diff].push_back(std::vector<std::pair<T,int>>());
-					_notice[curtime+diff][index].emplace_back(*iter, counter);
-					++iter;
-					if(iter == queue.end()) break;
-				}
-			}
-			else
-			{
-				if(counter + cfg.num < queue.size())
-				{
-					std::advance(iter, cfg.num);
-					counter += cfg.num;
-				}
-				else
-				{
-					//待优化
-					for(; counter < cfg.upbound; ++counter)
-					{
-						++iter;
-						if(iter == queue.end()) break;
-					}
-				}
-			}
-		}
-	}
-
+	_tick(curtime);
 
 	notice.clear();
 	if(_notice.empty()) return;
+	cout << "time " << curtime << " " << _notice.begin()->first << endl;
 	if(curtime >= _notice.begin()->first)
 	{
 		notice = std::move(_notice.begin()->second);
