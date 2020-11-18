@@ -23,7 +23,10 @@ public:
 	T pop();
 	void offline(T t);
 	void leave(T t);
-	void tick();
+	TIMETYPE avgwaittime(unsigned index=0);
+	//获取本tick需要广播的数据, int为在本队列中的位次
+	//应以小于1秒的间隔周期调用
+	void tick(std::vector<std::vector<std::pair<T,int>>> notice);
 
 private:
 	using Queue = std::list<T>;
@@ -40,6 +43,9 @@ private:
 	std::map<T, State> _all;
 	std::vector<unsigned> _weights;
 	std::vector<Queue> _queues;
+
+	TIMETYPE _last_tick_time = 0;
+	std::map<TIMETYPE, std::vector<std::vector<std::pair<T,int>>>> _notice;
 
 	T _pop_from_queue(int index)
 	{
@@ -181,8 +187,14 @@ void QueueWithWeight<T>::leave(T t)
 	}
 }
 template <typename T>
-void QueueWithWeight<T>::tick()
+TIMETYPE QueueWithWeight<T>::avgwaittime(unsigned index)
 {
+	return 1;
+}
+template <typename T>
+void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> notice)
+{
+	printf("QueueWithWeight::tick %lld\n", _gettime());
 	unsigned n = _getnum();
 	while(n--)
 	{
@@ -193,6 +205,77 @@ void QueueWithWeight<T>::tick()
 		}
 		else break;
 	};
+
+
+	struct Config
+	{
+		int num;
+		int upbound;
+		int interval;
+		TIMETYPE last_hit_time;
+		bool hit;
+	};
+	std::vector<Config> _config;
+
+	TIMETYPE curtime = _gettime();
+	bool hit_any = false;
+	for(auto &cfg : _config)
+	{
+		if(curtime - cfg.last_hit_time >= cfg.interval)
+		{
+			cfg.hit = true;
+			cfg.last_hit_time = curtime;
+			hit_any = true;
+		}
+		else
+		{
+			cfg.hit = false;
+		}
+	}
+	if(!hit_any) return;
+
+	int upbound;
+	for(auto iter = _config.crbegin(); iter != _config.crend(); ++iter)
+	{
+		if(iter->hit)
+		{
+			upbound = iter->upbound;
+			break;
+		}
+	}
+
+	for(auto &queue : _queues)
+	{
+		if(queue.empty()) continue;
+		auto iter = queue.begin();
+		int counter = 0;
+		for(auto &cfg : _config)
+		{
+			if(cfg.upbound > upbound) break;
+			if(cfg.hit)
+			{
+				for(; counter < cfg.upbound; ++counter)
+				{
+					++iter;
+					//do something
+				}
+			}
+			else
+			{
+				std::advance(iter, cfg.num);
+				counter += cfg.num;
+			}
+		}
+	}
+
+
+	notice.clear();
+	if(_notice.empty()) return;
+	if(_gettime() >= _notice.begin()->first)
+	{
+		notice = std::move(_notice.begin()->second);
+		_notice.erase(_notice.begin());
+	}
 }
 
 #endif // QUEUEWITHWEIGHT_H
