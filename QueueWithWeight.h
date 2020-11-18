@@ -44,6 +44,15 @@ private:
 	std::vector<unsigned> _weights;
 	std::vector<Queue> _queues;
 
+	struct Config
+	{
+		int upbound;
+		int interval;
+		int num;
+		TIMETYPE last_hit_time = 0;
+		bool hit;
+	};
+	std::vector<Config> _config;
 	TIMETYPE _last_tick_time = 0;
 	std::map<TIMETYPE, std::vector<std::vector<std::pair<T,int>>>> _notice;
 
@@ -78,7 +87,7 @@ private:
 	}
 	unsigned _getnum() const
 	{
-		return 1;
+		return 0;
 	}
 };
 
@@ -94,11 +103,24 @@ QueueWithWeight<T>::QueueWithWeight(const std::vector<unsigned> &weights)
 		_weights = weights;
 		_queues.assign(weights.size(), Queue());
 	}
+
+	_config.assign(2, Config());
+	_config[0].upbound = 3;
+	_config[0].interval = 2;
+	_config[1].upbound = 14;
+	_config[1].interval = 10;
+
+	if(!_config.empty())
+		_config[0].num = _config[0].upbound;
+	for(size_t i=1; i<_config.size(); ++i)
+	{
+		_config[i].num = _config[i].upbound - _config[i-1].upbound;
+	}
 }
 template <typename T>
 size_t QueueWithWeight<T>::push(T t, unsigned index)
 {
-	if(index >= _queues.size())
+	if(index >= (unsigned)_queues.size())
 		return 0;
 	auto iter = _all.find(t);
 	State *pval;
@@ -157,7 +179,7 @@ T QueueWithWeight<T>::pop()
 		else
 			weight_sum += weights[i-1];
 	}
-	int pos = rand() % weight_sum;
+	unsigned pos = rand() % weight_sum;
 	for(auto i=weights.size(); i; --i)
 	{
 		if(weights[i-1] > pos)
@@ -194,8 +216,12 @@ TIMETYPE QueueWithWeight<T>::avgwaittime(unsigned index)
 template <typename T>
 void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> notice)
 {
-	printf("QueueWithWeight::tick %lld\n", _gettime());
-	unsigned n = _getnum();
+	static TIMETYPE curtime = 100;
+	++curtime;
+	//auto curtime = _gettime();
+
+	printf("QueueWithWeight::tick %lld\n", curtime);
+	auto n = _getnum();
 	while(n--)
 	{
 		T t = pop();
@@ -207,17 +233,6 @@ void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> notice)
 	};
 
 
-	struct Config
-	{
-		int num;
-		int upbound;
-		int interval;
-		TIMETYPE last_hit_time;
-		bool hit;
-	};
-	std::vector<Config> _config;
-
-	TIMETYPE curtime = _gettime();
 	bool hit_any = false;
 	for(auto &cfg : _config)
 	{
@@ -243,27 +258,48 @@ void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> notice)
 			break;
 		}
 	}
+	cout << "upbound is " << upbound << endl;
 
-	for(auto &queue : _queues)
+	for(size_t index = 0; index < _queues.size(); ++index)
 	{
+		auto &queue = _queues[index];
 		if(queue.empty()) continue;
 		auto iter = queue.begin();
 		int counter = 0;
-		for(auto &cfg : _config)
+		for(const auto &cfg : _config)
 		{
 			if(cfg.upbound > upbound) break;
 			if(cfg.hit)
 			{
+				//待优化
+				int diff = 0;
+				int circle = cfg.num/cfg.interval;
 				for(; counter < cfg.upbound; ++counter)
 				{
+					if(--circle == 0) ++diff;
+					for(int k = _notice[curtime+diff].size(); k < index; ++k)
+						_notice[curtime+diff].push_back(std::vector<std::pair<T,int>>());
+					_notice[curtime+diff][index].emplace_back(*iter, counter);
 					++iter;
-					//do something
+					if(iter == queue.end()) break;
 				}
 			}
 			else
 			{
-				std::advance(iter, cfg.num);
-				counter += cfg.num;
+				if(counter + cfg.num < queue.size())
+				{
+					std::advance(iter, cfg.num);
+					counter += cfg.num;
+				}
+				else
+				{
+					//待优化
+					for(; counter < cfg.upbound; ++counter)
+					{
+						++iter;
+						if(iter == queue.end()) break;
+					}
+				}
 			}
 		}
 	}
@@ -271,7 +307,7 @@ void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> notice)
 
 	notice.clear();
 	if(_notice.empty()) return;
-	if(_gettime() >= _notice.begin()->first)
+	if(curtime >= _notice.begin()->first)
 	{
 		notice = std::move(_notice.begin()->second);
 		_notice.erase(_notice.begin());
