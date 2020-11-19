@@ -7,6 +7,18 @@
 #include <assert.h>
 
 using TIMETYPE = time_t;
+namespace {
+TIMETYPE _gettime()
+{
+	return time(nullptr);
+}
+//每次tick出队数量
+unsigned _getnum()
+{
+	return 10;
+}
+}
+
 //掉线保留时间
 static constexpr int DEFAULT_OVERTIME = 30;
 //开始进行出队时间统计的队伍大小
@@ -21,9 +33,9 @@ public:
 	QueueWithWeight(const std::vector<unsigned> &weights={});
 	//返回的是所在队列的人数
 	size_t push(T t, unsigned index=0);
+	T pop();
 	bool empty();
 	size_t size();
-	T pop();
 	void offline(T t);
 	void leave(T t);
 	TIMETYPE avgwaittime(unsigned index=0);
@@ -69,6 +81,7 @@ private:
 			--size;
 		}
 	};
+	unsigned _size;
 	std::vector<Queue> _queues;
 
 	struct Config
@@ -85,10 +98,32 @@ private:
 	struct TimeStat
 	{
 		TIMETYPE first_blood = 0;
-		int sum_time;
-		int sum_count;
-		TIMETYPE begin_time;
-		int cur_count;
+		int sum_time = 0;
+		int sum_count = 0;
+		TIMETYPE begin_time = 0;
+		int cur_count = 1;
+		void begin() { begin_time = first_blood; }
+		void onpop(bool end)
+		{
+			if(!begin_time) return;
+			++cur_count;
+			if(end)
+			{
+				sum_time += _gettime() - begin_time;
+				sum_count += cur_count;
+				first_blood = 0;
+				begin_time = 0;
+				cur_count = 1;
+			}
+		}
+		int avg()
+		{
+			if(begin_time)
+				return (_gettime() - begin_time + sum_time) / (sum_count + cur_count);
+			if(sum_time)
+				return sum_time / cur_count;
+			return 0;
+		}
 	};
 	std::vector<TimeStat> _time_stat;
 
@@ -141,9 +176,9 @@ private:
 				break;
 			}
 		}
-		cout << "upbound is " << upbound << endl;
+		//cout << "upbound is " << upbound << endl;
 
-		for(size_t index=0; index<_queues.size(); ++index)
+		for(unsigned index=0; index<_size; ++index)
 		{
 			const auto &queue = _queues[index];
 			if(queue.empty()) continue;
@@ -185,16 +220,6 @@ private:
 			}
 		}
 	}
-
-	//portable
-	TIMETYPE _gettime() const
-	{
-		return time(nullptr);
-	}
-	unsigned _getnum() const
-	{
-		return 10;
-	}
 };
 
 template <typename T>
@@ -202,15 +227,17 @@ QueueWithWeight<T>::QueueWithWeight(const std::vector<unsigned> &weights)
 {
 	if(weights.size() < 2)
 	{
+		_size = 1;
 		_queues.emplace_back(Queue());
 		_time_stat.push_back(TimeStat());
 	}
 	else
 	{
-		_queues.assign(weights.size(), Queue());
-		for(size_t i=0; i<weights.size(); ++i)
+		_size = weights.size();
+		_queues.assign(_size, Queue());
+		for(unsigned i=0; i<_size; ++i)
 			_queues[i].weight = weights[i];
-		_time_stat.assign(weights.size(), TimeStat());
+		_time_stat.assign(_size, TimeStat());
 	}
 
 	_config.assign(5, Config());
@@ -237,7 +264,7 @@ QueueWithWeight<T>::QueueWithWeight(const std::vector<unsigned> &weights)
 template <typename T>
 size_t QueueWithWeight<T>::push(T t, unsigned index)
 {
-	if(index >= (unsigned)_queues.size())
+	if(index >= _size)
 		return 0;
 	auto iter = _all.find(t);
 	State *pval;
@@ -264,7 +291,52 @@ size_t QueueWithWeight<T>::push(T t, unsigned index)
 	if(_queues[index].push(t) == 1)
 		_time_stat[index].first_blood = _gettime();
 	*pval = State(index, --_queues[index].queue.end());
-	return _queues[index].size;
+	auto size = _queues[index].size;
+	if(size > TIME_STATISTICS_THRESHOLD)
+		_time_stat[index].begin();
+	return size;
+}
+template <typename T>
+T QueueWithWeight<T>::pop()
+{
+	if(empty()) return 0;
+	if(_size == 1)
+	{
+		T t = _pop_from_queue(0);
+		if(t>0)
+		{
+			_time_stat[0].onpop(_queues[0].empty());
+			return t;
+		}
+		return pop();
+	}
+	std::vector<unsigned> weights(_size);
+	for(size_t i=0; i<weights.size(); ++i)
+		weights[i] = _queues[i].weight;
+	unsigned weight_sum = 0;
+	for(auto i=_size; i; --i)
+	{
+		if(_queues[i-1].empty())
+			weights[i-1] = 0;
+		else
+			weight_sum += weights[i-1];
+	}
+	unsigned pos = rand() % weight_sum;
+	for(auto i=weights.size(); i; --i)
+	{
+		if(weights[i-1] > pos)
+		{
+			T t = _pop_from_queue(i-1);
+			if(t>0)
+			{
+				_time_stat[i-1].onpop(_queues[i-1].empty());
+				return t;
+			}
+			return pop();
+		}
+		pos -= weights[i-1];
+	}
+	return 0;
 }
 template <typename T>
 bool QueueWithWeight<T>::empty()
@@ -280,43 +352,11 @@ template <typename T>
 size_t QueueWithWeight<T>::size()
 {
 	size_t s = 0;
-	for(auto q : _queues)
+	for(const auto &q : _queues)
 	{
 		s += q.size;
 	}
 	return s;
-}
-template <typename T>
-T QueueWithWeight<T>::pop()
-{
-	if(empty()) return 0;
-	if(_queues.size() == 1)
-	{
-		T t = _pop_from_queue(0);
-		return t>0 ? t : pop();
-	}
-	std::vector<unsigned> weights(_queues.size());
-	for(int i=0; i<weights.size(); ++i)
-		weights[i] = _queues[i].weight;
-	unsigned weight_sum = 0;
-	for(auto i=_queues.size(); i; --i)
-	{
-		if(_queues[i-1].empty())
-			weights[i-1] = 0;
-		else
-			weight_sum += weights[i-1];
-	}
-	unsigned pos = rand() % weight_sum;
-	for(auto i=weights.size(); i; --i)
-	{
-		if(weights[i-1] > pos)
-		{
-			T t = _pop_from_queue(i-1);
-			return t>0 ? t : pop();
-		}
-		pos -= weights[i-1];
-	}
-	return 0;
 }
 template <typename T>
 void QueueWithWeight<T>::offline(T t)
@@ -338,14 +378,18 @@ void QueueWithWeight<T>::leave(T t)
 template <typename T>
 TIMETYPE QueueWithWeight<T>::avgwaittime(unsigned index)
 {
-	return 1;
+	if(index >= _size)
+		return -1;
+	return _time_stat[index].avg();
 }
 template <typename T>
 void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> &notice)
 {
+	/* for test
 	static TIMETYPE curtime = 100;
 	++curtime;
-	//auto curtime = _gettime();
+	*/
+	auto curtime = _gettime();
 
 	printf("QueueWithWeight::tick %lld\n", curtime);
 	auto n = _getnum();
@@ -354,7 +398,7 @@ void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> &notice
 		T t = pop();
 		if(t)
 		{
-			printf("pop %u\n", t);
+			printf("QueueWithWeight::pop %u\n", t);
 		}
 		else break;
 	};
@@ -369,5 +413,45 @@ void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> &notice
 		_notice.erase(_notice.begin());
 	}
 }
+
+/* test
+	QueueWithWeight<int> q({1,2,4,8});
+	for(int i=1;i<=100000;++i)
+	{
+		q.push(100000+i, 0);
+	}
+	cout << "q's size " << q.size() << endl << endl;
+	for(int i=1;i<=10000;++i)
+	{
+		q.push(2000000+i, 1);
+	}
+	cout << "q's size " << q.size() << endl << endl;
+	for(int i=1;i<=1000;++i)
+	{
+		q.push(3000000+i, 2);
+	}
+	cout << "q's size " << q.size() << endl << endl;
+	for(int i=1;i<=100;++i)
+	{
+		q.push(4000000+i, 3);
+	}
+	cout << "q's size " << q.size() << endl << endl;
+
+	std::vector<std::vector<std::pair<int, int>>> r;
+	for(int i=1;i<=100000000;++i)
+	{
+		q.tick(r);
+		for(const auto &ra : r)
+		{
+			for(const auto &rb : ra)
+			{
+				cout << "role " << rb.first << ", no. " << rb.second << endl;
+			}
+		}
+		cout << endl;
+		if(q.size() == 0) break;
+	}
+	assert(q.empty());
+*/
 
 #endif // QUEUEWITHWEIGHT_H
