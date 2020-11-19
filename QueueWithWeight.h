@@ -17,6 +17,7 @@ class QueueWithWeight
 {
 public:
 	QueueWithWeight(const std::vector<unsigned> &weights={});
+	//返回的是所在队列的人数
 	size_t push(T t, unsigned index=0);
 	bool empty();
 	size_t size();
@@ -24,7 +25,7 @@ public:
 	void offline(T t);
 	void leave(T t);
 	TIMETYPE avgwaittime(unsigned index=0);
-	//获取本tick需要广播的数据, int为在本队列中的位次
+	//获取本tick需要广播的数据, int为在本队列中的从0开始的位次
 	//应以小于1秒的间隔周期调用
 	void tick(std::vector<std::vector<std::pair<T,int>>> &notice);
 
@@ -43,6 +44,7 @@ private:
 	std::map<T, State> _all;
 	std::vector<unsigned> _weights;
 	std::vector<Queue> _queues;
+	std::vector<int> _queues_size;
 
 	struct Config
 	{
@@ -60,10 +62,12 @@ private:
 	{
 		T t;
 		auto &q = _queues[index];
+		int &size = _queues_size[index];
 		do
 		{
 			t = q.front();
 			q.pop_front();
+			--size;
 			auto iter = _all.find(t);
 			if(iter != _all.end())
 			{
@@ -106,7 +110,7 @@ private:
 				break;
 			}
 		}
-		cout << "upbound is " << upbound << endl;
+		//cout << "upbound is " << upbound << endl;
 
 		for(size_t index=0; index<_queues.size(); ++index)
 		{
@@ -123,12 +127,12 @@ private:
 					int diff = 0;
 					auto *pnotice = &_notice[curtime+diff];
 					int circle0 = std::ceil((float)cfg.num/cfg.interval);
-					cout << "circle0 is " << cfg.num << "/" << cfg.interval << "=" << circle0 << endl;
 					int circle = circle0;
+					//cout << "circle is " << cfg.num << "/" << cfg.interval << "=" << circle << endl;
 					int maxpos = std::min(cfg.upbound, (int)queue.size());
 					for(; pos<maxpos; ++pos,++iter)
 					{
-						cout << "pos " << pos << ", val " << *iter << ", diff " << diff << endl;
+						//cout << "pos " << pos << ", val " << *iter << ", diff " << diff << endl;
 						for(int k=pnotice->size(); k<=index; ++k)
 							pnotice->push_back(std::vector<std::pair<T,int>>());
 						(*pnotice)[index].emplace_back(*iter, pos);
@@ -158,7 +162,7 @@ private:
 	}
 	unsigned _getnum() const
 	{
-		return 2;
+		return 10;
 	}
 };
 
@@ -168,18 +172,26 @@ QueueWithWeight<T>::QueueWithWeight(const std::vector<unsigned> &weights)
 	if(weights.size() < 2)
 	{
 		_queues.emplace_back(Queue());
+		_queues_size.push_back(0);
 	}
 	else
 	{
 		_weights = weights;
 		_queues.assign(weights.size(), Queue());
+		_queues_size.assign(weights.size(), 0);
 	}
 
 	_config.assign(2, Config());
-	_config[0].upbound = 3;
+	_config[0].upbound = 200;
 	_config[0].interval = 2;
-	_config[1].upbound = 14;
-	_config[1].interval = 10;
+	_config[1].upbound = 750;
+	_config[1].interval = 5;
+	_config[2].upbound = 2000;
+	_config[2].interval = 12;
+	_config[3].upbound = 5000;
+	_config[3].interval = 30;
+	_config[4].upbound = 10000;
+	_config[4].interval = 60;
 
 	if(!_config.empty())
 		_config[0].num = _config[0].upbound;
@@ -199,10 +211,16 @@ size_t QueueWithWeight<T>::push(T t, unsigned index)
 	State *pval;
 	if(iter != _all.end())
 	{
-		if(iter->second.offtime > 0 && _gettime() < iter->second.offtime + DEFAULT_OVERTIME)
+		if(iter->second.offtime == 0) return 0;
+		if(_gettime() < iter->second.offtime + DEFAULT_OVERTIME)
 		{
 			iter->second.offtime = 0;
-			return _queues[iter->second.index].size();
+			return 0;
+		}
+		else
+		{
+			_queues[iter->second.index].erase(iter->second.node);
+			--_queues_size[iter->second.index];
 		}
 		pval = &iter->second;
 	}
@@ -211,8 +229,9 @@ size_t QueueWithWeight<T>::push(T t, unsigned index)
 		pval = &_all[t];
 	}
 	_queues[index].push_back(t);
+	++_queues_size[index];
 	*pval = State(index, --_queues[index].end());
-	return _queues[index].size();
+	return _queues_size[index];
 }
 template <typename T>
 bool QueueWithWeight<T>::empty()
@@ -278,6 +297,7 @@ void QueueWithWeight<T>::leave(T t)
 	if(iter != _all.end())
 	{
 		_queues[iter->second.index].erase(iter->second.node);
+		--_queues_size[iter->second.index];
 		_all.erase(iter);
 	}
 }
@@ -309,7 +329,6 @@ void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> &notice
 
 	notice.clear();
 	if(_notice.empty()) return;
-	cout << "time " << curtime << " " << _notice.begin()->first << endl;
 	if(curtime >= _notice.begin()->first)
 	{
 		notice = std::move(_notice.begin()->second);
