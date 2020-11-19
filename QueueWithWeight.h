@@ -14,16 +14,16 @@ TIMETYPE _gettime()
 }
 }
 
-//掉线保留时间
-static constexpr int DEFAULT_OVERTIME = 30;
-//开始进行出队时间统计的队伍大小
-static constexpr int TIME_STATISTICS_THRESHOLD = 20;
-
 //可用于单线程游戏排队, 支持取消排队, 掉线重入
 //假定T为正数有效
 template <typename T>
 class QueueWithWeight
 {
+	//掉线保留时间
+	static constexpr int DEFAULT_OVERTIME = 30;
+	//开始进行出队时间统计的队伍大小
+	static constexpr int TIME_STATISTICS_THRESHOLD = 20;
+
 public:
 	QueueWithWeight(const std::vector<unsigned> &weights={});
 	//返回的是所在队列的人数
