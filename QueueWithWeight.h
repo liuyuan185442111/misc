@@ -9,8 +9,10 @@
 using TIMETYPE = time_t;
 //掉线保留时间
 static constexpr int DEFAULT_OVERTIME = 30;
+//开始进行出队时间统计的队伍大小
+static constexpr int TIME_STATISTICS_THRESHOLD = 20;
 
-//可用于游戏排队, 支持取消排队, 掉线重入
+//可用于单线程游戏排队, 支持取消排队, 掉线重入
 //假定T为正数有效
 template <typename T>
 class QueueWithWeight
@@ -32,6 +34,7 @@ public:
 private:
 	using Queue = std::list<T>;
 	using QueueNode = typename Queue::iterator;
+
 	struct State
 	{
 		unsigned index;
@@ -42,6 +45,7 @@ private:
 		State &operator=(State &&) = default;
 	};
 	std::map<T, State> _all;
+
 	std::vector<unsigned> _weights;
 	std::vector<Queue> _queues;
 	std::vector<int> _queues_size;
@@ -55,8 +59,17 @@ private:
 		bool hit;
 	};
 	std::vector<Config> _config;
-	TIMETYPE _last_tick_time = 0;
 	std::map<TIMETYPE, std::vector<std::vector<std::pair<T,int>>>> _notice;
+
+	struct TimeStat
+	{
+		TIMETYPE first_blood = 0;
+		int sum_time;
+		int sum_count;
+		TIMETYPE begin_time;
+		int cur_count;
+	};
+	std::vector<TimeStat> _time_stat;
 
 	T _pop_from_queue(int index)
 	{
@@ -110,7 +123,7 @@ private:
 				break;
 			}
 		}
-		//cout << "upbound is " << upbound << endl;
+		cout << "upbound is " << upbound << endl;
 
 		for(size_t index=0; index<_queues.size(); ++index)
 		{
@@ -173,25 +186,27 @@ QueueWithWeight<T>::QueueWithWeight(const std::vector<unsigned> &weights)
 	{
 		_queues.emplace_back(Queue());
 		_queues_size.push_back(0);
+		_time_stat.push_back(TimeStat());
 	}
 	else
 	{
 		_weights = weights;
 		_queues.assign(weights.size(), Queue());
 		_queues_size.assign(weights.size(), 0);
+		_time_stat.assign(weights.size(), TimeStat());
 	}
 
-	_config.assign(2, Config());
-	_config[0].upbound = 200;
-	_config[0].interval = 2;
-	_config[1].upbound = 750;
-	_config[1].interval = 5;
-	_config[2].upbound = 2000;
-	_config[2].interval = 12;
-	_config[3].upbound = 5000;
-	_config[3].interval = 30;
-	_config[4].upbound = 10000;
-	_config[4].interval = 60;
+	_config.assign(5, Config());
+	_config.at(0).upbound = 200;
+	_config.at(0).interval = 2;
+	_config.at(1).upbound = 750;
+	_config.at(1).interval = 5;
+	_config.at(2).upbound = 2000;
+	_config.at(2).interval = 12;
+	_config.at(3).upbound = 5000;
+	_config.at(3).interval = 30;
+	_config.at(4).upbound = 10000;
+	_config.at(4).interval = 60;
 
 	if(!_config.empty())
 		_config[0].num = _config[0].upbound;
@@ -214,11 +229,13 @@ size_t QueueWithWeight<T>::push(T t, unsigned index)
 		if(iter->second.offtime == 0) return 0;
 		if(_gettime() < iter->second.offtime + DEFAULT_OVERTIME)
 		{
+			//断线重入
 			iter->second.offtime = 0;
-			return 0;
+			return _queues_size[iter->second.index]/2+1;
 		}
 		else
 		{
+			//断线超时
 			_queues[iter->second.index].erase(iter->second.node);
 			--_queues_size[iter->second.index];
 		}
@@ -229,7 +246,8 @@ size_t QueueWithWeight<T>::push(T t, unsigned index)
 		pval = &_all[t];
 	}
 	_queues[index].push_back(t);
-	++_queues_size[index];
+	if(_queues_size[index]++ == 0)
+		_time_stat[index].first_blood = _gettime();
 	*pval = State(index, --_queues[index].end());
 	return _queues_size[index];
 }
@@ -247,9 +265,9 @@ template <typename T>
 size_t QueueWithWeight<T>::size()
 {
 	size_t s = 0;
-	for(const auto &q : _queues)
+	for(auto q : _queues_size)
 	{
-		s += q.size();
+		s += q;
 	}
 	return s;
 }
