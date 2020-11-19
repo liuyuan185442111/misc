@@ -4,7 +4,7 @@
 #include <vector>
 #include <list>
 #include <map>
-#include <set>
+#include <assert.h>
 
 using TIMETYPE = time_t;
 //掉线保留时间
@@ -32,8 +32,7 @@ public:
 	void tick(std::vector<std::vector<std::pair<T,int>>> &notice);
 
 private:
-	using Queue = std::list<T>;
-	using QueueNode = typename Queue::iterator;
+	using QueueNode = typename std::list<T>::iterator;
 
 	struct State
 	{
@@ -46,9 +45,31 @@ private:
 	};
 	std::map<T, State> _all;
 
-	std::vector<unsigned> _weights;
+	struct Queue
+	{
+		std::list<T> queue;
+		unsigned weight;
+		int size = 0;
+		bool empty() const { return queue.empty(); }
+		T pop()
+		{
+			T t = queue.front();
+			queue.pop_front();
+			--size;
+			return t;
+		}
+		size_t push(T t)
+		{
+			queue.push_back(t);
+			return ++size;
+		}
+		void erase(const typename std::list<T>::iterator &iter)
+		{
+			queue.erase(iter);
+			--size;
+		}
+	};
 	std::vector<Queue> _queues;
-	std::vector<int> _queues_size;
 
 	struct Config
 	{
@@ -75,12 +96,9 @@ private:
 	{
 		T t;
 		auto &q = _queues[index];
-		int &size = _queues_size[index];
 		do
 		{
-			t = q.front();
-			q.pop_front();
-			--size;
+			t = q.pop();
 			auto iter = _all.find(t);
 			if(iter != _all.end())
 			{
@@ -130,7 +148,7 @@ private:
 			const auto &queue = _queues[index];
 			if(queue.empty()) continue;
 
-			auto iter = queue.begin();
+			auto iter = queue.queue.begin();
 			int pos = 0;
 			for(const auto &cfg : _config)
 			{
@@ -142,7 +160,7 @@ private:
 					int circle0 = std::ceil((float)cfg.num/cfg.interval);
 					int circle = circle0;
 					//cout << "circle is " << cfg.num << "/" << cfg.interval << "=" << circle << endl;
-					int maxpos = std::min(cfg.upbound, (int)queue.size());
+					int maxpos = std::min(cfg.upbound, (int)queue.size);
 					for(; pos<maxpos; ++pos,++iter)
 					{
 						//cout << "pos " << pos << ", val " << *iter << ", diff " << diff << endl;
@@ -160,7 +178,7 @@ private:
 				}
 				else
 				{
-					if((int)queue.size() < cfg.upbound) break;
+					if((int)queue.size < cfg.upbound) break;
 					std::advance(iter, cfg.num);
 					pos = cfg.upbound;
 				}
@@ -185,14 +203,13 @@ QueueWithWeight<T>::QueueWithWeight(const std::vector<unsigned> &weights)
 	if(weights.size() < 2)
 	{
 		_queues.emplace_back(Queue());
-		_queues_size.push_back(0);
 		_time_stat.push_back(TimeStat());
 	}
 	else
 	{
-		_weights = weights;
 		_queues.assign(weights.size(), Queue());
-		_queues_size.assign(weights.size(), 0);
+		for(size_t i=0; i<weights.size(); ++i)
+			_queues[i].weight = weights[i];
 		_time_stat.assign(weights.size(), TimeStat());
 	}
 
@@ -231,13 +248,12 @@ size_t QueueWithWeight<T>::push(T t, unsigned index)
 		{
 			//断线重入
 			iter->second.offtime = 0;
-			return _queues_size[iter->second.index]/2+1;
+			return _queues[iter->second.index].size/2+1;
 		}
 		else
 		{
 			//断线超时
 			_queues[iter->second.index].erase(iter->second.node);
-			--_queues_size[iter->second.index];
 		}
 		pval = &iter->second;
 	}
@@ -245,11 +261,10 @@ size_t QueueWithWeight<T>::push(T t, unsigned index)
 	{
 		pval = &_all[t];
 	}
-	_queues[index].push_back(t);
-	if(_queues_size[index]++ == 0)
+	if(_queues[index].push(t) == 1)
 		_time_stat[index].first_blood = _gettime();
-	*pval = State(index, --_queues[index].end());
-	return _queues_size[index];
+	*pval = State(index, --_queues[index].queue.end());
+	return _queues[index].size;
 }
 template <typename T>
 bool QueueWithWeight<T>::empty()
@@ -265,9 +280,9 @@ template <typename T>
 size_t QueueWithWeight<T>::size()
 {
 	size_t s = 0;
-	for(auto q : _queues_size)
+	for(auto q : _queues)
 	{
-		s += q;
+		s += q.size;
 	}
 	return s;
 }
@@ -280,7 +295,9 @@ T QueueWithWeight<T>::pop()
 		T t = _pop_from_queue(0);
 		return t>0 ? t : pop();
 	}
-	std::vector<unsigned> weights(_weights);
+	std::vector<unsigned> weights(_queues.size());
+	for(int i=0; i<weights.size(); ++i)
+		weights[i] = _queues[i].weight;
 	unsigned weight_sum = 0;
 	for(auto i=_queues.size(); i; --i)
 	{
@@ -315,7 +332,6 @@ void QueueWithWeight<T>::leave(T t)
 	if(iter != _all.end())
 	{
 		_queues[iter->second.index].erase(iter->second.node);
-		--_queues_size[iter->second.index];
 		_all.erase(iter);
 	}
 }
