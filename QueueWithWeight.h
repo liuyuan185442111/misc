@@ -12,11 +12,6 @@ TIMETYPE _gettime()
 {
 	return time(nullptr);
 }
-//每次tick出队数量
-unsigned _getnum()
-{
-	return 10;
-}
 }
 
 //掉线保留时间
@@ -41,7 +36,7 @@ public:
 	TIMETYPE avgwaittime(unsigned index=0);
 	//获取本tick需要广播的数据, int为在本队列中的从0开始的位次
 	//应以小于1秒的间隔周期调用
-	void tick(std::vector<std::vector<std::pair<T,int>>> &notice);
+	void tick(unsigned popnum, std::vector<std::vector<std::pair<T,int>>> &notice);
 
 private:
 	using QueueNode = typename std::list<T>::iterator;
@@ -383,17 +378,15 @@ TIMETYPE QueueWithWeight<T>::avgwaittime(unsigned index)
 	return _time_stat[index].avg();
 }
 template <typename T>
-void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> &notice)
+void QueueWithWeight<T>::tick(unsigned popnum, std::vector<std::vector<std::pair<T,int>>> &notice)
 {
-	/* for test
+	//for test
 	static TIMETYPE curtime = 100;
 	++curtime;
-	*/
-	auto curtime = _gettime();
+	//auto curtime = _gettime();
 
 	printf("QueueWithWeight::tick %lld\n", curtime);
-	auto n = _getnum();
-	while(n--)
+	while(popnum--)
 	{
 		T t = pop();
 		if(t)
@@ -440,7 +433,7 @@ void QueueWithWeight<T>::tick(std::vector<std::vector<std::pair<T,int>>> &notice
 	std::vector<std::vector<std::pair<int, int>>> r;
 	for(int i=1;i<=100000000;++i)
 	{
-		q.tick(r);
+		q.tick(10, r);
 		for(const auto &ra : r)
 		{
 			for(const auto &rb : ra)
