@@ -35,7 +35,7 @@ public:
 	void leave(T t);
 	TIMETYPE avgwaittime(unsigned index=0);
 	//获取本tick需要广播的数据, int为在本队列中的从0开始的位次
-	//应以小于1秒的间隔周期调用
+	//应以不大于1秒的间隔周期调用
 	void tick(unsigned popnum, std::vector<std::vector<std::pair<T,int>>> &notice);
 
 private:
