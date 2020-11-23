@@ -92,31 +92,33 @@ private:
 
 	struct TimeStat
 	{
-		TIMETYPE first_blood = 0;
 		int sum_time = 0;
 		int sum_count = 0;
-		TIMETYPE begin_time = 0;
+		bool valid = false;
+		TIMETYPE first_time;
+		TIMETYPE last_time;
 		int cur_count = 1;
-		void begin() { begin_time = first_blood; }
 		void onpop(bool end)
 		{
-			if(!begin_time) return;
 			++cur_count;
+			last_time = _gettime();
 			if(end)
 			{
-				sum_time += _gettime() - begin_time;
-				sum_count += cur_count;
-				first_blood = 0;
-				begin_time = 0;
+			    if(valid)
+                {
+                    valid = false;
+                    sum_time += last_time - first_time;
+                    sum_count += cur_count;
+                }
 				cur_count = 1;
 			}
 		}
 		int avg()
 		{
-			if(begin_time)
-				return (_gettime() - begin_time + sum_time) / (sum_count + cur_count);
+			if(valid)
+				return (last_time - first_time + sum_time) / (sum_count + cur_count);
 			if(sum_time)
-				return sum_time / cur_count;
+				return sum_time / sum_count;
 			return 0;
 		}
 	};
@@ -284,11 +286,11 @@ size_t QueueWithWeight<T>::push(T t, unsigned index)
 		pval = &_all[t];
 	}
 	if(_queues[index].push(t) == 1)
-		_time_stat[index].first_blood = _gettime();
+		_time_stat[index].first_time = _gettime();
 	*pval = State(index, --_queues[index].queue.end());
 	auto size = _queues[index].size;
 	if(size > TIME_STATISTICS_THRESHOLD)
-		_time_stat[index].begin();
+		_time_stat[index].valid = true;
 	return size;
 }
 template <typename T>
