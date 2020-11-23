@@ -104,12 +104,12 @@ private:
 			last_time = _gettime();
 			if(end)
 			{
-			    if(valid)
-                {
-                    valid = false;
-                    sum_time += last_time - first_time;
-                    sum_count += cur_count;
-                }
+				if(valid)
+				{
+					valid = false;
+					sum_time += last_time - first_time;
+					sum_count += cur_count;
+				}
 				cur_count = 1;
 			}
 		}
