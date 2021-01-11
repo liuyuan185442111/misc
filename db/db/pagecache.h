@@ -52,9 +52,13 @@ public:
 	void* first_key(size_t &key_len);
 	//need free return pointer
 	void* next_key(const void *key, size_t &key_len);
+	//need free return pointer
+	void* last_key(size_t &key_len);
+	//need free return pointer
+	void* prev_key(const void *key, size_t &key_len);
 
 	template <typename T> void walk(T *query) { walk(left_most(root_index_page()), query); }
-	template <typename T> void walk(const void *key, size_t key_len, T *query) { walk(great_equal_key(key, key_len), query); }
+	template <typename T> void walk(const void *key, size_t key_len, T *query) { walk(greater_equal_key(key, key_len), query); }
 
 	Page** snapshot_reference(size_t &snapshot_size) { return hash.snapshot_reference(snapshot_size); }
 	void snapshot_create() { performance()->set_dirty_peak(hash.snapshot_create(&magic)); }
@@ -140,7 +144,11 @@ private:
 	index_hdr* left_most(Page *page);
 	index_hdr* next_index_header(index_hdr *cur);
 	index_hdr* greater_key(const void *key, size_t key_len);
-	index_hdr* great_equal_key(const void *key, size_t key_len);
+	index_hdr* greater_equal_key(const void *key, size_t key_len);
+	index_hdr* right_most(Page *page);
+	index_hdr* prev_index_header(index_hdr *cur);
+	index_hdr* less_key(const void *key, size_t key_len);
+	index_hdr* less_equal_key(const void *key, size_t key_len);
 
 	//----------walk
 	void walk(index_hdr *hdr, IQueryKey *query);

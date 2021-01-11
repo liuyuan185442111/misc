@@ -93,7 +93,7 @@ class PageBrowser
 		Page *page = hash.find(page_index);
 		if(!page) throw PageFile::Exception();
 		if(page->get_type() != DATA_PAGE) return NULL;
-		return page->layout_ptr()->data;
+		return page->layout_ptr()->_data;
 #endif
 	}
 

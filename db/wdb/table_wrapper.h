@@ -48,6 +48,29 @@ public:
 	void del(const Octets &key) { db->del(key.begin(), key.size()); }
 	bool checkpoint() { return db->checkpoint(); }
 	size_t count() { return db->count(); }
+	bool last_key(Octets &key)
+	{
+		size_t len;
+		if(void* data = db->last_key(len))
+		{
+			Octets(data, len).swap(key);
+			free(data);
+			return true;
+		}
+		return false;
+	}
+	bool prev_key(const Octets &key, Octets &prev)
+	{
+		if(key.size() == 0) return false;
+		size_t len = key.size();
+		if(void *data = db->prev_key(key.begin(), len))
+		{
+			Octets(data, len).swap(prev);
+			free(data);
+			return true;
+		}
+		return false;
+	}
 };
 
 }

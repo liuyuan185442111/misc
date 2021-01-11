@@ -56,6 +56,14 @@ public:
 	{
 		return (char *)page_cache->next_key(key, key_len);
 	}
+	char* last_key(size_t& key_len)
+	{
+		return (char *)page_cache->last_key(key_len);
+	}
+	char* prev_key(const void* key, size_t& key_len)
+	{
+		return (char *)page_cache->prev_key(key, key_len);
+	}
 	size_t count() const
 	{
 		return page_cache->record_count();

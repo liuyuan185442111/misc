@@ -33,7 +33,7 @@ ifeq ($(single_thread),false)
 endif
 LDFLAGS = -pthread
 
-DEFINES += -DSAME_BYTE_ORDER -DDB_USE_MMAP
+#DEFINES += -DSAME_BYTE_ORDER -DDB_USE_MMAP
 LDFLAGS += -lsnappy
 
 DBSRC = $(COM_DIR)/octets.cpp $(COM_DIR)/conf.cpp $(COM_DIR)/split.cpp\

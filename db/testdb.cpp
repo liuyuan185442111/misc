@@ -356,11 +356,71 @@ void test_insert(size_t n)
 	tab.checkpoint();
 }
 
+//测试时需要屏蔽掉SAME_BYTE_ORDER宏
+void test_prev()
+{
+	std::set<int, std::greater<int> > keys;
+	std::vector<int> vec;
+	lcore::TableWrapper tab("prev", 20000, 10000);
+	for(int i=1; i<100000; ++i)
+	{
+		int t = (1 << 24) + i;
+		keys.insert(t);
+		vec.push_back(t);
+	}
+
+	random_shuffle(vec.begin(), vec.end());
+	for(std::vector<int>::iterator it=vec.begin();it!=vec.end();++it)
+	{
+		tab.insert((lcore::OctetsStream() << *it), (lcore::OctetsStream() << 3.1415**it));
+	}
+	tab.checkpoint();
+
+	cout << "there are " << tab.count() << " elements in table\n";
+	cout << "test begin...\n";
+
+	{
+	lcore::Octets prev;
+	ASSERT( !tab.prev_key((lcore::OctetsStream() << 0), prev) );
+	}
+	{
+	lcore::Octets prev;
+	tab.prev_key((lcore::OctetsStream() << (1 << 25)), prev);
+	lcore::OctetsStream oskey(prev);
+	int num;
+	oskey >> num;
+	ASSERT(num == (1 << 24) + 99999);
+	}
+
+	lcore::Octets okey;
+	tab.last_key(okey);
+	lcore::OctetsStream oskey(okey);
+	std::set<int, std::greater<int> >::iterator it=keys.begin();
+	int num;
+	oskey >> num;
+	ASSERT(num == *it);
+
+	lcore::Octets prev;
+	for(++it;it!=keys.end();++it)
+	{
+		tab.prev_key(okey, prev);
+		lcore::OctetsStream oskey(prev);
+		int num;
+		oskey >> num;
+		ASSERT(num == *it);
+		okey = prev;
+	}
+
+	cout << "test end\n";
+
+	tab.checkpoint();
+}
+
 int main(int argc, char **argv)
 {
 	if(argc == 1)
 	{
-		cout << argv[0] << " [through]|[bigkey]|[common count]|[insert count]" << endl;
+		cout << argv[0] << " [through]|[bigkey]|[common count]|[insert count]|[prev]" << endl;
 		return 0;
 	}
 
@@ -391,6 +451,10 @@ int main(int argc, char **argv)
 	{
 		int c = atoi(argv[2]);
 		test_insert(c);
+	}
+	else if(argc == 2 && strcmp(argv[1], "prev") == 0)
+	{
+		test_prev();
 	}
 
 	return 0;

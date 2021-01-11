@@ -273,6 +273,19 @@ void* PageCache::next_key(const void *key, size_t &key_len)
 	return NULL;
 }
 
+void* PageCache::last_key(size_t &key_len)
+{
+	index_hdr *hdr = right_most(root_index_page());
+	return hdr ? extract_key(hdr, key_len) : NULL;
+}
+
+void* PageCache::prev_key(const void *key, size_t &key_len)
+{
+	if(index_hdr *hdr = less_key(key, key_len))
+		return extract_key(hdr, key_len);
+	return NULL;
+}
+
 void PageCache::snapshot_release()
 {
 	Performance *perf = performance();
@@ -348,7 +361,7 @@ index_hdr* PageCache::find_key(const void *key, size_t key_len, int& pos)
 					hdr  += half + 1;
 				}
 				else if(pos < 0)
-					size  = half;
+					size = half;
 				else
 					return hdr + half;
 			} while(size);
@@ -376,6 +389,14 @@ index_hdr* PageCache::left_most(Page *page)
 	while(bgn->l_child())
 		bgn = Rload_page(bgn->l_child())->index_left();
 	return bgn < Header2Page(bgn)->index_right() ? bgn : NULL;
+}
+
+index_hdr* PageCache::right_most(Page *page)
+{
+	index_hdr *edn = page->index_right();
+	while(edn->l_child())
+		edn = Rload_page(edn->l_child())->index_right();
+	return edn > Header2Page(edn)->index_left() ? edn - 1 : NULL;
 }
 
 void PageCache::clr_fragment(frag_hdr *hdr)
@@ -784,6 +805,27 @@ index_hdr* PageCache::next_index_header(index_hdr *cur)
 	return NULL;
 }
 
+index_hdr* PageCache::prev_index_header(index_hdr *cur)
+{
+	//左子树的最大值
+	if(cur->l_child())
+		return right_most(Rload_page(cur->l_child()));
+	//处于叶子节点, 左边的元素
+	Page *page = Header2Page(cur);
+	if(cur > page->index_left())
+		return cur - 1;
+	//处于叶子节点最左边
+	index_hdr *end = page->index_end();
+	while(end->parent_index)
+	{
+		Page *parent = Rload_page(end->parent_index);
+		if(end->parent_pos > parent->index_l_pos())
+			return parent->index_pos(end->parent_pos - 1);
+		end = parent->index_end();
+	}
+	return NULL;
+}
+
 index_hdr* PageCache::greater_key(const void *key, size_t key_len)
 {
 	int pos = 0;
@@ -791,17 +833,37 @@ index_hdr* PageCache::greater_key(const void *key, size_t key_len)
 	{
 		if(pos == 0) // equals found.
 			return next_index_header(hdr); // return NULL if the key is last. see next_index_header.
-		if(hdr != Header2Page(hdr)->index_right()) // greater found. maybe tail. see great_equal_key.
+		if(hdr != Header2Page(hdr)->index_right()) // greater found. maybe tail. see greater_equal_key.
 			return hdr;
 	}
 	return NULL;
 }
 
-index_hdr* PageCache::great_equal_key(const void *key, size_t key_len)
+index_hdr* PageCache::greater_equal_key(const void *key, size_t key_len)
 {
 	int pos;
 	index_hdr* hdr = find_key(key, key_len, pos); 
 	return (hdr && hdr == Header2Page(hdr)->index_right()) ? NULL : hdr;
+}
+
+index_hdr* PageCache::less_key(const void *key, size_t key_len)
+{
+	index_hdr* behind = greater_equal_key(key, key_len);
+	return behind ? prev_index_header(behind) : right_most(root_index_page());
+}
+
+index_hdr* PageCache::less_equal_key(const void *key, size_t key_len)
+{
+	int pos = 0;
+	if(index_hdr *hdr = find_key(key, key_len, pos))
+	{
+		if(pos == 0) // equals found.
+			return hdr;
+		if(pos < 0)
+			return NULL;
+		return prev_index_header(hdr);
+	}
+	return right_most(root_index_page());
 }
 
 void PageCache::merge_sibling(Page *left, index_hdr *parent_hdr, Page *right)
