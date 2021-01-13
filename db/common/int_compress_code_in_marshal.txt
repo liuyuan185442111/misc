@@ -1,0 +1,30 @@
+﻿关于marshal.h中4字节整数的变长压缩/编码方式
+
+为了传输效率和存储效率，对整数进行了压缩，也可称为变长编码。
+首先来看无符号整数的编码，参考UTF-8编码方式(http://blog.csdn.net/liuyuan185442111/article/details/74436758)。
+与UTF-8编码方式相比，我们明确知道什么位置应该会有什么数据，所以就不需要10来表征这是前面编码的一部分，那么对于编码为多字节的数字，从第二个字节开始就多了两位可以使用，编码规则可以用下表来描述：
+字节数	二进制表示										有效二进制位数目	可表示的最大数字
+1		0xxxxxxx										7					0x7F			127
+2		10xxxxxx xxxxxxxx								14					0x3FFF			16383
+3		110xxxxx xxxxxxxx xxxxxxxx						18					0x1FFFFF		2097151
+4		1110xxxx xxxxxxxx xxxxxxxx xxxxxxxx				28					0x0FFFFFFF		268435455
+5		1111xxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx	36					0x0FFFFFFFFF	68719476735
+但我们没有3字节的pop和push方法，只能拆分成1字节和2字节进行两次操作，索性就不用3字节编码了，修改后的编码方式如下：
+字节数	二进制表示										有效二进制位数目	可表示的最大数字
+1		0xxxxxxx										7					0x7F			127
+2		10xxxxxx xxxxxxxx								14					0x3FFF			16383
+4		110xxxxx xxxxxxxx xxxxxxxx xxxxxxxx				28					0x1FFFFFFF		536870911
+5		111xxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx	36					0x1FFFFFFFFF	137438953471
+
+以上是考虑到，一个无符号整数更有可能是一个较小的数字，一个很大的无符号整数会用5个字节来编码，但对于有符号整数，如果当做无符号整数来处理，所有的负数都会用5字节来编码，这显然是不合适的，所以我们拿出首位来当做符号位，这样正的有符号数的编码方式调整为：
+字节数	二进制表示										有效二进制位数目	可表示的最大数字
+1		00xxxxxx										6					0x3F			63
+2		010xxxxx xxxxxxxx								13					0x1FFF			8191
+4		0110xxxx xxxxxxxx xxxxxxxx xxxxxxxx				27					0x0FFFFFFF		268435455
+5		0111xxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx	35					0x0FFFFFFFFF	68719476735
+负的有符号数编码方式则为：
+字节数	二进制表示										有效二进制位数目	可表示的最大数字的绝对值
+1		10xxxxxx										6					0x3F			63
+2		110xxxxx xxxxxxxx								13					0x1FFF			8191
+4		1110xxxx xxxxxxxx xxxxxxxx xxxxxxxx				27					0x0FFFFFFF		268435455
+5		1111xxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx	35					0x0FFFFFFFFF	68719476735
